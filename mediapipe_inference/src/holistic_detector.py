@@ -4,13 +4,13 @@ from pathlib import Path
 from result_data import HolisticLandmarks
 import cv2
 import time
+import concurrent.futures
 
 
 root_directory = str(Path(__file__).parent.parent)
 
 class HolisticDetector:
     def __init__(self):
-        self.__pose = PoseDetector(root_directory + "/models/pose_landmarker_full.task")
         self.__hand = HandDetector(root_directory + "/models/hand_landmarker.task")
         self.__face = FaceDetector(root_directory + "/models/face_landmarker.task")
 
@@ -22,17 +22,21 @@ class HolisticDetector:
             return
 
         mp_image = mp.Image(image_format = mp.ImageFormat.SRGB, data = image)
-
-        self.__pose.inference(mp_image, t_ms)
-        self.__hand.inference(mp_image, t_ms)
-        self.__face.inference(mp_image, t_ms)
+        
+        # Run detections in parallel using ThreadPoolExecutor
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            futures = [
+                executor.submit(self.__hand.inference, mp_image, t_ms),
+                executor.submit(self.__face.inference, mp_image, t_ms)
+            ]
+            concurrent.futures.wait(futures)
 
         self.latest_time_ms = t_ms
 
     @property
     def results(self):
         return HolisticLandmarks(
-            self.__pose.results,
+            None,
             self.__hand.results,
             self.__face.results
         )

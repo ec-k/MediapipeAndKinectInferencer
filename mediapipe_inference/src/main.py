@@ -27,8 +27,6 @@ def main_loop():
 
   # Visualize resulted landmarks
   annotated_image = image
-  if results.pose_landmarks is not None:
-    annotated_image = visualizer.draw_pose_landmarks_on_image(annotated_image, results.pose_landmarks)
   if results.hand_landmarks is not None:
     annotated_image = visualizer.draw_hand_landmarks_on_image(annotated_image, results.hand_landmarks)
   if results.face_results is not None:
@@ -43,7 +41,7 @@ if __name__ == "__main__":
   pose_sender = HolisticPoseSender("localhost", 9001)
   pose_sender.connect()
 
-  holistic_detector = HolisticDetector(5)
+  holistic_detector = HolisticDetector()
 
   width = 1280
   height = 720
