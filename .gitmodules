@@ -4,3 +4,6 @@
 [submodule "proto"]
 	path = proto
 	url = https://github.com/ec-k/SkeletonProto.git
+[submodule "mediapipe_inferencer"]
+	path = mediapipe_inferencer
+	url = https://github.com/ec-k/mediapipe-inferencer.git
