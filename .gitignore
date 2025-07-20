@@ -401,3 +401,7 @@ FodyWeavers.xsd
 
 
 colorImg.dat
+
+# Protobuf generated files
+**/*_pb2.py
+**/HolisticLandmarks.cs
