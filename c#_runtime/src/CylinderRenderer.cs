@@ -2,6 +2,7 @@
 // Released under the MIT license
 // https://github.com/microsoft/Azure-Kinect-Samples/blob/master/LICENSE
 
+using Scripts;
 using System;
 using System.Collections.Generic;
 using System.Numerics;

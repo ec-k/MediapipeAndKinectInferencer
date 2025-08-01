@@ -5,7 +5,7 @@ using Microsoft.Azure.Kinect.Sensor;
 using System.IO.MemoryMappedFiles;
 using System.IO;
 
-namespace MpAndKinectPoseSender
+namespace Scripts
 {
     public class ImageWriter: IDisposable
     {
@@ -46,7 +46,7 @@ namespace MpAndKinectPoseSender
 
         public void Write(BGRA[] data)
         {
-            _accessor.WriteArray<BGRA>(0, data, 0, data.Length);
+            _accessor.WriteArray(0, data, 0, data.Length);
         }
         
         public void Dispose()

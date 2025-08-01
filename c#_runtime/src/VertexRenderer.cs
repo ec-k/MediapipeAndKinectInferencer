@@ -8,7 +8,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace MpAndKinectPoseSender
+namespace Scripts
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct Vertex
@@ -60,7 +60,7 @@ namespace MpAndKinectPoseSender
 
         protected void UpdateVertices(Vertex[] vertices)
         {
-            this.Vertices = vertices;
+            Vertices = vertices;
 
             var vertexSize = Marshal.SizeOf<Vertex>();
             Gl.BindVertexArray(vertexArrayObject);

@@ -6,7 +6,7 @@ using Google.Protobuf;
 using Microsoft.Azure.Kinect.BodyTracking;
 using Microsoft.Azure.Kinect.Sensor;
 
-namespace MpAndKinectPoseSender
+namespace Scripts
 {
     internal class LandmarkHandler : IDisposable
     {

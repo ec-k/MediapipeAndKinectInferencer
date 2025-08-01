@@ -4,7 +4,7 @@
 
 using System.Linq;
 
-namespace MpAndKinectPoseSender
+namespace Scripts
 {
     public static class Shaders
     {

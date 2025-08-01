@@ -5,7 +5,7 @@
 using Microsoft.Azure.Kinect.BodyTracking;
 using System;
 
-namespace MpAndKinectPoseSender
+namespace Scripts
 {
     public class VisualizerData : IDisposable
     {

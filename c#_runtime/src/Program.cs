@@ -4,9 +4,10 @@
 
 using Microsoft.Azure.Kinect.BodyTracking;
 using Microsoft.Azure.Kinect.Sensor;
+using MpAndKinectPoseSender;
 using System;
 
-namespace MpAndKinectPoseSender
+namespace Scripts
 {
     class Program
     {
@@ -31,7 +32,11 @@ namespace MpAndKinectPoseSender
             var deviceCalibration = device.GetCalibration();
             PointCloud.ComputePointCloudCache(deviceCalibration);
 
-            var tracker = Tracker.Create(deviceCalibration, new TrackerConfiguration() { ProcessingMode = TrackerProcessingMode.Gpu, SensorOrientation = SensorOrientation.Default });
+            var tracker = Tracker.Create(
+                deviceCalibration
+                , new TrackerConfiguration() { 
+                    ProcessingMode = TrackerProcessingMode.Gpu
+                    , SensorOrientation = SensorOrientation.Default });
             using var imgWriter = new ImageWriter();
 
             device.StartImu();

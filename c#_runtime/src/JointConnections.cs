@@ -5,7 +5,7 @@
 using Microsoft.Azure.Kinect.BodyTracking;
 using System.Collections.Generic;
 
-namespace MpAndKinectPoseSender
+namespace Scripts
 {
     public static class JointConnections
     {

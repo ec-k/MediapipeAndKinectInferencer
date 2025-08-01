@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace MpAndKinectPoseSender
+namespace Scripts
 {
     public class SphereRenderer : TriangleRenderer
     {
@@ -72,7 +72,7 @@ namespace MpAndKinectPoseSender
                         sphereIndices.Add(k2);
                         sphereIndices.Add(k1 + 1);
                     }
-                    if (i != (stackCount - 1))
+                    if (i != stackCount - 1)
                     {
                         sphereIndices.Add(k1 + 1);
                         sphereIndices.Add(k2);

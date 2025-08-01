@@ -3,6 +3,7 @@
 // https://github.com/microsoft/Azure-Kinect-Samples/blob/master/LICENSE
 
 using Microsoft.Azure.Kinect.BodyTracking;
+using MpAndKinectPoseSender;
 using OpenGL;
 using OpenGL.CoreUI;
 using System;
@@ -10,7 +11,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
 
-namespace MpAndKinectPoseSender
+namespace Scripts
 {
     public class Renderer
     {

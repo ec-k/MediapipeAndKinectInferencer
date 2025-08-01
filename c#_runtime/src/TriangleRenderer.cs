@@ -6,7 +6,7 @@ using OpenGL;
 using System;
 using System.Linq;
 
-namespace MpAndKinectPoseSender
+namespace Scripts
 {
     public class TriangleRenderer : VertexRenderer
     {
@@ -22,8 +22,8 @@ namespace MpAndKinectPoseSender
         internal void UpdateTriangles(Vertex[] vertices, int[] indices)
         {
             // Perform sanity check on indices array.
-            if ((indices.Length % 3 != 0) ||
-                indices.Any(index => (index < 0) || (index > vertices.Length - 1)))
+            if (indices.Length % 3 != 0 ||
+                indices.Any(index => index < 0 || index > vertices.Length - 1))
             {
                 throw new Exception("Array of triangle indices is invalid.");
             }
