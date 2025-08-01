@@ -1,7 +1,7 @@
 @echo off
 echo Generating Protobuf code...
 
-SET PROTO_PATH=./proto
+SET PROTO_PATH=./proto/Runtime
 mkdir .\\mediapipe_inferencer\\src\\proto_generated || echo proto_generated dir already exists.
 
 echo Generating Python code...
