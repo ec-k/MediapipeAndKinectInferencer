@@ -3,15 +3,15 @@
 // https://github.com/microsoft/Azure-Kinect-Samples/blob/master/LICENSE
 
 using Microsoft.Azure.Kinect.BodyTracking;
-using MpAndKinectPoseSender;
 using OpenGL;
 using OpenGL.CoreUI;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
+using MpAndKinectPoseSender.PoseInference;
 
-namespace Scripts
+namespace MpAndKinectPoseSender.Renderers
 {
     public class Renderer
     {
@@ -19,10 +19,10 @@ namespace Scripts
         private CylinderRenderer CylinderRenderer;
         private PointCloudRenderer PointCloudRenderer;
 
-        private readonly VisualizerData visualizerData;
+        private readonly FrameManager visualizerData;
         private List<Vertex> pointCloud = null;
 
-        public Renderer(VisualizerData visualizerData)
+        public Renderer(FrameManager visualizerData)
         {
             this.visualizerData = visualizerData;
         }

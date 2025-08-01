@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Scripts
+namespace MpAndKinectPoseSender.Renderers
 {
     public class SphereRenderer : TriangleRenderer
     {

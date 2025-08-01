@@ -1,7 +1,7 @@
 ﻿using Microsoft.Azure.Kinect.BodyTracking;
 using MediapipeJointId = HolisticPose.PoseLandmarks.Types.LandmarkIndex;
 
-namespace Scripts
+namespace MpAndKinectPoseSender.PoseInference
 {
     static internal class LandmarkUtils
     {

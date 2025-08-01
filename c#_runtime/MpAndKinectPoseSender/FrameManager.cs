@@ -5,9 +5,9 @@
 using Microsoft.Azure.Kinect.BodyTracking;
 using System;
 
-namespace Scripts
+namespace MpAndKinectPoseSender
 {
-    public class VisualizerData : IDisposable
+    public class FrameManager : IDisposable
     {
         private Frame frame;
 

@@ -5,7 +5,7 @@ using Microsoft.Azure.Kinect.Sensor;
 using System.IO.MemoryMappedFiles;
 using System.IO;
 
-namespace Scripts
+namespace MpAndKinectPoseSender
 {
     public class ImageWriter: IDisposable
     {

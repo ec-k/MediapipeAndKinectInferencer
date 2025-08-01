@@ -3,7 +3,7 @@ using System;
 using System.Numerics;
 using HolisticPose;
 
-namespace Scripts
+namespace MpAndKinectPoseSender.PoseInference
 {
     internal class TiltCorrector
     {

@@ -8,7 +8,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Scripts
+namespace MpAndKinectPoseSender.Renderers
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct Vertex

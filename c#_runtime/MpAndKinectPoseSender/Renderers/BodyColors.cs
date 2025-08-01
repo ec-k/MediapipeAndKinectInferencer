@@ -5,7 +5,7 @@
 using System.Drawing;
 using System.Numerics;
 
-namespace MpAndKinectPoseSender
+namespace MpAndKinectPoseSender.Renderers
 {
     static class BodyColors
     {

@@ -4,16 +4,17 @@
 
 using Microsoft.Azure.Kinect.BodyTracking;
 using Microsoft.Azure.Kinect.Sensor;
-using MpAndKinectPoseSender;
+using MpAndKinectPoseSender.Renderers;
+using MpAndKinectPoseSender.PoseInference;
 using System;
 
-namespace Scripts
+namespace MpAndKinectPoseSender
 {
     class Program
     {
         static void Main()
         {
-            using var visualizerData = new VisualizerData();
+            using var visualizerData = new FrameManager();
             var renderer = new Renderer(visualizerData);
 
             renderer.StartVisualizationThread();

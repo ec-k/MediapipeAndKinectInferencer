@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
-namespace Scripts
+namespace MpAndKinectPoseSender.Renderers
 {
     public class PointCloudRenderer : VertexRenderer
     {

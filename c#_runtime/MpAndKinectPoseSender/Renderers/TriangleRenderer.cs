@@ -6,7 +6,7 @@ using OpenGL;
 using System;
 using System.Linq;
 
-namespace Scripts
+namespace MpAndKinectPoseSender.Renderers
 {
     public class TriangleRenderer : VertexRenderer
     {
