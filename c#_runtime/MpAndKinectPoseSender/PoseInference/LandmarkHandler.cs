@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using HolisticPose;
+using HumanLandmarks;
 using Google.Protobuf;
 using Microsoft.Azure.Kinect.BodyTracking;
 using Microsoft.Azure.Kinect.Sensor;
@@ -15,7 +15,6 @@ namespace MpAndKinectPoseSender.PoseInference
         int _senderPort = 9000;
 
         UdpClient _receiver;
-        string _receiverUri = "127.0.0.1";
         int _receiverPort = 9001;
 
         TiltCorrector _tiltCorrector;
@@ -82,7 +81,7 @@ namespace MpAndKinectPoseSender.PoseInference
 
         void PackResults(Skeleton skeleton)
         {
-            var kinectBodyLandmarks = new PoseLandmarks();
+            var kinectBodyLandmarks = new KinectPoseLandmarks();
             const int poselmListSize = 33;
             var poseLandmarks = new Landmark[poselmListSize];
 
@@ -109,12 +108,12 @@ namespace MpAndKinectPoseSender.PoseInference
         {
             var lm = new Landmark();
              
-            lm.X = joint.Position.X / 1000;
-            lm.Y = joint.Position.Y / 1000;
-            lm.Z = joint.Position.Z / 1000;
+            lm.Position.X = joint.Position.X / 1000;
+            lm.Position.Y = joint.Position.Y / 1000;
+            lm.Position.Z = joint.Position.Z / 1000;
 
-            (lm.X, lm.Y, lm.Z) = _tiltCorrector.CorrectLandmarkPosition(lm.X, lm.Y, lm.Z);
-            (lm.X, lm.Y, lm.Z) = TransformCoordination(lm.X, lm.Y, lm.Z);
+            (lm.Position.X, lm.Position.Y, lm.Position.Z) = _tiltCorrector.CorrectLandmarkPosition(lm.Position.X, lm.Position.Y, lm.Position.Z);
+            (lm.Position.X, lm.Position.Y, lm.Position.Z) = TransformCoordination(lm.Position.X, lm.Position.Y, lm.Position.Z);
 
             lm.Confidence = joint.ConfidenceLevel switch
             {

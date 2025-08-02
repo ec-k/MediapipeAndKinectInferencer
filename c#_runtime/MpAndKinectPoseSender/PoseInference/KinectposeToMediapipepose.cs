@@ -1,5 +1,5 @@
 ﻿using Microsoft.Azure.Kinect.BodyTracking;
-using MediapipeJointId = HolisticPose.PoseLandmarks.Types.LandmarkIndex;
+using MediapipeJointId = HumanLandmarks.PoseLandmarks.Types.LandmarkIndex;
 
 namespace MpAndKinectPoseSender.PoseInference
 {

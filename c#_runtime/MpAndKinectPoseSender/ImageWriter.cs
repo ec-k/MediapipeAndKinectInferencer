@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Net.WebSockets;
-using System.Threading;
 using Microsoft.Azure.Kinect.Sensor;
 using System.IO.MemoryMappedFiles;
 using System.IO;
@@ -53,20 +51,6 @@ namespace MpAndKinectPoseSender
         {
             _mmf.Dispose();
             _accessor.Dispose();
-        }
-    }
-
-    public class WsHandler
-    {
-        ClientWebSocket _ws;
-
-        public WsHandler()
-        {
-            _ws = new();
-        }
-        public async void Connect(Uri uri)
-        {
-            await _ws.ConnectAsync(uri, CancellationToken.None);
         }
     }
 }

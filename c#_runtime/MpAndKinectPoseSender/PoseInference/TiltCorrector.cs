@@ -1,7 +1,7 @@
 ﻿using Microsoft.Azure.Kinect.Sensor;
 using System;
 using System.Numerics;
-using HolisticPose;
+using HumanLandmarks;
 
 namespace MpAndKinectPoseSender.PoseInference
 {
@@ -53,11 +53,11 @@ namespace MpAndKinectPoseSender.PoseInference
         
         internal void CorrectLandmarkPosition(ref Landmark landmark)
         {
-            var (x, y, z) = CorrectLandmarkPosition(landmark.X, landmark.Y, landmark.Z);
+            var (x, y, z) = CorrectLandmarkPosition(landmark.Position.X, landmark.Position.Y, landmark.Position.Z);
 
-            landmark.X = x;
-            landmark.Y = y;
-            landmark.Z = z;
+            landmark.Position.X = x;
+            landmark.Position.Y = y;
+            landmark.Position.Z = z;
         }
 
         internal (float, float, float) CorrectLandmarkPosition(float x, float y, float z)
