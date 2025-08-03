@@ -41,7 +41,8 @@ namespace MpAndKinectPoseSender
 
             // Setup for this app which requires device settings
             PointCloud.ComputePointCloudCache(deviceCalibration);
-            using var landmarkHandler = new LandmarkHandler(imuSample, deviceCalibration);
+            var tiltCorrector = new TiltCorrector(imuSample, deviceCalibration);
+            using var landmarkHandler = new LandmarkHandler(tiltCorrector);
 
             var userInputChar = "-";
             while (renderer.IsActive)

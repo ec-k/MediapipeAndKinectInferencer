@@ -17,14 +17,14 @@ namespace MpAndKinectPoseSender.PoseInference
         UdpClient _receiver;
         int _receiverPort = 9001;
 
-        TiltCorrector _tiltCorrector;
+        readonly TiltCorrector _tiltCorrector;
 
         readonly Action<SocketException> _socketExceptionCallback;
         readonly Action<ObjectDisposedException> _objectDisposedExceptionCallback;
 
         HolisticLandmarks _result;
 
-        public LandmarkHandler(ImuSample imuSample, Calibration sensorCalibration)
+        public LandmarkHandler(TiltCorrector tiltCorrector)
         {
             _sender = new UdpClient();
             var senderEndPoint = new IPEndPoint(IPAddress.Parse(_senderUri), _senderPort);
@@ -35,7 +35,7 @@ namespace MpAndKinectPoseSender.PoseInference
 
             _receiver.BeginReceive(OnReceived, _receiver);
 
-            _tiltCorrector = new(imuSample, sensorCalibration);
+            _tiltCorrector = tiltCorrector;
         }
 
         internal void UpdateTiltRotation() => _tiltCorrector.UpdateTiltRotation();
