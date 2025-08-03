@@ -25,8 +25,8 @@ namespace HumanLandmarks {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChtraW5lY3RfcG9zZV9sYW5kbWFya3MucHJvdG8SDmh1bWFuTGFuZG1hcmtz",
-            "Gg5sYW5kbWFyay5wcm90byLLBAoTS2luZWN0UG9zZUxhbmRtYXJrcxIrCgls",
-            "YW5kbWFya3MYASADKAsyGC5odW1hbkxhbmRtYXJrcy5MYW5kbWFyayKGBAoN",
+            "Gg5sYW5kbWFyay5wcm90byLXBAoTS2luZWN0UG9zZUxhbmRtYXJrcxIrCgls",
+            "YW5kbWFya3MYASADKAsyGC5odW1hbkxhbmRtYXJrcy5MYW5kbWFyayKSBAoN",
             "TGFuZG1hcmtJbmRleBIKCgZQRUxWSVMQABIPCgtTUElORV9OQVZBTBABEg8K",
             "C1NQSU5FX0NIRVNUEAISCAoETkVDSxADEhEKDUNMQVZJQ0xFX0xFRlQQBBIR",
             "Cg1TSE9VTERFUl9MRUZUEAUSDgoKRUxCT1dfTEVGVBAGEg4KCldSSVNUX0xF",
@@ -38,7 +38,7 @@ namespace HumanLandmarks {
             "DQoJRk9PVF9MRUZUEBUSDQoJSElQX1JJR0hUEBYSDgoKS05FRV9SSUdIVBAX",
             "Eg8KC0FOS0xFX1JJR0hUEBgSDgoKRk9PVF9SSUdIVBAZEggKBEhFQUQQGhII",
             "CgROT1NFEBsSDAoIRVlFX0xFRlQQHBIMCghFQVJfTEVGVBAdEg0KCUVZRV9S",
-            "SUdIVBAeEg0KCUVBUl9SSUdIVBAfYgZwcm90bzM="));
+            "SUdIVBAeEg0KCUVBUl9SSUdIVBAfEgoKBkxFTkdUSBAgYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::HumanLandmarks.LandmarkReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
@@ -194,11 +194,7 @@ namespace HumanLandmarks {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
+        switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -217,11 +213,7 @@ namespace HumanLandmarks {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
+        switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -272,6 +264,7 @@ namespace HumanLandmarks {
         [pbr::OriginalName("EAR_LEFT")] EarLeft = 29,
         [pbr::OriginalName("EYE_RIGHT")] EyeRight = 30,
         [pbr::OriginalName("EAR_RIGHT")] EarRight = 31,
+        [pbr::OriginalName("LENGTH")] Length = 32,
       }
 
     }

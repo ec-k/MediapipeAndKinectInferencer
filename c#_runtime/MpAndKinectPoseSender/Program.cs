@@ -10,7 +10,7 @@ using System;
 
 namespace MpAndKinectPoseSender
 {
-    class Program
+    class Program   
     {
         static void Main()
         {

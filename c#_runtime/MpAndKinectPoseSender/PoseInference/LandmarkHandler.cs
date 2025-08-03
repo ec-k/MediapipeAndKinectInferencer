@@ -82,16 +82,14 @@ namespace MpAndKinectPoseSender.PoseInference
         void PackResults(Skeleton skeleton)
         {
             var kinectBodyLandmarks = new KinectPoseLandmarks();
-            const int poselmListSize = 33;
+            const int poselmListSize = 32;
             var poseLandmarks = new Landmark[poselmListSize];
 
             for (var jointId = 0; jointId < (int)JointId.Count; jointId++)
             {
                 var joint = skeleton.GetJoint(jointId);
-                var mpJointId = (int)LandmarkUtils.KinectJoint2MediapipeJoint((JointId)jointId);
-                if (mpJointId < 0) continue;
                 var lm = PackLandmark(joint);
-                poseLandmarks[mpJointId] = lm;
+                poseLandmarks[jointId] = lm;
             }
             for (var i = 0; i < poseLandmarks.Length; i++)
             {
@@ -107,14 +105,16 @@ namespace MpAndKinectPoseSender.PoseInference
         Landmark PackLandmark(Joint joint)
         {
             var lm = new Landmark();
-             
-            lm.Position.X = joint.Position.X / 1000;
-            lm.Position.Y = joint.Position.Y / 1000;
-            lm.Position.Z = joint.Position.Z / 1000;
+            var position = new Position();
 
-            (lm.Position.X, lm.Position.Y, lm.Position.Z) = _tiltCorrector.CorrectLandmarkPosition(lm.Position.X, lm.Position.Y, lm.Position.Z);
-            (lm.Position.X, lm.Position.Y, lm.Position.Z) = TransformCoordination(lm.Position.X, lm.Position.Y, lm.Position.Z);
+            position.X = joint.Position.X / 1000;
+            position.Y = joint.Position.Y / 1000;
+            position.Z = joint.Position.Z / 1000;
 
+            (position.X, position.Y, position.Z) = _tiltCorrector.CorrectLandmarkPosition(position.X, position.Y, position.Z);
+            (position.X, position.Y, position.Z) = TransformCoordination(position.X, position.Y, position.Z);
+
+            lm.Position = position;
             lm.Confidence = joint.ConfidenceLevel switch
             {
                 JointConfidenceLevel.None => 0f,
