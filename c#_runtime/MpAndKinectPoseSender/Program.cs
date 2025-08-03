@@ -14,13 +14,14 @@ namespace MpAndKinectPoseSender
     {
         static void Main()
         {
+            // Setup classes
             using var visualizerData = new FrameManager();
             var renderer = new Renderer(visualizerData);
-
             renderer.StartVisualizationThread();
+            using var imgWriter = new ImageWriter();
 
-            // Open device.
-            using Device device = Device.Open();
+            // Setup a device
+            using var device = Device.Open();
             device.StartCameras(new DeviceConfiguration()
             {
                 CameraFPS = FPS.FPS30,
@@ -29,19 +30,17 @@ namespace MpAndKinectPoseSender
                 WiredSyncMode = WiredSyncMode.Standalone,
                 ColorFormat = ImageFormat.ColorBGRA32,
             });
-
             var deviceCalibration = device.GetCalibration();
-            PointCloud.ComputePointCloudCache(deviceCalibration);
-
             var tracker = Tracker.Create(
                 deviceCalibration
                 , new TrackerConfiguration() { 
                     ProcessingMode = TrackerProcessingMode.Gpu
                     , SensorOrientation = SensorOrientation.Default });
-            using var imgWriter = new ImageWriter();
-
             device.StartImu();
             var imuSample = device.GetImuSample();
+
+            // Setup for this app which requires device settings
+            PointCloud.ComputePointCloudCache(deviceCalibration);
             using var landmarkHandler = new LandmarkHandler(imuSample, deviceCalibration);
 
             var userInputChar = "-";
@@ -70,16 +69,9 @@ namespace MpAndKinectPoseSender
                 }
 
                 // Try getting latest tracker frame.
-                using Frame frame = tracker.PopResult(TimeSpan.Zero, throwOnTimeout: false);
+                using var frame = tracker.PopResult(TimeSpan.Zero, throwOnTimeout: false);
                 if (frame != null)
                 {
-                    // Save this frame for visualization in Renderer.
-
-                    // One can access frame data here and extract e.g. tracked bodies from it for the needed purpose.
-                    // Instead, for simplicity, we transfer the frame object to the rendering background thread.
-                    // This example shows t hat frame popped from tracker should be disposed. Since here it is used
-                    // in a different thread, we use Reference method to prolong the lifetime of the frame object.
-                    // For reference on how to read frame data, please take a look at Renderer.NativeWindow_Render().
                     visualizerData.Frame = frame.Reference();
 
 
