@@ -42,7 +42,7 @@ namespace MpAndKinectPoseSender
             _accessor = _mmf.CreateViewAccessor();
         }
 
-        public void Write(BGRA[] data)
+        public void Write(byte[] data)
         {
             _accessor.WriteArray(0, data, 0, data.Length);
         }

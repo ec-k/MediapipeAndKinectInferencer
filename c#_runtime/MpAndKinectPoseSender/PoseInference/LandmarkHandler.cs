@@ -3,8 +3,8 @@ using System.Net;
 using System.Net.Sockets;
 using HumanLandmarks;
 using Google.Protobuf;
-using Microsoft.Azure.Kinect.BodyTracking;
-using Microsoft.Azure.Kinect.Sensor;
+using K4AdotNet.BodyTracking;
+using System.Linq;
 
 namespace MpAndKinectPoseSender.PoseInference
 {
@@ -85,9 +85,10 @@ namespace MpAndKinectPoseSender.PoseInference
             const int poselmListSize = 32;
             var poseLandmarks = new Landmark[poselmListSize];
 
-            for (var jointId = 0; jointId < (int)JointId.Count; jointId++)
+            var enumArr = Enum.GetValues(typeof(JointType));
+            for(var jointId = 0; jointId < enumArr.Length; jointId++)
             {
-                var joint = skeleton.GetJoint(jointId);
+                var joint = skeleton[(JointType)jointId];
                 var lm = PackLandmark(joint);
                 poseLandmarks[jointId] = lm;
             }
@@ -107,9 +108,10 @@ namespace MpAndKinectPoseSender.PoseInference
             var lm = new Landmark();
             var position = new Position();
 
-            position.X = joint.Position.X / 1000;
-            position.Y = joint.Position.Y / 1000;
-            position.Z = joint.Position.Z / 1000;
+            // Convert position from millimeters to meters
+            position.X = joint.PositionMm.X / 1000;
+            position.Y = joint.PositionMm.Y / 1000;
+            position.Z = joint.PositionMm.Z / 1000;
 
             (position.X, position.Y, position.Z) = _tiltCorrector.CorrectLandmarkPosition(position.X, position.Y, position.Z);
             (position.X, position.Y, position.Z) = TransformCoordination(position.X, position.Y, position.Z);

@@ -9,6 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.29.2" />
+    <PackageReference Include="K4AdotNet" Version="1.4.17" />
     <PackageReference Include="Microsoft.Azure.Kinect.BodyTracking" Version="1.1.2" />
     <PackageReference Include="OpenGL.Net" Version="0.8.4" />
     <PackageReference Include="OpenGL.Net.CoreUI" Version="0.8.4" />

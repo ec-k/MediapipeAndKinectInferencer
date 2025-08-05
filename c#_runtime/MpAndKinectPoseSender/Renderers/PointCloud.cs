@@ -2,7 +2,7 @@
 // Released under the MIT license
 // https://github.com/microsoft/Azure-Kinect-Samples/blob/master/LICENSE
 
-using Microsoft.Azure.Kinect.Sensor;
+using K4AdotNet.Sensor;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -20,10 +20,15 @@ namespace MpAndKinectPoseSender.Renderers
             using (var fakeDepth = new Image(ImageFormat.Depth16, calibration.DepthCameraCalibration.ResolutionWidth, calibration.DepthCameraCalibration.ResolutionHeight))
             {
                 // compute 3D points at z = 1000mm distance from the camera.
-                MemoryMarshal.Cast<byte, ushort>(fakeDepth.Memory.Span).Fill(1000);
-                using (var pointCloudImage = transformation.DepthImageToPointCloud(fakeDepth))
+                MemoryMarshal.Cast<byte, ushort>(fakeDepth.GetSpan<byte>()).Fill(1000);
+                using var pointCloudImage = new Image(
+                    ImageFormat.Custom,
+                    fakeDepth.WidthPixels,
+                    fakeDepth.HeightPixels,
+                    sizeof(short) * 3 * fakeDepth.WidthPixels);
+                transformation.DepthImageToPointCloud(fakeDepth, CalibrationGeometry.Depth, pointCloudImage);
                 {
-                    var pointCloudBuffer = MemoryMarshal.Cast<byte, short>(pointCloudImage.Memory.Span);
+                    var pointCloudBuffer = MemoryMarshal.Cast<byte, short>(pointCloudImage.GetSpan<byte>());
 
                     pointCloudCache = new Vector3[calibration.DepthCameraCalibration.ResolutionHeight, calibration.DepthCameraCalibration.ResolutionWidth];
                     for (int k = 0, v = 0; v < calibration.DepthCameraCalibration.ResolutionHeight; ++v)
@@ -53,7 +58,7 @@ namespace MpAndKinectPoseSender.Renderers
 
             pointCloud.Clear();
 
-            var depthPixels = depth.GetPixels<ushort>().ToArray();
+            var depthPixels = depth.GetSpan<ushort>().ToArray();
 
             for (int v = 0, pixelIndex = 0; v < depth.HeightPixels; ++v)
             {

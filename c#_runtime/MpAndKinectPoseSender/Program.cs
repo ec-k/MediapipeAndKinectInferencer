@@ -2,17 +2,19 @@
 // Released under the MIT license
 // https://github.com/microsoft/Azure-Kinect-Samples/blob/master/LICENSE
 
-using Microsoft.Azure.Kinect.BodyTracking;
-using Microsoft.Azure.Kinect.Sensor;
-using MpAndKinectPoseSender.Renderers;
+using K4AdotNet.BodyTracking;
+using K4AdotNet.Record;
+using K4AdotNet.Sensor;
 using MpAndKinectPoseSender.PoseInference;
+using MpAndKinectPoseSender.Renderers;
 using System;
+using System.IO;
 
 namespace MpAndKinectPoseSender
 {
     class Program   
     {
-        static void Main()
+        static void OnlineProcess()
         {
             // Setup classes
             using var visualizerData = new FrameManager();
@@ -22,20 +24,26 @@ namespace MpAndKinectPoseSender
 
             // Setup a device
             using var device = Device.Open();
-            device.StartCameras(new DeviceConfiguration()
+            var deviceConfig = new DeviceConfiguration()
             {
-                CameraFPS = FPS.FPS30,
+                CameraFps = FrameRate.Thirty,
                 ColorResolution = ColorResolution.R720p,
-                DepthMode = DepthMode.NFOV_Unbinned,
+                DepthMode = DepthMode.NarrowViewUnbinned,
                 WiredSyncMode = WiredSyncMode.Standalone,
-                ColorFormat = ImageFormat.ColorBGRA32,
-            });
-            var deviceCalibration = device.GetCalibration();
-            var tracker = Tracker.Create(
-                deviceCalibration
-                , new TrackerConfiguration() { 
-                    ProcessingMode = TrackerProcessingMode.Gpu
-                    , SensorOrientation = SensorOrientation.Default });
+                ColorFormat = ImageFormat.ColorBgra32,
+            };
+            device.StartCameras(deviceConfig);
+            Calibration deviceCalibration;
+            device.GetCalibration(deviceConfig.DepthMode, deviceConfig.ColorResolution, out deviceCalibration);
+            var tracker = new Tracker(
+                    deviceCalibration,
+                    new TrackerConfiguration
+                    {
+                        SensorOrientation = SensorOrientation.Default,
+                        ProcessingMode = TrackerProcessingMode.Gpu,
+                        GpuDeviceId = 0,
+                        ModelPath = null
+                    });
             device.StartImu();
             var imuSample = device.GetImuSample();
 
@@ -70,18 +78,19 @@ namespace MpAndKinectPoseSender
                 }
 
                 // Try getting latest tracker frame.
-                using var frame = tracker.PopResult(TimeSpan.Zero, throwOnTimeout: false);
+                using var frame = tracker.PopResult();
                 if (frame != null)
                 {
-                    visualizerData.Frame = frame.Reference();
+                    visualizerData.Frame = frame.DuplicateReference();
 
 
                     // Write color image to thw Memory Mapped File
-                    try{
-                        var colorImg = frame.Capture.Color;
+                    try
+                    {
+                        var colorImg = frame.Capture.ColorImage;
                         if (colorImg != null)
                         {
-                            var bgraArr = colorImg.GetPixels<BGRA>().ToArray();
+                            var bgraArr = colorImg.GetSpan<byte>().ToArray();
                             imgWriter.Write(bgraArr);
                         }
                     }
@@ -91,14 +100,20 @@ namespace MpAndKinectPoseSender
                     }
 
                     // Send Landmarks to a pose solver app
-                    if (frame.NumberOfBodies > 0)
+                    if (frame.BodyCount > 0)
                     {
-                        var skeleton = frame.GetBodySkeleton(0);
+                        Skeleton skeleton;
+                        frame.GetBodySkeleton(0, out skeleton);
                         landmarkHandler.Update(skeleton);
                         landmarkHandler.SendResults();
                     }
                 }
             }
+        }
+
+        static void Main()
+        {
+            OnlineProcess();
         }
     }
 }

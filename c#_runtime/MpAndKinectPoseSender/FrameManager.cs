@@ -2,16 +2,16 @@
 // Released under the MIT license
 // https://github.com/microsoft/Azure-Kinect-Samples/blob/master/LICENSE
 
-using Microsoft.Azure.Kinect.BodyTracking;
+using K4AdotNet.BodyTracking;
 using System;
 
 namespace MpAndKinectPoseSender
 {
     public class FrameManager : IDisposable
     {
-        private Frame frame;
+        private BodyFrame frame;
 
-        public Frame Frame
+        public BodyFrame Frame
         {
             set
             {
@@ -23,7 +23,7 @@ namespace MpAndKinectPoseSender
             }
         }
 
-        public Frame TakeFrameWithOwnership()
+        public BodyFrame TakeFrameWithOwnership()
         {
             lock (this)
             {

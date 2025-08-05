@@ -1,7 +1,8 @@
-﻿using Microsoft.Azure.Kinect.Sensor;
+﻿using K4AdotNet.Sensor;
 using System;
 using System.Numerics;
 using HumanLandmarks;
+using K4AdotNet;
 
 namespace MpAndKinectPoseSender.PoseInference
 {
@@ -10,7 +11,7 @@ namespace MpAndKinectPoseSender.PoseInference
 
         ImuSample _imuSample;
         Calibration _sensorCalibration;
-        Quaternion _inversedCameraTiltRotation;
+        System.Numerics.Quaternion _inversedCameraTiltRotation;
 
         internal TiltCorrector(ImuSample imuSample, Calibration sensorCalibration)
         {
@@ -27,28 +28,29 @@ namespace MpAndKinectPoseSender.PoseInference
 
         internal void ResetTiltRotation()
         {
-            _inversedCameraTiltRotation = Quaternion.Identity;
+            _inversedCameraTiltRotation = System.Numerics.Quaternion.Identity;
             Console.WriteLine("Reset");
         }
 
         Vector3 GetGravityVector(ImuSample imuSample)
         {
-            return imuSample.AccelerometerSample;
+            var vector3Result = new Vector3(imuSample.AccelerometerSample.X, imuSample.AccelerometerSample.Y, imuSample.AccelerometerSample.Z);
+            return vector3Result;
         }
 
-        Quaternion CalculateTiltRotation(ImuSample imuSample, Calibration sensorCalibration)
+        System.Numerics.Quaternion CalculateTiltRotation(ImuSample imuSample, Calibration sensorCalibration)
         {
             var gravityVector = GetGravityVector(imuSample);
             var downVector = -Vector3.UnitZ;
 
-            var coordinationTransformationMatrix = sensorCalibration.Extrinsics(CalibrationDeviceType.Accel, CalibrationDeviceType.Depth).Rotation;
+            var coordinationTransformationMatrix = sensorCalibration.GetExtrinsics(CalibrationGeometry.Accel, CalibrationGeometry.Depth).Rotation;
 
             var R_gravity = gravityVector.Transform(coordinationTransformationMatrix);
             var R_down = downVector.Transform(coordinationTransformationMatrix);
 
             var cameraTiltRotation = Utils.FromToRotation(R_gravity, R_down);
 
-            return Quaternion.Inverse(cameraTiltRotation);
+            return System.Numerics.Quaternion.Inverse(cameraTiltRotation);
         }
         
         internal void CorrectLandmarkPosition(ref Landmark landmark)
@@ -70,13 +72,7 @@ namespace MpAndKinectPoseSender.PoseInference
 
     internal static class Utils
     {
-        internal static Extrinsics Extrinsics(this Calibration calibraiton, CalibrationDeviceType from, CalibrationDeviceType to)
-        {
-            int index = (int)CalibrationDeviceType.Num * (int)from * (int)to;
-            return calibraiton.DeviceExtrinsics[index];
-        }
-
-        internal static Vector3 Transform(this Vector3 v, float[] rotationMatrix)
+        internal static Vector3 Transform(this Vector3 v, Float3x3 rotationMatrix)
         {
             var Rx = new Vector3(rotationMatrix[0], rotationMatrix[1], rotationMatrix[2]);
             var Ry = new Vector3(rotationMatrix[3], rotationMatrix[4], rotationMatrix[5]);
@@ -85,15 +81,15 @@ namespace MpAndKinectPoseSender.PoseInference
             return new Vector3(Vector3.Dot(v, Rx), Vector3.Dot(v, Ry), Vector3.Dot(v, Rz));
         }
 
-        internal static Quaternion FromToRotation(Vector3 from, Vector3 to)
+        internal static System.Numerics.Quaternion FromToRotation(Vector3 from, Vector3 to)
         {
             var axis = Vector3.Cross(from, to);
 
-            if (axis == Vector3.Zero) return Quaternion.Identity;
+            if (axis == Vector3.Zero) return System.Numerics.Quaternion.Identity;
 
-            var radAngle = MathF.Acos(Vector3.Dot(axis, from) / (from.Magnitude() * to.Magnitude()));
+            var radAngle = MathF.Acos(Vector3.Dot(from, to) / (from.Magnitude() * to.Magnitude()));
 
-            return Quaternion.CreateFromAxisAngle(axis, radAngle);
+            return System.Numerics.Quaternion.CreateFromAxisAngle(axis, radAngle);
         }
 
         internal static float Magnitude(this Vector3 v)

@@ -2,7 +2,7 @@
 // Released under the MIT license
 // https://github.com/microsoft/Azure-Kinect-Samples/blob/master/LICENSE
 
-using Microsoft.Azure.Kinect.BodyTracking;
+using K4AdotNet.BodyTracking;
 using OpenGL;
 using OpenGL.CoreUI;
 using System;
@@ -106,28 +106,36 @@ namespace MpAndKinectPoseSender.Renderers
                 PointCloudRenderer.View = view;
                 PointCloudRenderer.Projection = proj;
 
-                PointCloud.ComputePointCloud(lastFrame.Capture.Depth, ref pointCloud);
+                PointCloud.ComputePointCloud(lastFrame.Capture.DepthImage, ref pointCloud);
                 PointCloudRenderer.Render(pointCloud, new Vector4(1, 1, 1, 1));
 
-                for (uint i = 0; i < lastFrame.NumberOfBodies; ++i)
+                for (uint i = 0; i < lastFrame.BodyCount; ++i)
                 {
-                    var skeleton = lastFrame.GetBodySkeleton(i);
-                    var bodyId = lastFrame.GetBodyId(i);
-                    var bodyColor = BodyColors.GetColorAsVector(bodyId);
+                    Skeleton skeleton;
+                    lastFrame.GetBodySkeleton((int)i, out skeleton);
+                    var bodyId = lastFrame.GetBodyId((int)i);
+                    var bodyColor = BodyColors.GetColorAsVector((uint)bodyId.Value);
 
-                    for (int jointId = 0; jointId < (int)JointId.Count; ++jointId)
+                    var tmpArr = Enum.GetValues(typeof(JointType));
+                    for (int jointId = 0; jointId < tmpArr.Length; ++jointId)
                     {
-                        var joint = skeleton.GetJoint(jointId);
+                        var joint = skeleton[jointId];
 
                         // Render the joint as a sphere.
                         const float radius = 0.024f;
-                        SphereRenderer.Render(joint.Position / 1000, radius, bodyColor);
+                        var jointPositionVector = new Vector3(joint.PositionMm.X, joint.PositionMm.Y, joint.PositionMm.Z);
+                        SphereRenderer.Render(jointPositionVector / 1000, radius, bodyColor);
 
-                        if (JointConnections.JointParent.TryGetValue((JointId)jointId, out JointId parentId))
+                        try
                         {
+                            var jointType = (JointType)Enum.ToObject(typeof(JointType), jointId);
+                            var parent = jointType.GetParent();
+                            var parentJoint = skeleton[parent];
+                            var parentJointVector = new Vector3(parentJoint.PositionMm.X, parentJoint.PositionMm.Y, parentJoint.PositionMm.Z);
                             // Render a bone connecting this joint and its parent as a cylinder.
-                            CylinderRenderer.Render(joint.Position / 1000, skeleton.GetJoint((int)parentId).Position / 1000, bodyColor);
+                            CylinderRenderer.Render(jointPositionVector / 1000, parentJointVector / 1000, bodyColor);
                         }
+                        catch { }
                     }
                 }
             }
