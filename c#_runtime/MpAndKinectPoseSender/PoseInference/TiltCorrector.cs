@@ -17,12 +17,13 @@ namespace MpAndKinectPoseSender.PoseInference
         {
             _imuSample = imuSample;
             _sensorCalibration = sensorCalibration;
-            _inversedCameraTiltRotation = CalculateTiltRotation(imuSample, sensorCalibration);
+            UpdateTiltRotation();
         }
 
         internal void UpdateTiltRotation()
         {
-            _inversedCameraTiltRotation = CalculateTiltRotation(_imuSample, _sensorCalibration);
+            var cameraTiltRotation = CalculateTiltRotation(_imuSample, _sensorCalibration);
+            _inversedCameraTiltRotation = System.Numerics.Quaternion.Inverse(cameraTiltRotation);
             Console.WriteLine("Calibrated");
         }
 
@@ -48,9 +49,9 @@ namespace MpAndKinectPoseSender.PoseInference
             var R_gravity = gravityVector.Transform(coordinationTransformationMatrix);
             var R_down = downVector.Transform(coordinationTransformationMatrix);
 
-            var cameraTiltRotation = Utils.FromToRotation(R_gravity, R_down);
+            var cameraTiltRotation = Utils.FromToRotation(R_down, R_gravity);
 
-            return System.Numerics.Quaternion.Inverse(cameraTiltRotation);
+            return cameraTiltRotation;
         }
         
         internal void CorrectLandmarkPosition(ref Landmark landmark)
