@@ -14,6 +14,74 @@ namespace MpAndKinectPoseSender
 {
     class Program   
     {
+        static void OfflineProcess()
+        {
+            string mkvFilePath = "KinectTestRecording.mkv";
+
+            if (!File.Exists(mkvFilePath))
+            {
+                Console.WriteLine($"Error: {mkvFilePath} is not found.");
+                return;
+            }
+            Console.WriteLine($"Reading a .mkv file '{mkvFilePath}' ...");
+
+            var playback = new Playback(mkvFilePath);
+            try
+            {
+                RecordConfiguration recordConfig;
+                Calibration calibration;
+                playback.GetRecordConfiguration(out recordConfig);
+                playback.GetCalibration(out calibration);
+                var tracker = new Tracker(
+                    calibration
+                    , new TrackerConfiguration
+                    {
+                        SensorOrientation = SensorOrientation.Default,
+                        ProcessingMode = TrackerProcessingMode.Gpu,
+                        GpuDeviceId = 0,
+                        ModelPath = null
+                    });
+
+                int frameCount = 0;
+                while (true)
+                {
+                    Capture capture;
+                    var waitResult = playback.TryGetNextCapture(out capture);
+                    if (!waitResult)
+                    {
+                        Console.WriteLine("Error: Failed to get a capture.");
+                        break;
+                    }
+
+                    frameCount++;
+                    Console.WriteLine($"フレーム {frameCount} を処理中...");
+
+                    tracker.EnqueueCapture(capture);
+                    capture.Dispose();
+
+                    var frame = tracker.PopResult();
+
+
+                    if (frame.BodyCount > 0)
+                    {
+                        Skeleton skeleton;
+                        frame.GetBodySkeleton(0, out skeleton);
+                        //landmarkHandler.Update(skeleton);
+                        //landmarkHandler.SendResults();
+                    }
+                    frame.Dispose();
+                }
+            }
+            finally
+            {
+                playback.Dispose();
+            }
+
+            Console.WriteLine("ボディトラッキング処理が完了しました。");
+            Console.WriteLine("任意のキーを押して終了します...");
+            Console.ReadKey();
+        }
+
         static void OnlineProcess()
         {
             // Setup classes
@@ -113,7 +181,8 @@ namespace MpAndKinectPoseSender
 
         static void Main()
         {
-            OnlineProcess();
+            //OnlineProcess();
+            OfflineProcess();
         }
     }
 }
