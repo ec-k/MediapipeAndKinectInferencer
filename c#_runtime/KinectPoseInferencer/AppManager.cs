@@ -5,12 +5,12 @@
 using K4AdotNet.Record;
 using K4AdotNet.Sensor;
 using K4AdotNet.BodyTracking;
-using MpAndKinectPoseSender.PoseInference;
-using MpAndKinectPoseSender.Renderers;
+using KinectPoseInferencer.PoseInference;
+using KinectPoseInferencer.Renderers;
 using System;
 using System.IO;
 
-namespace MpAndKinectPoseSender
+namespace KinectPoseInferencer
 {
     internal class AppManager
     {

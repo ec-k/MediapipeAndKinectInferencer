@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
-namespace MpAndKinectPoseSender.Renderers
+namespace KinectPoseInferencer.Renderers
 {
     public class PointCloudRenderer : VertexRenderer
     {

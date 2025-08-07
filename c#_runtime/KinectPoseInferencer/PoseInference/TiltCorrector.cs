@@ -4,7 +4,7 @@ using System.Numerics;
 using HumanLandmarks;
 using K4AdotNet;
 
-namespace MpAndKinectPoseSender.PoseInference
+namespace KinectPoseInferencer.PoseInference
 {
     internal class TiltCorrector
     {

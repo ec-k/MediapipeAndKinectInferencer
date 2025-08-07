@@ -5,7 +5,7 @@
 using Microsoft.Azure.Kinect.BodyTracking;
 using System.Collections.Generic;
 
-namespace MpAndKinectPoseSender.PoseInference
+namespace KinectPoseInferencer.PoseInference
 {
     public static class JointConnections
     {

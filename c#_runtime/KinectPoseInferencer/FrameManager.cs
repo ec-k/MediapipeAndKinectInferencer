@@ -5,7 +5,7 @@
 using K4AdotNet.BodyTracking;
 using System;
 
-namespace MpAndKinectPoseSender
+namespace KinectPoseInferencer
 {
     public class FrameManager : IDisposable
     {

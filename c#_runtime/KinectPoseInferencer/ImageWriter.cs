@@ -3,7 +3,7 @@ using Microsoft.Azure.Kinect.Sensor;
 using System.IO.MemoryMappedFiles;
 using System.IO;
 
-namespace MpAndKinectPoseSender
+namespace KinectPoseInferencer
 {
     public class ImageWriter: IDisposable
     {

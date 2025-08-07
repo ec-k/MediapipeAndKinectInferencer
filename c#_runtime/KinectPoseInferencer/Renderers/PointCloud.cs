@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-namespace MpAndKinectPoseSender.Renderers
+namespace KinectPoseInferencer.Renderers
 {
     public static class PointCloud
     {

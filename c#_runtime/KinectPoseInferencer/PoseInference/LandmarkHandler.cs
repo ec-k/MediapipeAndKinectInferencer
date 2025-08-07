@@ -5,7 +5,7 @@ using HumanLandmarks;
 using Google.Protobuf;
 using K4AdotNet.BodyTracking;
 
-namespace MpAndKinectPoseSender.PoseInference
+namespace KinectPoseInferencer.PoseInference
 {
     internal class LandmarkHandler : IDisposable
     {

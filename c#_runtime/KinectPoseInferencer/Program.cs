@@ -1,4 +1,4 @@
-﻿namespace MpAndKinectPoseSender
+﻿namespace KinectPoseInferencer
 {
     class Program   
     {
