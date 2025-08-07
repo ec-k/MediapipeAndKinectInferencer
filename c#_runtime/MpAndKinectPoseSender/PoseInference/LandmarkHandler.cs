@@ -4,7 +4,6 @@ using System.Net.Sockets;
 using HumanLandmarks;
 using Google.Protobuf;
 using K4AdotNet.BodyTracking;
-using System.Linq;
 
 namespace MpAndKinectPoseSender.PoseInference
 {
