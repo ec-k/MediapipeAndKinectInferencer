@@ -11,6 +11,7 @@ namespace KinectPoseInferencer.Input
 
         ImuSample _imuSample;
         Calibration _calibration;
+        bool _isKinectDataInitialized = false;
 
         public UserActionService(
             ActionMap actionMap,
@@ -34,6 +35,8 @@ namespace KinectPoseInferencer.Input
 
         void HandleKeyPressed(string key)
         {
+            if (!_isKinectDataInitialized) return;
+
             if (_actionMap.KeyActions.TryGetValue(key, out var action))
             {
                 action?.Invoke();
@@ -48,6 +51,7 @@ namespace KinectPoseInferencer.Input
         {
             _imuSample = imuSample;
             _calibration = calibration;
+            _isKinectDataInitialized = true;
         }
 
         void IDisposable.Dispose()
