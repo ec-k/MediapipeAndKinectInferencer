@@ -1,7 +1,8 @@
-﻿using System;
-using Microsoft.Azure.Kinect.Sensor;
-using System.IO.MemoryMappedFiles;
+﻿using K4AdotNet.Sensor;
+using System;
 using System.IO;
+using System.IO.MemoryMappedFiles;
+using System.Xml;
 
 namespace KinectPoseInferencer
 {
@@ -42,7 +43,15 @@ namespace KinectPoseInferencer
             _accessor = _mmf.CreateViewAccessor();
         }
 
-        public void Write(byte[] data)
+        public void WriteImage(Image image)
+        {
+            if (image is null) return;
+            
+            var byteImg = image.GetSpan<byte>().ToArray();
+            Write(byteImg);
+        }
+
+        void Write(byte[] data)
         {
             _accessor.WriteArray(0, data, 0, data.Length);
         }

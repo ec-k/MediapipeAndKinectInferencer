@@ -19,6 +19,9 @@ namespace KinectPoseInferencer
         readonly UserActionService _userActionService;
         readonly LandmarkHandler _landmarkHandler;
         readonly TiltCorrector _tiltCorrector;
+        readonly Renderer _renderer;
+        readonly FrameManager _frameManager;
+        readonly ImageWriter _imageWriter;
 
         Device _device;
         Tracker _tracker;
@@ -27,12 +30,18 @@ namespace KinectPoseInferencer
             KeyInputProvider keyInputProvider,
             UserActionService userActionService,
             LandmarkHandler landmarkHandler,
-            TiltCorrector tiltCorrector)
+            TiltCorrector tiltCorrector,
+            Renderer renderer,
+            FrameManager frameManager,
+            ImageWriter imageWriter)
         {
             _keyInputProvider = keyInputProvider ?? throw new ArgumentNullException(nameof(keyInputProvider));
             _userActionService = userActionService ?? throw new ArgumentNullException(nameof(userActionService));
             _landmarkHandler = landmarkHandler ?? throw new ArgumentNullException(nameof(landmarkHandler));
             _tiltCorrector = tiltCorrector ?? throw new ArgumentNullException(nameof(tiltCorrector));
+            _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
+            _frameManager = frameManager ?? throw new ArgumentNullException(nameof(frameManager));
+            _imageWriter = imageWriter ?? throw new ArgumentNullException(nameof(imageWriter));
         }
 
         public void RunOfflineProcess(string filePath)
@@ -98,10 +107,7 @@ namespace KinectPoseInferencer
         public void RunOnlineProcess()
         {
             // Setup classes
-            using var visualizerData = new FrameManager();
-            var renderer = new Renderer(visualizerData);
-            renderer.StartVisualizationThread();
-            using var imgWriter = new ImageWriter();
+            _renderer.StartVisualizationThread();
 
             // Setup a device
             _device = Device.Open();
@@ -134,7 +140,7 @@ namespace KinectPoseInferencer
             {
                 SendLandmarks
             };
-            while (renderer.IsActive)
+            while (_renderer.IsActive)
             {
                 using (Capture sensorCapture = _device.GetCapture())
                 {
@@ -158,25 +164,16 @@ namespace KinectPoseInferencer
                 using var frame = tracker.PopResult();
                 if (frame is not null)
                 {
-                    visualizerData.Frame = frame.DuplicateReference();
-                    WriteColorImageToSharedMemory(frame, imgWriter);
+                    _frameManager.Frame = frame.DuplicateReference();
+                    var colorImg = frame.Capture.ColorImage;
+                    try
+                    {
+                        _imageWriter.WriteImage(colorImg);
+                    }
+                    catch { }
                     Inference(frame, landmarkHandlingActions);
                 }
             }
-        }
-
-        void WriteColorImageToSharedMemory(BodyFrame frame, ImageWriter imgWriter)
-        {
-            try
-            {
-                var colorImg = frame.Capture.ColorImage;
-                if (colorImg is not null)
-                {
-                    var bgraArr = colorImg.GetSpan<byte>().ToArray();
-                    imgWriter.Write(bgraArr);
-                }
-            }
-            catch { }
         }
 
         void Inference(BodyFrame frame, Action<Skeleton>[] actions)

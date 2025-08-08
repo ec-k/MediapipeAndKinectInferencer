@@ -22,6 +22,9 @@ namespace KinectPoseInferencer
             services.AddSingleton<Input.UserAction>();
             services.AddSingleton<PoseInference.LandmarkHandler>();
             services.AddSingleton<PoseInference.TiltCorrector>();
+            services.AddSingleton<Renderers.Renderer>();
+            services.AddSingleton<ImageWriter>();
+            services.AddSingleton<FrameManager>();
             services.AddSingleton<AppManager>();
             return services.BuildServiceProvider();
         }
