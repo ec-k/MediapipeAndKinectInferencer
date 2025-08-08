@@ -15,7 +15,25 @@ namespace KinectPoseInferencer
 {
     internal class AppManager
     {
-        LandmarkHandler _landmarkHandler;
+        readonly KeyInputProvider _keyInputProvider;
+        readonly UserActionService _userActionService;
+        readonly LandmarkHandler _landmarkHandler;
+        readonly TiltCorrector _tiltCorrector;
+
+        Device _device;
+        Tracker _tracker;
+
+        public AppManager(
+            KeyInputProvider keyInputProvider,
+            UserActionService userActionService,
+            LandmarkHandler landmarkHandler,
+            TiltCorrector tiltCorrector)
+        {
+            _keyInputProvider = keyInputProvider ?? throw new ArgumentNullException(nameof(keyInputProvider));
+            _userActionService = userActionService ?? throw new ArgumentNullException(nameof(userActionService));
+            _landmarkHandler = landmarkHandler ?? throw new ArgumentNullException(nameof(landmarkHandler));
+            _tiltCorrector = tiltCorrector ?? throw new ArgumentNullException(nameof(tiltCorrector));
+        }
 
         public void RunOfflineProcess(string filePath)
         {
@@ -86,7 +104,7 @@ namespace KinectPoseInferencer
             using var imgWriter = new ImageWriter();
 
             // Setup a device
-            using var device = Device.Open();
+            _device = Device.Open();
             var deviceConfig = new DeviceConfiguration()
             {
                 CameraFps = FrameRate.Thirty,
@@ -95,41 +113,30 @@ namespace KinectPoseInferencer
                 WiredSyncMode = WiredSyncMode.Standalone,
                 ColorFormat = ImageFormat.ColorBgra32,
             };
-            device.StartCameras(deviceConfig);
+            _device.StartCameras(deviceConfig);
             Calibration deviceCalibration;
-            device.GetCalibration(deviceConfig.DepthMode, deviceConfig.ColorResolution, out deviceCalibration);
-            var tracker = new Tracker(
-                    deviceCalibration,
-                    new TrackerConfiguration
-                    {
-                        SensorOrientation = SensorOrientation.Default,
-                        ProcessingMode = TrackerProcessingMode.Gpu,
-                        GpuDeviceId = 0,
-                        ModelPath = null
-                    });
-            device.StartImu();
-            var imuSample = device.GetImuSample();
+            _device.GetCalibration(deviceConfig.DepthMode, deviceConfig.ColorResolution, out deviceCalibration);
+            var tracker = new Tracker(deviceCalibration, new TrackerConfiguration
+            {
+                SensorOrientation = SensorOrientation.Default,
+                ProcessingMode = TrackerProcessingMode.Gpu,
+                GpuDeviceId = 0,
+                ModelPath = null
+            });
+            _device.StartImu();
+            var imuSample = _device.GetImuSample();
 
             // Setup for this app which requires device settings
             PointCloud.ComputePointCloudCache(deviceCalibration);
-            var tiltCorrector = new TiltCorrector(imuSample, deviceCalibration);
-            using var landmarkHandler = new LandmarkHandler(tiltCorrector);
-            _landmarkHandler = landmarkHandler;
-
-
-            var actionMap = new ActionMap();
-            var keyInputProvider = new KeyInputProvider();
-            var userActionService = new UserActionService(
-                actionMap,
-                keyInputProvider,
-                new UserAction(landmarkHandler));
+            _tiltCorrector.UpdateTiltRotation(imuSample, deviceCalibration);
+            _userActionService.SetKinectRuntimeData(imuSample, deviceCalibration);
             var landmarkHandlingActions = new Action<Skeleton>[]
             {
                 SendLandmarks
             };
             while (renderer.IsActive)
             {
-                using (Capture sensorCapture = device.GetCapture())
+                using (Capture sensorCapture = _device.GetCapture())
                 {
                     try
                     {
@@ -144,7 +151,7 @@ namespace KinectPoseInferencer
 
                 if (Console.KeyAvailable)
                 {
-                    keyInputProvider.ReadInputAndNotify();
+                    _keyInputProvider.ReadInputAndNotify();
                 }
 
                 // Try getting latest tracker frame.
@@ -157,8 +164,6 @@ namespace KinectPoseInferencer
                 }
             }
         }
-
-
 
         void WriteColorImageToSharedMemory(BodyFrame frame, ImageWriter imgWriter)
         {
@@ -189,6 +194,13 @@ namespace KinectPoseInferencer
         {
             _landmarkHandler.Update(skeleton);
             _landmarkHandler.SendResults();
+        }
+
+        public void Dispose()
+        {
+            _landmarkHandler?.Dispose();
+            _device?.Dispose();
+            _tracker?.Dispose();
         }
     }
 }

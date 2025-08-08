@@ -6,23 +6,13 @@ using K4AdotNet;
 
 namespace KinectPoseInferencer.PoseInference
 {
-    internal class TiltCorrector
+    internal class TiltCorrector: IDisposable
     {
-
-        ImuSample _imuSample;
-        Calibration _sensorCalibration;
         System.Numerics.Quaternion _inversedCameraTiltRotation;
 
-        internal TiltCorrector(ImuSample imuSample, Calibration sensorCalibration)
+        internal void UpdateTiltRotation(ImuSample imuSample, Calibration sensorCalibration)
         {
-            _imuSample = imuSample;
-            _sensorCalibration = sensorCalibration;
-            UpdateTiltRotation();
-        }
-
-        internal void UpdateTiltRotation()
-        {
-            var cameraTiltRotation = CalculateTiltRotation(_imuSample, _sensorCalibration);
+            var cameraTiltRotation = CalculateTiltRotation(imuSample, sensorCalibration);
             _inversedCameraTiltRotation = System.Numerics.Quaternion.Inverse(cameraTiltRotation);
             Console.WriteLine("Calibrated");
         }
@@ -69,6 +59,8 @@ namespace KinectPoseInferencer.PoseInference
             var convertedPos = Vector3.Transform(pos, _inversedCameraTiltRotation);
             return (convertedPos.X, convertedPos.Y, convertedPos.Z);
         }
+
+        public void Dispose() { }
     }
 
     internal static class Utils
@@ -96,6 +88,6 @@ namespace KinectPoseInferencer.PoseInference
         internal static float Magnitude(this Vector3 v)
         {
             return Vector3.Distance(Vector3.Zero, v);
-        }
+        } 
     }
 }

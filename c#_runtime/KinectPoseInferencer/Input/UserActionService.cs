@@ -1,4 +1,5 @@
-﻿using System;
+﻿using K4AdotNet.Sensor;
+using System;
 
 namespace KinectPoseInferencer.Input
 {
@@ -8,7 +9,10 @@ namespace KinectPoseInferencer.Input
         readonly KeyInputProvider _keyInputProvider;
         readonly UserAction _userAction;
 
-        internal UserActionService(
+        ImuSample _imuSample;
+        Calibration _calibration;
+
+        public UserActionService(
             ActionMap actionMap,
             KeyInputProvider keyInputProvider,
             UserAction userAction)
@@ -22,7 +26,7 @@ namespace KinectPoseInferencer.Input
 
         void Initizlie()
         {
-            _actionMap.RegisterAction("C", _userAction.Calibrate);
+            _actionMap.RegisterAction("C", () => _userAction.Calibrate(_imuSample, _calibration));
             _actionMap.RegisterAction("R", _userAction.ResetCalibrationSetting);
 
             _keyInputProvider.OnKeyPressed += HandleKeyPressed;
@@ -30,7 +34,7 @@ namespace KinectPoseInferencer.Input
 
         void HandleKeyPressed(string key)
         {
-            if(_actionMap.KeyActions.TryGetValue(key, out var action))
+            if (_actionMap.KeyActions.TryGetValue(key, out var action))
             {
                 action?.Invoke();
             }
@@ -38,6 +42,12 @@ namespace KinectPoseInferencer.Input
             {
                 Console.WriteLine($"No action registered for key: {key}");
             }
+        }
+
+        public void SetKinectRuntimeData(ImuSample imuSample, Calibration calibration)
+        {
+            _imuSample = imuSample;
+            _calibration = calibration;
         }
 
         void IDisposable.Dispose()

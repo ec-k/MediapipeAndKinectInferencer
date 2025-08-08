@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using HumanLandmarks;
 using Google.Protobuf;
+using K4AdotNet.Sensor;
 using K4AdotNet.BodyTracking;
 
 namespace KinectPoseInferencer.PoseInference
@@ -34,10 +35,10 @@ namespace KinectPoseInferencer.PoseInference
 
             _receiver.BeginReceive(OnReceived, _receiver);
 
-            _tiltCorrector = tiltCorrector;
+            _tiltCorrector = tiltCorrector ?? throw new ArgumentNullException(nameof(tiltCorrector));
         }
 
-        internal void UpdateTiltRotation() => _tiltCorrector.UpdateTiltRotation();
+        internal void UpdateTiltRotation(ImuSample imuSample, Calibration calibration) => _tiltCorrector.UpdateTiltRotation(imuSample, calibration);
         internal void ResetTiltRotation() => _tiltCorrector.ResetTiltRotation();
 
         public void Update(Skeleton skeleton)
@@ -138,6 +139,7 @@ namespace KinectPoseInferencer.PoseInference
         {
             _sender.Close(); _sender.Dispose();
             _receiver.Close(); _receiver.Dispose();
+            _tiltCorrector.Dispose();
         }
     }
 }

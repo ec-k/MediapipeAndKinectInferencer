@@ -1,4 +1,5 @@
-﻿using KinectPoseInferencer.PoseInference;
+﻿using K4AdotNet.Sensor;
+using KinectPoseInferencer.PoseInference;
 using System;
 
 namespace KinectPoseInferencer.Input
@@ -6,14 +7,15 @@ namespace KinectPoseInferencer.Input
     internal class UserAction
     {
         readonly LandmarkHandler _landmarkHandler;
-        internal UserAction(LandmarkHandler landmarkHandler)
+
+        public UserAction(LandmarkHandler landmarkHandler)
         {
-            _landmarkHandler = landmarkHandler;
+            _landmarkHandler = landmarkHandler ?? throw new ArgumentNullException(nameof(landmarkHandler));
         }
 
-        public void Calibrate()
+        public void Calibrate(ImuSample imuSample, Calibration calibration)
         {
-            _landmarkHandler.UpdateTiltRotation();
+            _landmarkHandler.UpdateTiltRotation(imuSample, calibration);
             Console.WriteLine("Calibration setting is updated.");
         }
 
