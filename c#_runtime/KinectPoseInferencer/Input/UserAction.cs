@@ -6,22 +6,22 @@ namespace KinectPoseInferencer.Input
 {
     internal class UserAction
     {
-        readonly LandmarkHandler _landmarkHandler;
+        readonly SkeletonToPoseLandmarksConverter _converter;
 
-        public UserAction(LandmarkHandler landmarkHandler)
+        public UserAction(SkeletonToPoseLandmarksConverter converter)
         {
-            _landmarkHandler = landmarkHandler ?? throw new ArgumentNullException(nameof(landmarkHandler));
+            _converter = converter ?? throw new ArgumentNullException(nameof(converter));
         }
 
         public void Calibrate(ImuSample imuSample, Calibration calibration)
         {
-            _landmarkHandler.UpdateTiltRotation(imuSample, calibration);
+            _converter.UpdateTiltRotation(imuSample, calibration);
             Console.WriteLine("Calibration setting is updated.");
         }
 
         public void ResetCalibrationSetting()
         {
-            _landmarkHandler.ResetTiltRotation();
+            _converter.ResetTiltRotation();
             Console.WriteLine("Calibration setting is reset.");
         }
     }
