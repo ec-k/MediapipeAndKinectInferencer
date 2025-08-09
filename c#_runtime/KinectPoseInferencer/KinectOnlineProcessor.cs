@@ -3,17 +3,15 @@
 // https://github.com/microsoft/Azure-Kinect-Samples/blob/master/LICENSE
 
 using K4AdotNet.BodyTracking;
-using K4AdotNet.Record;
 using K4AdotNet.Sensor;
 using KinectPoseInferencer.Input;
 using KinectPoseInferencer.PoseInference;
 using KinectPoseInferencer.Renderers;
 using System;
-using System.IO;
 
 namespace KinectPoseInferencer
 {
-    internal class AppManager
+    internal class KinectOnlineProcessor
     {
         readonly KeyInputProvider _keyInputProvider;
         readonly UserActionService _userActionService;
@@ -26,7 +24,7 @@ namespace KinectPoseInferencer
         Device _device;
         Tracker _tracker;
 
-        public AppManager(
+        public KinectOnlineProcessor(
             KeyInputProvider keyInputProvider,
             UserActionService userActionService,
             LandmarkHandler landmarkHandler,
@@ -44,67 +42,7 @@ namespace KinectPoseInferencer
             _imageWriter = imageWriter ?? throw new ArgumentNullException(nameof(imageWriter));
         }
 
-        public void RunOfflineProcess(string filePath)
-        {
-            // Read the file
-            if (!File.Exists(filePath))
-            {
-                Console.WriteLine($"Error: {filePath} is not found.");
-                return;
-            }
-            Console.WriteLine($"Reading a .mkv file '{filePath}' ...");
-
-            // Initialize playeback and tracker
-            var playback = new Playback(filePath);
-            RecordConfiguration recordConfig;
-            Calibration calibration;
-            playback.GetRecordConfiguration(out recordConfig);
-            playback.GetCalibration(out calibration);
-            var tracker = new Tracker(
-                calibration
-                , new TrackerConfiguration
-                {
-                    SensorOrientation = SensorOrientation.Default,
-                    ProcessingMode = TrackerProcessingMode.Gpu,
-                    GpuDeviceId = 0,
-                    ModelPath = null
-                });
-
-            try
-            {
-                while (true)
-                {
-                    Capture capture;
-                    var waitResult = playback.TryGetNextCapture(out capture);
-                    if (!waitResult)
-                    {
-                        Console.WriteLine("Error: Failed to get a capture.");
-                        break;
-                    }
-
-                    tracker.EnqueueCapture(capture);
-                    capture.Dispose();
-
-                    using var frame = tracker.PopResult();
-                    if (frame is not null)
-                    {
-                        Inference(frame, new Action<Skeleton>[] { });
-
-                    }
-                    frame.Dispose();
-                }
-            }
-            finally
-            {
-                playback.Dispose();
-            }
-
-            Console.WriteLine("ボディトラッキング処理が完了しました。");
-            Console.WriteLine("任意のキーを押して終了します...");
-            Console.ReadKey();
-        }
-
-        public void RunOnlineProcess()
+        public void Run()
         {
             // Setup classes
             _renderer.StartVisualizationThread();

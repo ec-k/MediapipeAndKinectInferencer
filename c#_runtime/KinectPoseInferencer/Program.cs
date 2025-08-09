@@ -9,7 +9,7 @@ namespace KinectPoseInferencer
         static void Main()
         {
             using var serviceProvider = Build();
-            var appManager = serviceProvider.GetRequiredService<AppManager>();
+            var appManager = serviceProvider.GetRequiredService<KinectOnlineProcessor>();
             appManager.RunOnlineProcess();
         }
 
@@ -25,7 +25,7 @@ namespace KinectPoseInferencer
             services.AddSingleton<Renderers.Renderer>();
             services.AddSingleton<ImageWriter>();
             services.AddSingleton<FrameManager>();
-            services.AddSingleton<AppManager>();
+            services.AddSingleton<KinectOnlineProcessor>();
             return services.BuildServiceProvider();
         }
     }
