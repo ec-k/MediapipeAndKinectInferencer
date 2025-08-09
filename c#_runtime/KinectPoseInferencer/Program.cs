@@ -6,16 +6,42 @@ namespace KinectPoseInferencer
 {
     internal static class Program
     {
+        class AppStartupOptoins
+        {
+            public bool IsOffline { get; set; }
+            public string VideoFilePath { get; set; }
+        }
+
         internal static void Main(string[] args)
         {
-            var isOffline = args.Contains("--offline", StringComparer.OrdinalIgnoreCase);
-            string videoFilePath = null;
-            if (isOffline)
+            var options = ParseCommandLineArguments(args);
+
+            using var serviceProvider = Build();
+            if (options.IsOffline)
+            {
+                Console.WriteLine($"Running in OFFLINE mode (from video file: '{options.VideoFilePath}').");
+                var appManager = serviceProvider.GetRequiredService<KinectOfflineProcessor>();
+                appManager.Run(options.VideoFilePath);
+            }
+            else
+            {
+                Console.WriteLine("Running in ONLINE mode (from live Kinect stream).");
+                var appManager = serviceProvider.GetRequiredService<KinectOnlineProcessor>();
+                appManager.Run();
+            }
+        }
+
+        static AppStartupOptoins ParseCommandLineArguments(string[] args)
+        {
+            var options = new AppStartupOptoins();
+            options.IsOffline = args.Contains("--offline", StringComparer.OrdinalIgnoreCase);
+            if (options.IsOffline)
             {
                 var offlineIndex = Array.FindIndex(args, arg => arg.Equals("--offline", StringComparison.OrdinalIgnoreCase));
-                if(offlineIndex != -1 && offlineIndex + 1 < args.Length)
-                    videoFilePath = args[offlineIndex + 1];
-                if (string.IsNullOrWhiteSpace(videoFilePath))
+                if (offlineIndex != -1 && offlineIndex + 1 < args.Length)
+                    options.VideoFilePath = args[offlineIndex + 1];
+
+                if (string.IsNullOrWhiteSpace(options.VideoFilePath))
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine("Error: OFFLINE mode requires a video file path. Please specify it after --offline argument.");
@@ -24,20 +50,8 @@ namespace KinectPoseInferencer
                     Environment.Exit(1);
                 }
             }
-            else
-                Console.WriteLine("Running in online mode.");
 
-            using var serviceProvider = Build();
-            if (isOffline)
-            {
-                var appManager = serviceProvider.GetRequiredService<KinectOfflineProcessor>();
-                appManager.Run(videoFilePath);
-            }
-            else
-            {
-                var appManager = serviceProvider.GetRequiredService<KinectOnlineProcessor>();
-                appManager.Run();
-            }
+            return options;
         }
 
         static ServiceProvider Build()
