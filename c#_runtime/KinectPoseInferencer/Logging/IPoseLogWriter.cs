@@ -1,5 +1,4 @@
 ﻿using HumanLandmarks;
-using System;
 
 namespace KinectPoseInferencer.Logging
 {
@@ -11,6 +10,6 @@ namespace KinectPoseInferencer.Logging
         /// Writes the pose landmarks of one frame to the log file.
         /// </summary>
         /// <param name="poseLandmarks"></param>
-        void Write(PoseLandmarks poseLandmarks);
+        void Write(KinectPoseLandmarks poseLandmarks);
     }
 }

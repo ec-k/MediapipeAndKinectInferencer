@@ -1,9 +1,11 @@
 ﻿using K4AdotNet.BodyTracking;
 using K4AdotNet.Record;
 using K4AdotNet.Sensor;
+using KinectPoseInferencer.Logging;
+using KinectPoseInferencer.PoseInference;
+using KinectPoseInferencer.Renderers;
 using System;
 using System.IO;
-using KinectPoseInferencer.Renderers;
 using System.Threading;
 
 namespace KinectPoseInferencer
@@ -12,13 +14,19 @@ namespace KinectPoseInferencer
     {
         readonly Renderer _renderer;
         readonly FrameManager _frameManager;
+        readonly SkeletonToPoseLandmarksConverter _converter;
+        readonly IPoseLogWriter _poseLogWriter;
 
         public KinectOfflineProcessor(
             Renderer renderer,
-            FrameManager frameManager)
+            FrameManager frameManager,
+            SkeletonToPoseLandmarksConverter converter,
+            IPoseLogWriter poseLogWriter)
         {
             _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
             _frameManager = frameManager ?? throw new ArgumentNullException(nameof(frameManager));
+            _converter = converter ?? throw new ArgumentNullException(nameof(converter));
+            _poseLogWriter = poseLogWriter ?? throw new ArgumentNullException(nameof(poseLogWriter));
         }
 
         public void Run(string filePath)
@@ -49,6 +57,14 @@ namespace KinectPoseInferencer
                 });
             PointCloud.ComputePointCloudCache(calibration);
             var frameInterval = TimeSpan.FromSeconds(1f / (float)recordConfig.CameraFps);
+            _poseLogWriter.Initialize("Landmarks.log");
+            var landmarkHandlingActions = new Action<Skeleton>[]
+            {
+                skeleton => {
+                    var landmarks = _converter.Convert(skeleton);
+                    _poseLogWriter.Write(landmarks);
+                }
+            };
             while (_renderer.IsActive)
             {
                 Capture capture;
@@ -66,7 +82,7 @@ namespace KinectPoseInferencer
                 if (frame is not null)
                 {
                     _frameManager.Frame = frame.DuplicateReference();
-                    Inference(frame, new Action<Skeleton>[] { });
+                    Inference(frame, landmarkHandlingActions);
                 }
                 else
                 {

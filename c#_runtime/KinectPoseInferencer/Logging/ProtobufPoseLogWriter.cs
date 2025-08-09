@@ -6,7 +6,7 @@ using Google.Protobuf;
 
 namespace KinectPoseInferencer.Logging
 {
-    internal class PoseLogWriter: IPoseLogWriter, IDisposable
+    internal class ProtobufPoseLogWriter: IPoseLogWriter, IDisposable
     {
         FileStream _fileStream;
         bool _isInitialized;
@@ -21,9 +21,8 @@ namespace KinectPoseInferencer.Logging
         public void Initialize(string filePath)
         {
             if (_isInitialized)
-            {
-                throw new InvalidOperationException("PoseLogWriter has been initialized.");
-            }
+                throw new InvalidOperationException("ProtobufPoseLogWriter has been initialized.");
+
             try
             {
                 _fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
@@ -41,11 +40,11 @@ namespace KinectPoseInferencer.Logging
         /// Before writing, the byte size of the message is written as a 4-byte prefix.
         /// </summary>
         /// <param name="poseLandmarks">The PoseLandmarks object to write.</param>
-        public void Write(PoseLandmarks poseLandmarks)
+        public void Write(KinectPoseLandmarks poseLandmarks)
         {
             if (!_isInitialized || _fileStream == null)
             {
-                throw new InvalidOperationException("PoseLogWriter has not been initialized.");
+                throw new InvalidOperationException("ProtobufPoseLogWriter has not been initialized.");
             }
 
             try
