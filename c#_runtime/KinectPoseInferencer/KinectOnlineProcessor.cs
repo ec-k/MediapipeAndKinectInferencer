@@ -5,8 +5,9 @@
 using K4AdotNet.BodyTracking;
 using K4AdotNet.Sensor;
 using KinectPoseInferencer.Input;
-using KinectPoseInferencer.PoseInference;
 using KinectPoseInferencer.Renderers;
+using KinectPoseInferencer.PoseInference;
+using KinectPoseInferencer.PoseInference.Filters;
 using System;
 
 namespace KinectPoseInferencer
@@ -80,6 +81,7 @@ namespace KinectPoseInferencer
             };
             while (_renderer.IsActive)
             {
+                _tiltCorrector.UpdateTiltRotation(_device.GetImuSample(), deviceCalibration);
                 using (Capture sensorCapture = _device.GetCapture())
                 {
                     try
