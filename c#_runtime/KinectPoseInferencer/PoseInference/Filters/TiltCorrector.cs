@@ -1,25 +1,23 @@
 ﻿using K4AdotNet.Sensor;
 using System;
 using System.Numerics;
-using HumanLandmarks;
-using K4AdotNet;
 
-namespace KinectPoseInferencer.PoseInference
+namespace KinectPoseInferencer.PoseInference.Filters
 {
-    internal class TiltCorrector: IDisposable
+    internal class TiltCorrector: IPositionFilter
     {
-        System.Numerics.Quaternion _inversedCameraTiltRotation;
+        Quaternion _inversedCameraTiltRotation;
 
         internal void UpdateTiltRotation(ImuSample imuSample, Calibration sensorCalibration)
         {
             var cameraTiltRotation = CalculateTiltRotation(imuSample, sensorCalibration);
-            _inversedCameraTiltRotation = System.Numerics.Quaternion.Inverse(cameraTiltRotation);
+            _inversedCameraTiltRotation = Quaternion.Inverse(cameraTiltRotation);
             Console.WriteLine("Calibrated");
         }
 
         internal void ResetTiltRotation()
         {
-            _inversedCameraTiltRotation = System.Numerics.Quaternion.Identity;
+            _inversedCameraTiltRotation = Quaternion.Identity;
             Console.WriteLine("Reset");
         }
 
@@ -29,7 +27,7 @@ namespace KinectPoseInferencer.PoseInference
             return measuredAccelVector;
         }
 
-        System.Numerics.Quaternion CalculateTiltRotation(ImuSample imuSample, Calibration sensorCalibration)
+        Quaternion CalculateTiltRotation(ImuSample imuSample, Calibration sensorCalibration)
         {
             var measuredSensorUpVector_AccelSpace = GetAccelerometerMeasurement(imuSample);
             var idealUpVector_AccelSpace = -Vector3.UnitZ;
@@ -41,23 +39,12 @@ namespace KinectPoseInferencer.PoseInference
             var cameraTiltRotation = Utils.FromToRotation(idealUpVector_DepthSpace, actualSensorUpVector_DepthSpace);
             return cameraTiltRotation;
         }
-        
-        internal void CorrectLandmarkPosition(ref Landmark landmark)
-        {
-            var (x, y, z) = CorrectLandmarkPosition(landmark.Position.X, landmark.Position.Y, landmark.Position.Z);
 
-            landmark.Position.X = x;
-            landmark.Position.Y = y;
-            landmark.Position.Z = z;
-        }
-
-        internal (float, float, float) CorrectLandmarkPosition(float x, float y, float z)
+        public Vector3 Apply(Vector3 position)
         {
-            var pos = new Vector3(x, y, z);
+            var pos = new Vector3(position.X, position.Y, position.Z);
             var convertedPos = Vector3.Transform(pos, _inversedCameraTiltRotation);
-            return (convertedPos.X, convertedPos.Y, convertedPos.Z);
+            return pos;
         }
-
-        public void Dispose() { }
     }
 }

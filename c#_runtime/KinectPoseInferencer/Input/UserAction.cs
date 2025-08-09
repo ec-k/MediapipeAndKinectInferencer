@@ -1,27 +1,27 @@
 ﻿using K4AdotNet.Sensor;
-using KinectPoseInferencer.PoseInference;
+using KinectPoseInferencer.PoseInference.Filters;
 using System;
 
 namespace KinectPoseInferencer.Input
 {
     internal class UserAction
     {
-        readonly SkeletonToPoseLandmarksConverter _converter;
+        readonly TiltCorrector _tiltCorrector;
 
-        public UserAction(SkeletonToPoseLandmarksConverter converter)
+        public UserAction(TiltCorrector tiltCorrector)
         {
-            _converter = converter ?? throw new ArgumentNullException(nameof(converter));
+            _tiltCorrector = tiltCorrector ?? throw new ArgumentNullException(nameof(tiltCorrector));
         }
 
         public void Calibrate(ImuSample imuSample, Calibration calibration)
         {
-            _converter.UpdateTiltRotation(imuSample, calibration);
+            _tiltCorrector.UpdateTiltRotation(imuSample, calibration);
             Console.WriteLine("Calibration setting is updated.");
         }
 
         public void ResetCalibrationSetting()
         {
-            _converter.ResetTiltRotation();
+            _tiltCorrector.ResetTiltRotation();
             Console.WriteLine("Calibration setting is reset.");
         }
     }

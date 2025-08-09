@@ -1,21 +1,21 @@
 ﻿using HumanLandmarks;
-using K4AdotNet.Sensor;
 using K4AdotNet.BodyTracking;
 using System;
+using System.Numerics;
+using KinectPoseInferencer.PoseInference.Filters;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace KinectPoseInferencer.PoseInference
 {
     internal class SkeletonToPoseLandmarksConverter
     {
-        readonly TiltCorrector _tiltCorrector;
+        readonly IEnumerable<IPositionFilter> _positionFilters;
 
-        public SkeletonToPoseLandmarksConverter(TiltCorrector tiltCorrector)
+        public SkeletonToPoseLandmarksConverter(IEnumerable<IPositionFilter> positionFilters)
         {
-            _tiltCorrector = tiltCorrector ?? throw new ArgumentNullException(nameof(tiltCorrector));
+            _positionFilters = positionFilters ?? throw new ArgumentNullException(nameof(positionFilters));
         }
-
-        internal void UpdateTiltRotation(ImuSample imuSample, Calibration calibration) => _tiltCorrector.UpdateTiltRotation(imuSample, calibration);
-        internal void ResetTiltRotation() => _tiltCorrector.ResetTiltRotation();
 
         internal KinectPoseLandmarks Convert(Skeleton skeleton)
         {
@@ -44,17 +44,17 @@ namespace KinectPoseInferencer.PoseInference
         Landmark PackLandmark(Joint joint)
         {
             var lm = new Landmark();
-            var position = new Position();
 
-            // Convert position from millimeters to meters
-            position.X = joint.PositionMm.X / 1000;
-            position.Y = joint.PositionMm.Y / 1000;
-            position.Z = joint.PositionMm.Z / 1000;
+            var initialPosition = new Vector3(joint.PositionMm.X, joint.PositionMm.Y, joint.PositionMm.Z);
+            var filteredPosition = _positionFilters.Aggregate(initialPosition, (current, filter) => filter.Apply(current));
 
-            (position.X, position.Y, position.Z) = _tiltCorrector.CorrectLandmarkPosition(position.X, position.Y, position.Z);
-            (position.X, position.Y, position.Z) = TransformCoordination(position.X, position.Y, position.Z);
+            lm.Position = new Position()
+            {
+                X = filteredPosition.X,
+                Y = filteredPosition.Y,
+                Z = filteredPosition.Z
+            };
 
-            lm.Position = position;
             lm.Confidence = joint.ConfidenceLevel switch
             {
                 JointConfidenceLevel.None => 0f,
@@ -67,7 +67,6 @@ namespace KinectPoseInferencer.PoseInference
             return lm;
         }
 
-        (float, float, float) TransformCoordination(float x, float y, float z)
-            => (-x, -y, -z);
+        
     }
 }
