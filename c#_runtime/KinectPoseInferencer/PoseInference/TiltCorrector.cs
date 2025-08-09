@@ -23,24 +23,22 @@ namespace KinectPoseInferencer.PoseInference
             Console.WriteLine("Reset");
         }
 
-        Vector3 GetGravityVector(ImuSample imuSample)
+        Vector3 GetAccelerometerMeasurement(ImuSample imuSample)
         {
-            var vector3Result = new Vector3(imuSample.AccelerometerSample.X, imuSample.AccelerometerSample.Y, imuSample.AccelerometerSample.Z);
-            return vector3Result;
+            var measuredAccelVector = new Vector3(imuSample.AccelerometerSample.X, imuSample.AccelerometerSample.Y, imuSample.AccelerometerSample.Z);
+            return measuredAccelVector;
         }
 
         System.Numerics.Quaternion CalculateTiltRotation(ImuSample imuSample, Calibration sensorCalibration)
         {
-            var gravityVector = GetGravityVector(imuSample);
-            var downVector = -Vector3.UnitZ;
+            var measuredSensorUpVector_AccelSpace = GetAccelerometerMeasurement(imuSample);
+            var idealUpVector_AccelSpace = -Vector3.UnitZ;
 
-            var coordinationTransformationMatrix = sensorCalibration.GetExtrinsics(CalibrationGeometry.Accel, CalibrationGeometry.Depth).Rotation;
+            var coordTransform_AccelToDepth = sensorCalibration.GetExtrinsics(CalibrationGeometry.Accel, CalibrationGeometry.Depth).Rotation;
+            var actualSensorUpVector_DepthSpace = measuredSensorUpVector_AccelSpace.Transform(coordTransform_AccelToDepth);
+            var idealUpVector_DepthSpace = idealUpVector_AccelSpace.Transform(coordTransform_AccelToDepth);
 
-            var R_gravity = gravityVector.Transform(coordinationTransformationMatrix);
-            var R_down = downVector.Transform(coordinationTransformationMatrix);
-
-            var cameraTiltRotation = Utils.FromToRotation(R_down, R_gravity);
-
+            var cameraTiltRotation = Utils.FromToRotation(idealUpVector_DepthSpace, actualSensorUpVector_DepthSpace);
             return cameraTiltRotation;
         }
         
