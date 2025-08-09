@@ -2,9 +2,9 @@
 using K4AdotNet.BodyTracking;
 using System;
 using System.Numerics;
-using KinectPoseInferencer.PoseInference.Filters;
 using System.Collections.Generic;
 using System.Linq;
+using KinectPoseInferencer.PoseInference.Filters;
 
 namespace KinectPoseInferencer.PoseInference
 {
@@ -20,24 +20,21 @@ namespace KinectPoseInferencer.PoseInference
         internal KinectPoseLandmarks Convert(Skeleton skeleton)
         {
             var kinectBodyLandmarks = new KinectPoseLandmarks();
-            const int length = (int)KinectPoseLandmarks.Types.LandmarkIndex.Length;
-            var poseLandmarks = new Landmark[length];
+            var packedLandmarks = Enum.GetValues(typeof(JointType))
+                .Cast<JointType>()
+                .Select(jointType => skeleton[jointType])
+                .Select(joint => PackLandmark(joint))
+                .ToList();
 
-            var enumArr = Enum.GetValues(typeof(JointType));
-            for (var jointId = 0; jointId < enumArr.Length; jointId++)
+            var length = (int)KinectPoseLandmarks.Types.LandmarkIndex.Length;
+            var poseLandmarks = new List<Landmark>(length);
+            for (var i = 0; i < length; i++)
             {
-                var joint = skeleton[(JointType)jointId];
-                var lm = PackLandmark(joint);
-                poseLandmarks[jointId] = lm;
+                var currentLandmark = (i < packedLandmarks.Count) ? packedLandmarks[i] : new Landmark();
+                poseLandmarks.Add(currentLandmark);
             }
-            for (var i = 0; i < poseLandmarks.Length; i++)
-            {
-                if (poseLandmarks[i] == null)
-                    poseLandmarks[i] = new Landmark();
-            }
-            if (poseLandmarks != null && poseLandmarks.Length > 0)
-                kinectBodyLandmarks.Landmarks.AddRange(poseLandmarks);
 
+            kinectBodyLandmarks.Landmarks.AddRange(poseLandmarks);
             return kinectBodyLandmarks;
         }
 
