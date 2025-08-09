@@ -12,16 +12,13 @@ namespace KinectPoseInferencer
     {
         readonly Renderer _renderer;
         readonly FrameManager _frameManager;
-        readonly ImageWriter _imageWriter;
 
         public KinectOfflineProcessor(
             Renderer renderer,
-            FrameManager frameManager,
-            ImageWriter imageWriter)
+            FrameManager frameManager)
         {
             _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
             _frameManager = frameManager ?? throw new ArgumentNullException(nameof(frameManager));
-            _imageWriter = imageWriter ?? throw new ArgumentNullException(nameof(imageWriter));
         }
 
         public void Run(string filePath)
