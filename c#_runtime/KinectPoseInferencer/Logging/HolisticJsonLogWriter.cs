@@ -46,7 +46,7 @@ namespace KinectPoseInferencer.Logging
             }
         }
 
-        public void Write(HolisticLandmarks holisticLandmarks, ulong timestampMillis, uint frameNumber)
+        public void Write(HolisticLandmarks holisticLandmarks, double timestampMillis, uint frameNumber)
         {
             if (!_isInitialized || _streamWriter is null)
                 throw new InvalidOperationException("HolisticJsonLogWriter has not been initialized.");

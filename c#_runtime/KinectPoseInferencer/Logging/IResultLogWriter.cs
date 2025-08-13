@@ -11,6 +11,6 @@ namespace KinectPoseInferencer.Logging
         /// Writes the pose landmarks of one frame to the log file.
         /// </summary>
         /// <param name="landmarks"></param>
-        void Write(HolisticLandmarks landmarks, ulong timestampMs, uint frameNumber);
+        void Write(HolisticLandmarks landmarks, double timestampMs, uint frameNumber);
     }
 }

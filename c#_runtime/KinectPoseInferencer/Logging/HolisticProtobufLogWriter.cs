@@ -54,7 +54,7 @@ namespace KinectPoseInferencer.Logging
         /// The message length is written as a 4-byte little-endian prefix, followed by the message bytes.
         /// </summary>
         /// <param name="message">The byte array representing the Protobuf message.</param>
-        public void Write(HolisticLandmarks holisticLandmarks, ulong timestampMillis, uint frameNumber)
+        public void Write(HolisticLandmarks holisticLandmarks, double timestampMillis, uint frameNumber)
         {
             if (!_isInitialized || _fileStream is null)
                 throw new InvalidOperationException("HolisticProtobufLogWriter has not been initialized. Call Initialize() first.");

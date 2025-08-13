@@ -1,4 +1,5 @@
 ﻿using K4AdotNet;
+using K4AdotNet.Sensor;
 using System;
 using System.Numerics;
 
@@ -34,7 +35,7 @@ namespace KinectPoseInferencer
                     Vector3.UnitY : Vector3.UnitX;
 
                 var axis = Vector3.Cross(from, orthogonalAxis);
-                if (axis.LengthSquared() < 0.000001f) 
+                if (axis.LengthSquared() < 0.000001f)
                     axis = Vector3.Cross(from, Vector3.UnitZ);
                 return System.Numerics.Quaternion.CreateFromAxisAngle(axis, MathF.PI); // 180 degrees rotation
             }
@@ -51,5 +52,13 @@ namespace KinectPoseInferencer
         {
             return Vector3.Distance(Vector3.Zero, v);
         }
+
+        internal static int IntCameraFps(FrameRate frameRate) => frameRate switch
+        {
+            FrameRate.Five => 5,
+            FrameRate.Fifteen => 15,
+            FrameRate.Thirty => 30,
+            _ => throw new ArgumentOutOfRangeException(nameof(frameRate), frameRate, null)
+        };
     }
 }

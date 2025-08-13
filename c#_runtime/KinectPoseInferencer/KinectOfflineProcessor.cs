@@ -1,4 +1,5 @@
-﻿using K4AdotNet.BodyTracking;
+﻿using HumanLandmarks.Log;
+using K4AdotNet.BodyTracking;
 using K4AdotNet.Record;
 using K4AdotNet.Sensor;
 using KinectPoseInferencer.Logging;
@@ -14,34 +15,36 @@ namespace KinectPoseInferencer
     {
         readonly Renderer _renderer;
         readonly FrameManager _frameManager;
-        readonly SkeletonToPoseLandmarksConverter _converter;
-        readonly IPoseLogWriter _poseLogWriter;
+        readonly IResultLogWriter _resultLogWriter;
+        readonly LandmarkHandler _landmarkHandler;
+
+        uint _frameCount = 1;
 
         public KinectOfflineProcessor(
             Renderer renderer,
             FrameManager frameManager,
-            SkeletonToPoseLandmarksConverter converter,
-            IPoseLogWriter poseLogWriter)
+            IResultLogWriter resultLogWriter,
+            LandmarkHandler landmarkHandler)
         {
             _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
             _frameManager = frameManager ?? throw new ArgumentNullException(nameof(frameManager));
-            _converter = converter ?? throw new ArgumentNullException(nameof(converter));
-            _poseLogWriter = poseLogWriter ?? throw new ArgumentNullException(nameof(poseLogWriter));
+            _resultLogWriter = resultLogWriter ?? throw new ArgumentNullException(nameof(resultLogWriter));
+            _landmarkHandler = landmarkHandler ?? throw new ArgumentNullException(nameof(landmarkHandler));
         }
 
-        public void Run(string filePath)
+        public void Run(string videlFilePath, string logFileDestination)
         {
             // Read the file
-            if (!File.Exists(filePath))
+            if (!File.Exists(videlFilePath))
             {
-                Console.WriteLine($"Error: {filePath} is not found.");
+                Console.WriteLine($"Error: {videlFilePath} is not found.");
                 return;
             }
-            Console.WriteLine($"Reading a .mkv file '{filePath}' ...");
+            Console.WriteLine($"Reading a .mkv file '{videlFilePath}' ...");
 
             _renderer.StartVisualizationThread();
             // Initialize playeback and tracker
-            using var playback = new Playback(filePath);
+            using var playback = new Playback(videlFilePath);
             RecordConfiguration recordConfig;
             Calibration calibration;
             playback.GetRecordConfiguration(out recordConfig);
@@ -57,14 +60,20 @@ namespace KinectPoseInferencer
                 });
             PointCloud.ComputePointCloudCache(calibration);
             var frameInterval = TimeSpan.FromSeconds(1f / (float)recordConfig.CameraFps);
-            _poseLogWriter.Initialize("Landmarks.log");
-            var landmarkHandlingActions = new Action<Skeleton>[]
-            {
-                skeleton => {
-                    var landmarks = _converter.Convert(skeleton);
-                    _poseLogWriter.Write(landmarks);
-                }
-            };
+
+            // define a header
+            var coordinationSystem = new CoordinateSystem();
+            coordinationSystem.Unit = "milli meter";
+            coordinationSystem.UpAxis = CoordinateSystem.Types.Direction.YPlus;
+            coordinationSystem.RightAxis = CoordinateSystem.Types.Direction.XPlus;
+            coordinationSystem.Handedness = CoordinateSystem.Types.Handedness.LeftHanded;
+
+            var header = new LogHeader();
+            header.LogSchemaVersion = "1.0";
+            header.CaptureFramerateFps = Utils.IntCameraFps(recordConfig.CameraFps);
+            header.CoordinateSystem = coordinationSystem;
+
+            _resultLogWriter.Initialize(logFileDestination, header);
             while (_renderer.IsActive)
             {
                 Capture capture;
@@ -82,7 +91,10 @@ namespace KinectPoseInferencer
                 if (frame is not null)
                 {
                     _frameManager.Frame = frame.DuplicateReference();
-                    Inference(frame, landmarkHandlingActions);
+                    var timestampMs = frame.DeviceTimestamp.TotalMilliseconds;
+                    var nullableSkeleton = Inference(frame, null);
+                    if (nullableSkeleton is Skeleton skeleton)
+                        WriteLog(skeleton, timestampMs);
                 }
                 else
                 {
@@ -96,15 +108,28 @@ namespace KinectPoseInferencer
             Console.ReadKey();
         }
 
-        void Inference(BodyFrame frame, Action<Skeleton>[] actions)
+        Skeleton? Inference(BodyFrame frame, Action<Skeleton>[] actions)
         {
             if (frame.BodyCount > 0)
             {
                 Skeleton skeleton;
                 frame.GetBodySkeleton(0, out skeleton);
-                foreach (var action in actions)
-                    action?.Invoke(skeleton);
+
+                if (actions is not null) 
+                    foreach (var action in actions)
+                        action?.Invoke(skeleton);
+
+                return skeleton;
             }
+            return null;
+        }
+
+        void WriteLog(Skeleton skeleton, double timestampMs)
+        {
+            _landmarkHandler.Update(skeleton);
+            var result = _landmarkHandler.Result;
+            _resultLogWriter.Write(result, timestampMs, _frameCount);
+            _frameCount++;
         }
     }
 }

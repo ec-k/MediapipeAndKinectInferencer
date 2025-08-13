@@ -21,6 +21,7 @@ namespace KinectPoseInferencer.PoseInference
         readonly Action<SocketException> _socketExceptionCallback;
         readonly Action<ObjectDisposedException> _objectDisposedExceptionCallback;
 
+        internal HolisticLandmarks Result => _result;
         HolisticLandmarks _result;
 
         public LandmarkHandler(
