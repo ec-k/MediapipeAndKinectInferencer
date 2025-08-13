@@ -67,7 +67,7 @@ namespace KinectPoseInferencer
             services.AddSingleton<PoseInference.Filters.TiltCorrector>();
             services.AddSingleton<PoseInference.SkeletonToPoseLandmarksConverter>();
             services.AddSingleton<Renderers.Renderer>();
-            services.AddSingleton<Logging.IPoseLogWriter, Logging.ProtobufPoseLogWriter>();
+            services.AddSingleton<Logging.IResultLogWriter, Logging.HolisticJsonLogWriter>();
             services.AddSingleton<ImageWriter>();
             services.AddSingleton<FrameManager>();
             services.AddSingleton<KinectOnlineProcessor>();
