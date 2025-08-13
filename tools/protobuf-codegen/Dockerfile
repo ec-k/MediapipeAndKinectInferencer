@@ -6,6 +6,8 @@ ENV PROTOBUF_VERSION=${PROTOBUF_VERSION}
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     unzip \
+    ca-certificates \
+    && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/
 
 # Install protoc binary from GitHub release page

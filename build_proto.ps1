@@ -26,9 +26,13 @@ $protoFiles = Get-ChildItem -Path $PROTO_PATH -Filter "*.proto" | ForEach-Object
 Write-Host "Generating Python code..."
 foreach ($file in $protoFiles) {
     Write-Host "  Generating Python for $file"
+
+    $volumePathProto = (Convert-Path $PROTO_PATH).Replace('\', '/')
+    $volumePathPython = (Convert-Path $PYTHON_OUT_DIR).Replace('\', '/')
+
     docker run --rm `
-        -v (Convert-Path $PROTO_PATH):/app/proto `
-        -v (Convert-Path $PYTHON_OUT_DIR):/app/python_out `
+        -v `"$volumePathProto`":/app/proto `
+        -v `"$volumePathPython`":/app/python_out `
         $PROTO_IMAGE_NAME `
         protoc -I/app/proto --python_out=/app/python_out /app/proto/$file
 }
@@ -39,9 +43,13 @@ New-Item -Path "$PYTHON_OUT_DIR\__init__.py" -ItemType File -Force | Out-Null
 Write-Host "Generating C# code..."
 foreach ($file in $protoFiles) {
     Write-Host "  Generating C# for $file"
+
+    $volumePathProto = (Convert-Path $PROTO_PATH).Replace('\', '/')
+    $volumePathCsharp = (Convert-Path $CSHARP_OUT_DIR).Replace('\', '/')
+
     docker run --rm `
-        -v (Convert-Path $PROTO_PATH):/app/proto `
-        -v (Convert-Path $CSHARP_OUT_DIR):/app/csharp_out `
+        -v `"$volumePathProto`":/app/proto `
+        -v `"$volumePathCsharp`":/app/csharp_out `
         $PROTO_IMAGE_NAME `
         protoc -I/app/proto --csharp_out=/app/csharp_out /app/proto/$file
 }
