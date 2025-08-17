@@ -5,6 +5,12 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace KinectPoseInferencer
 {
+    public enum LogOutputFormat
+    {
+        Protobuf,
+        Json
+    }
+
     internal static class Program
     {
         class AppStartupOptoins
@@ -12,6 +18,7 @@ namespace KinectPoseInferencer
             public bool IsOffline { get; set; }
             public string VideoFilePath { get; set; }
             public string LogFileDestination { get; set; }
+            public LogOutputFormat LogOutputFormat { get; set; } = LogOutputFormat.Protobuf;
         }
 
         internal static void Main(string[] args)
@@ -53,6 +60,7 @@ namespace KinectPoseInferencer
                     var key = arg.TrimStart('-');
                     if (key.Equals("I", StringComparison.OrdinalIgnoreCase)) key = "input-video-path";
                     if (key.Equals("O", StringComparison.OrdinalIgnoreCase)) key = "output-log-destination";
+                    if (key.Equals("F", StringComparison.OrdinalIgnoreCase)) key = "log-format";
 
                     // Get the next argument as value if it is a valid value
                     if (i + 1 < args.Length && !args[i + 1].StartsWith("--") && !args[i + 1].StartsWith("-"))
@@ -96,10 +104,36 @@ namespace KinectPoseInferencer
                 }
             }
 
+            // Parse --log-format
+            if (argMap.ContainsKey("log-format"))
+            {
+                var formatString = argMap["log-format"];
+                if (string.IsNullOrWhiteSpace(formatString))
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Error: --log-format requires a format type (protobuf or json).");
+                    Console.WriteLine("Example: dotnet run -- --log-format json");
+                    Console.ResetColor();
+                    Environment.Exit(1);
+                }
+
+                if (Enum.TryParse(formatString, true, out LogOutputFormat format))
+                {
+                    options.LogOutputFormat = format;
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"Error: Unknown log format '{formatString}'. Supported formats are 'protobuf' and 'json'.");
+                    Console.ResetColor();
+                    Environment.Exit(1);
+                }
+            }
+
             return options;
         }
 
-        static ServiceProvider Build()
+        static ServiceProvider Build(AppStartupOptoins options)
         {
             var services = new ServiceCollection();
 
@@ -112,11 +146,26 @@ namespace KinectPoseInferencer
             services.AddSingleton<PoseInference.Filters.TiltCorrector>();
             services.AddSingleton<PoseInference.SkeletonToPoseLandmarksConverter>();
             services.AddSingleton<Renderers.Renderer>();
-            services.AddSingleton<Logging.IResultLogWriter, Logging.HolisticJsonLogWriter>();
             services.AddSingleton<ImageWriter>();
             services.AddSingleton<FrameManager>();
             services.AddSingleton<KinectOnlineProcessor>();
             services.AddSingleton<KinectOfflineProcessor>();
+
+            switch (options.LogOutputFormat)
+            {
+                case LogOutputFormat.Protobuf:
+                    services.AddSingleton<Logging.IResultLogWriter, Logging.HolisticProtobufLogWriter>();
+                    Console.WriteLine("Log output format set to Protobuf.");
+                    break;
+                case LogOutputFormat.Json:
+                    services.AddSingleton<Logging.IResultLogWriter, Logging.HolisticJsonLogWriter>();
+                    Console.WriteLine("Log output format set to JSON.");
+                    break;
+                default:
+                    services.AddSingleton<Logging.IResultLogWriter, Logging.HolisticProtobufLogWriter>();
+                    Console.WriteLine("Invalid log output format. Defaulting to Protobuf.");
+                    break;
+            }
 
             // Register filter chain
             services.AddSingleton<PoseInference.Filters.IPositionFilter, PoseInference.Filters.MilimeterToMeter>();
