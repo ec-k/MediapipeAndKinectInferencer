@@ -12,13 +12,11 @@ namespace KinectPoseInferencer.PoseInference.Filters
         {
             var cameraTiltRotation = CalculateTiltRotation(imuSample, sensorCalibration);
             _inversedCameraTiltRotation = Quaternion.Inverse(cameraTiltRotation);
-            Console.WriteLine("Calibrated");
         }
 
         internal void ResetTiltRotation()
         {
             _inversedCameraTiltRotation = Quaternion.Identity;
-            Console.WriteLine("Reset");
         }
 
         Vector3 GetAccelerometerMeasurement(ImuSample imuSample)
