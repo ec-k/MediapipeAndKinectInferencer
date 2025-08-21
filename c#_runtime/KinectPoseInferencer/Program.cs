@@ -25,7 +25,7 @@ namespace KinectPoseInferencer
         {
             var options = ParseCommandLineArguments(args);
 
-            using var serviceProvider = Build();
+            using var serviceProvider = Build(options);
             if (options.IsOffline)
             {
                 Console.WriteLine($"Running in OFFLINE mode (from video file: '{options.VideoFilePath}').");
