@@ -1,5 +1,3 @@
-# MediaPipe and Kinect Pose Sender
-
 This application captures and merges pose data from Azure Kinect (body) and MediaPipe (face, hands) and sends it as a unified data stream.
 
 ## Concept
@@ -61,3 +59,15 @@ Place the required MediaPipe model files (`.task` files) into the `mediapipe_inf
     poetry run python src/inference_by_mmap.py
     ```
 3.  **Run Your Client Application**: Start your own application that will receive the final pose data (which conforms to `holistic_landmarks.proto`).
+
+## License
+
+<!-- The source code in this repository created by the author is licensed under the **MIT License**. -->
+
+<!-- However,  -->
+
+This project depends on third-party software, and your use of this application is subject to their respective licenses.
+
+- **Microsoft Azure Kinect Body Tracking SDK**: The C# runtime component relies on NuGet packages governed by the **MICROSOFT SOFTWARE LICENSE TERMS**. By building or using the compiled application, you agree to these terms. Please review them carefully.
+
+- **Python Inferencer Dependencies**: The Python inferencer utilizes various third-party libraries. A complete list of these dependencies and their licenses is available in the `ThirdPartyNotices.txt` file at the following location: <https://github.com/ec-k/mediapipe-inferencer/blob/main/ThirdPartyNotices.txt>
