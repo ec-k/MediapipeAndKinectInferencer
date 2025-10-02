@@ -2,7 +2,6 @@
 using System;
 using System.IO;
 using System.IO.MemoryMappedFiles;
-using System.Xml;
 
 namespace KinectPoseInferencer
 {
@@ -10,14 +9,15 @@ namespace KinectPoseInferencer
     {
         public int Height { get; } = 1280;
         public int Width { get; } = 720;
-        string _filePath = "../../../../../../colorImg.dat";
+        readonly string _filePath;
         int _bufferSize => Height * Width * 4;
 
         MemoryMappedFile _mmf;
         MemoryMappedViewAccessor _accessor;
 
-        public ImageWriter()
+        public ImageWriter(string filePath)
         {
+            _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
             InitMmap();
         }
         public ImageWriter(int height, int width)
@@ -30,17 +30,54 @@ namespace KinectPoseInferencer
 
         void InitMmap()
         {
-            if (File.Exists(_filePath) == false)
+            Console.WriteLine($"MMF Target Path: {_filePath}");
+
+            var directoryPath = Path.GetDirectoryName(_filePath);
+
+            if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
             {
-                byte[] bs = new byte[_bufferSize];
-                using (FileStream fs = File.Open(_filePath, FileMode.Create))
+                try
                 {
-                    fs.Write(bs, 0, bs.Length);
+                    Directory.CreateDirectory(directoryPath);
+                    Console.WriteLine($"Created directory for MMF: {directoryPath}");
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"Error creating directory '{directoryPath}': {ex.Message}");
+                    throw;
                 }
             }
 
-            _mmf = MemoryMappedFile.CreateFromFile(_filePath, FileMode.Open);
-            _accessor = _mmf.CreateViewAccessor();
+            if (File.Exists(_filePath) == false)
+            {
+                try
+                {
+                    byte[] bs = new byte[_bufferSize];
+                    using (FileStream fs = File.Open(_filePath, FileMode.Create))
+                    {
+                        fs.Write(bs, 0, bs.Length);
+                    }
+                    Console.WriteLine($"Created new MMF file at: {_filePath}");
+                }
+                catch(Exception ex)
+                {
+                    Console.Error.WriteLine($"Error creating MMF file '{_filePath}': {ex.Message}");
+                    throw;
+                }
+            }
+
+            try
+            {
+                _mmf = MemoryMappedFile.CreateFromFile(_filePath, FileMode.Open);
+                _accessor = _mmf.CreateViewAccessor();
+                Console.WriteLine($"Successfully opened MMF: {_filePath}");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error opening MemoryMappedFile '{_filePath}': {ex.Message}");
+                Console.Error.WriteLine(ex.StackTrace);
+                throw;
+            }
         }
 
         public void WriteImage(Image image)
