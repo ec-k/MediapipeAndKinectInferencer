@@ -1,0 +1,1 @@
+(Start-Process -FilePath .\c#_runtime\bin\x64\Release\net8.0\win-x64\KinectPoseInferencer.exe -ArgumentList "--image-output-path colorImg.dat" -NoNewWindow -PassThru), (Start-Process -FilePath .\mediapipe_inferencer\inference_by_mmap.dist\inference_by_mmap.exe -NoNewWindow -PassThru) | Wait-Process
