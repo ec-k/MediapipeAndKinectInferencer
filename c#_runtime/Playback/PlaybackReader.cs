@@ -21,7 +21,7 @@ internal class PlaybackReader: IPlaybackReader
     int _taskCancelTimeoutSec = 2;
     bool _isReading = false;
 
-    internal PlaybackReader(
+    public PlaybackReader(
         FrameManager frameManager,
         ImageWriter imageWriter,
         LandmarkHandler landmarkHandler)
@@ -112,6 +112,8 @@ internal class PlaybackReader: IPlaybackReader
             return;
         }
 
+        if (capture.DepthImage is null)
+            return;
         _tracker.EnqueueCapture(capture);
         capture.Dispose();
 
