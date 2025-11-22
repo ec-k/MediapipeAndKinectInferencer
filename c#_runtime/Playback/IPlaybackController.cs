@@ -7,6 +7,7 @@ public interface IPlaybackController: IDisposable
 {
     IPlaybackControllerState CurrentState { get; set; }
     IPlaybackReader Reader { get; }
+    PlaybackDescriptor Descriptor { get; set; }
 
     void Start();
     void Pause();

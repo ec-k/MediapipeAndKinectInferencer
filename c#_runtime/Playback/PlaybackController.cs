@@ -9,19 +9,17 @@ public class PlaybackController : IPlaybackController
 
     public IPlaybackReader Reader => _reader;
     public IPlaybackControllerState CurrentState { get; set; }
-    PlaybackDescriptor _descriptor { get; set; }
+    public PlaybackDescriptor Descriptor { get; set; }
 
-    public PlaybackController(PlaybackDescriptor descriptor, IPlaybackReader reader)
+    public PlaybackController(IPlaybackReader reader)
     {
-        _descriptor = descriptor;
         _reader = reader;
-
         CurrentState = new IdleState(this);
     }
 
     public void Start()
     {
-        _reader.Configure(_descriptor);
+        _reader.Configure(Descriptor);
         _reader.Playback.GetCalibration(out var calibration);
         PointCloud.ComputePointCloudCache(calibration);
         CurrentState.Start();
