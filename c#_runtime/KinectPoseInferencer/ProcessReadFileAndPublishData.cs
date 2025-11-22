@@ -4,14 +4,12 @@
 
 using K4AdotNet.BodyTracking;
 using K4AdotNet.Sensor;
-using KinectPoseInferencer.Input;
 using KinectPoseInferencer.Renderers;
-using KinectPoseInferencer.PoseInference;
-using KinectPoseInferencer.PoseInference.Filters;
 using System;
 using KinectPoseInferencer.Playback;
 using K4AdotNet.Record;
 using System.IO;
+using System.Threading;
 
 namespace KinectPoseInferencer;
 
@@ -19,7 +17,6 @@ namespace KinectPoseInferencer;
 internal class ProcessReadFileAndPublishData
 {
     readonly IPlaybackController _playbackController;
-    readonly IPlaybackReader _playbackReader;
     readonly Renderer _renderer;
 
     Device _device;
@@ -27,11 +24,9 @@ internal class ProcessReadFileAndPublishData
 
     public ProcessReadFileAndPublishData(
         IPlaybackController playbackController,
-        IPlaybackReader playbackReader,
         Renderer renderer)
     {
         _playbackController = playbackController??throw new ArgumentNullException(nameof(playbackController));
-        _playbackReader = playbackReader ?? throw new ArgumentNullException(nameof(playbackReader));
         _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
     }
 
@@ -58,6 +53,9 @@ internal class ProcessReadFileAndPublishData
         _playbackController.Start();
 
         // TODO: Add awaiting while cancel requested.
+        while (true) {
+            Thread.Sleep(100);
+        }
     }
 
     public void Dispose()
