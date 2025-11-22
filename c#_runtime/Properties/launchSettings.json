@@ -1,8 +1,7 @@
 {
   "profiles": {
     "KinectPoseInferencer": {
-      "commandName": "Project",
-      "commandLineArgs": "--image-output-path ../../../../../../colorImg.dat"
+      "commandName": "Project"
     }
   }
 }

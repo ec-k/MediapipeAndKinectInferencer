@@ -20,7 +20,6 @@ namespace KinectPoseInferencer
             public string VideoFilePath { get; set; }
             public string LogFileDestination { get; set; }
             public LogOutputFormat LogOutputFormat { get; set; } = LogOutputFormat.Protobuf;
-            public string ImageOutputPath { get; set; }
         }
 
         internal static void Main(string[] args)
@@ -60,7 +59,6 @@ namespace KinectPoseInferencer
                     if (key.Equals("I", StringComparison.OrdinalIgnoreCase)) key = "input-video-path";
                     if (key.Equals("O", StringComparison.OrdinalIgnoreCase)) key = "output-log-destination";
                     if (key.Equals("F", StringComparison.OrdinalIgnoreCase)) key = "log-format";
-                    if (key.Equals("IOP", StringComparison.OrdinalIgnoreCase)) key = "image-output-path";
 
                     // Get the next argument as value if it is a valid value
                     if (i + 1 < args.Length && !args[i + 1].StartsWith("--") && !args[i + 1].StartsWith("-"))
@@ -81,20 +79,6 @@ namespace KinectPoseInferencer
             if (argMap.ContainsKey("offline"))
             {
                 options.IsOffline = true;
-            }
-
-            // --image-output-path
-            if (argMap.ContainsKey("image-output-path"))
-            {
-                options.ImageOutputPath = argMap["image-output-path"];
-                if (string.IsNullOrWhiteSpace(options.ImageOutputPath))
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Error: --image-output-path requires a file path.");
-                    Console.WriteLine("Example: dotnet run -- --image-output-path \"C:\\temp\\colorImg.dat\"");
-                    Console.ResetColor();
-                    Environment.Exit(1);
-                }
             }
 
             if (!options.IsOffline)
@@ -163,19 +147,18 @@ namespace KinectPoseInferencer
             var services = new ServiceCollection();
 
             // Get memory mapped file path
-            var finalImageOutputPath = options.ImageOutputPath;
-            Console.WriteLine($"ImageWriter path (from command-line): {finalImageOutputPath}");
-            var directoryPath = Path.GetDirectoryName(finalImageOutputPath);
-            if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
+            var appTempDirectory = Path.Combine(Path.GetTempPath(), "MediaPipeAndKinectInferencer");
+            var mmfFilePath = Path.Combine(appTempDirectory, "kinect_color_image.dat");
+            if (!string.IsNullOrEmpty(appTempDirectory) && !Directory.Exists(appTempDirectory))
             {
                 try
                 {
-                    Directory.CreateDirectory(directoryPath);
-                    Console.WriteLine($"Created directory for ImageWriter: {directoryPath}");
+                    Directory.CreateDirectory(appTempDirectory);
+                    Console.WriteLine($"Created directory for ImageWriter: {appTempDirectory}");
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"Error creating directory '{directoryPath}': {ex.Message}");
+                    Console.Error.WriteLine($"Error creating directory '{appTempDirectory}': {ex.Message}");
                     Environment.Exit(1);
                 }
             }
@@ -189,7 +172,7 @@ namespace KinectPoseInferencer
             services.AddSingleton<PoseInference.Filters.TiltCorrector>();
             services.AddSingleton<PoseInference.SkeletonToPoseLandmarksConverter>();
             services.AddSingleton<Renderers.Renderer>();
-            services.AddSingleton(provider => new ImageWriter(finalImageOutputPath));
+            services.AddSingleton(provider => new ImageWriter(mmfFilePath));
             services.AddSingleton<FrameManager>();
             services.AddSingleton<KinectOnlineProcessor>();
             services.AddSingleton<KinectOfflineProcessor>();
