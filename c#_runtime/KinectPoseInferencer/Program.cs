@@ -37,7 +37,9 @@ namespace KinectPoseInferencer
             else
             {
                 Console.WriteLine("Running in ONLINE mode (from live Kinect stream).");
-                var appManager = serviceProvider.GetRequiredService<KinectOnlineProcessor>();
+                //var appManager = serviceProvider.GetRequiredService<KinectOnlineProcessor>();
+                //appManager.Run();
+                var appManager = serviceProvider.GetRequiredService<ProcessReadFileAndPublishData>();
                 appManager.Run();
             }
         }
@@ -214,6 +216,14 @@ namespace KinectPoseInferencer
                 provider => provider.GetRequiredService<PoseInference.Filters.TiltCorrector>()
                 );
             services.AddSingleton<PoseInference.Filters.IPositionFilter, PoseInference.Filters.TransformCoordinator>();
+
+
+            services.AddSingleton<Playback.IPlaybackController, Playback.PlaybackController>();
+            services.AddSingleton<Playback.IPlaybackReader, Playback.PlaybackReader>();
+            services.AddTransient<Playback.States.IdleState>();
+            services.AddTransient<Playback.States.PlayingState>();
+            services.AddSingleton<ProcessReadFileAndPublishData>();
+
 
             return services.BuildServiceProvider();
         }
