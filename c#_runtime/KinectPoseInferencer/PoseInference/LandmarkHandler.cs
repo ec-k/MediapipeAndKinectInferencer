@@ -24,7 +24,7 @@ namespace KinectPoseInferencer.PoseInference
         internal HolisticLandmarks Result => _result;
         HolisticLandmarks _result;
 
-        public LandmarkHandler(
+        internal LandmarkHandler(
             SkeletonToPoseLandmarksConverter converter
             )
         {

@@ -44,7 +44,7 @@ namespace KinectPoseInferencer
 
             _renderer.StartVisualizationThread();
             // Initialize playeback and tracker
-            using var playback = new Playback(videlFilePath);
+            using var playback = new K4AdotNet.Record.Playback(videlFilePath);
             RecordConfiguration recordConfig;
             Calibration calibration;
             playback.GetRecordConfiguration(out recordConfig);
