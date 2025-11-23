@@ -9,6 +9,7 @@ using System.Windows;
 using KinectPoseInferencer.Playback;
 using KinectPoseInferencer.Playback.States;
 using KinectPoseInferencer.Renderers;
+using KinectPoseInferencer.UI;
 
 namespace KinectPoseInferencer;
 
@@ -29,7 +30,10 @@ public partial class App : Application
         using var scope = _host.Services.CreateScope();
         var services = scope.ServiceProvider;
         var renderer = services.GetRequiredService<Renderer>();
-        
+
+        var mainWindow = services.GetRequiredService<MainWindow>();
+        mainWindow.Show();
+
         renderer.StartVisualizationThread();
 
         // Setup a device
@@ -76,6 +80,8 @@ public partial class App : Application
                 services.AddSingleton<Renderer>();
                 services.AddSingleton(provider => new ImageWriter(mmfFilePath));
                 services.AddSingleton<FrameManager>();
+                services.AddSingleton<MainWindow>();
+                services.AddSingleton<MainWindowViewModel>();
 
                 // Register filter chain
                 services.AddSingleton<PoseInference.Filters.IPositionFilter, PoseInference.Filters.MilimeterToMeter>();
