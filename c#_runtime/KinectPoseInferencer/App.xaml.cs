@@ -16,9 +16,6 @@ public partial class App : Application
 {
     IHost? _host;
 
-    const string StudioName = "AtelierRC";
-    const string AppName = "KinectAndInputRecorder";
-
     public App()
     {
         var mmfFilePath = CreateMMFFile();
@@ -109,7 +106,7 @@ public partial class App : Application
 
     string CreateMMFFile()
     {
-        var appTempDirectory = Path.Combine(Path.GetTempPath(), StudioName, AppName);
+        var appTempDirectory = Path.Combine(Path.GetTempPath(), ProjectNameConstants.StudioName, ProjectNameConstants.AppName);
         var mmfFilePath = Path.Combine(appTempDirectory, "kinect_color_image.dat");
         if (!string.IsNullOrEmpty(appTempDirectory) && !Directory.Exists(appTempDirectory))
         {
