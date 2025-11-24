@@ -1,17 +1,7 @@
-﻿using System.Windows.Media.Media3D;
-using KinectPoseInferencer.Renderers;
+﻿using KinectPoseInferencer.Renderers;
 
 namespace KinectAndInputRecorder.Tests;
 
-
-public static class HelixGeometryFactory
-{
-    public static MeshGeometry3D CreateMesh(List<Vertex> vertices, List<int> indices)
-    {
-        // implement later
-        throw new System.NotImplementedException("HelixGeometryFactory is not yet implemented.");
-    }
-}
 
 [TestClass]
 public class HelixGeometryFactoryTests
