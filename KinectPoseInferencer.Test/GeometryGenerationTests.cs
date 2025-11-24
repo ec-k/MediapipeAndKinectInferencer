@@ -7,29 +7,14 @@
 //  that verify the counts of generated vertices and indices against expected values.
 
 using System.Numerics;
+using KinectPoseInferencer.Renderers;
 
 namespace KinectPoseInferencer.Tests;
 
 
-public struct TestVertex
-{
-    public Vector3 Position;
-    public Vector3 Normal;
-}
-
 [TestClass]
 public class GeometryGenerationTests
 {
-    // A stub corresponds to SphereRenderer.BuildVertices()
-    public static class SphereGeometryBuilder
-    {
-        public static void Build(int sectorCount, int stackCount, out List<TestVertex> vertices, out List<int> indices)
-        {
-            // implement later
-            throw new System.NotImplementedException("SphereGeometryBuilder is not yet implemented.");
-        }
-    }
-
     [TestMethod]
     public void BuildSphere_DefaultSegments_ReturnsCorrectCounts()
     {
