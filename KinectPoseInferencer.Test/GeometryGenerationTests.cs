@@ -6,11 +6,19 @@
 //  This TestClass uses a private static stub (SphereGeometryBuilder) to create Red tests
 //  that verify the counts of generated vertices and indices against expected values.
 
-using System.Numerics;
 using KinectPoseInferencer.Renderers;
 
 namespace KinectPoseInferencer.Tests;
 
+
+public static class CylinderGeometryBuilder
+{
+    public static void Build(int sectorCount, out List<Vertex> vertices, out List<int> indices)
+    {
+        // implement later
+        throw new System.NotImplementedException("CylinderGeometryBuilder is not yet implemented.");
+    }
+};
 
 [TestClass]
 public class GeometryGenerationTests
@@ -47,6 +55,44 @@ public class GeometryGenerationTests
 
         // Act
         SphereGeometryBuilder.Build(sectorCount, stackCount, out var vertices, out var indices);
+
+        // Assert
+        Assert.IsNotNull(vertices);
+        Assert.IsNotNull(indices);
+        Assert.AreEqual(expectedVertexCount, vertices.Count);
+        Assert.AreEqual(expectedIndexCount, indices.Count);
+    }
+
+    [TestMethod]
+    public void BuildCylinder_DefaultSegments_ReturnsCorrectCounts()
+    {
+        // Default values of CylinderRenderer: sectorCount=36
+        const int sectorCount = 36;
+
+        const int expectedVertexCount = 2 * (36 + 1); // Vertices.Count = 2 * (sectorCount + 1)
+        const int expectedIndexCount = 6 * 36;        // Indices.Count = 6 * sectorCount
+
+        // Act
+        CylinderGeometryBuilder.Build(sectorCount, out var vertices, out var indices);
+
+        // Assert
+        Assert.IsNotNull(vertices);
+        Assert.IsNotNull(indices);
+        Assert.AreEqual(expectedVertexCount, vertices.Count);
+        Assert.AreEqual(expectedIndexCount, indices.Count);
+    }
+
+    [TestMethod]
+    public void BuildCylinder_MinimumSegments_ReturnsCorrectCounts()
+    {
+        // Minimum values of CylinderRenderer: sectorCount=3
+        const int sectorCount = 3;
+
+        const int expectedVertexCount = 2 * (3 + 1);
+        const int expectedIndexCount = 6 * 3;
+
+        // Act
+        CylinderGeometryBuilder.Build(sectorCount, out var vertices, out var indices);
 
         // Assert
         Assert.IsNotNull(vertices);
