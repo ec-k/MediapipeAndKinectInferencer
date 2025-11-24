@@ -1,14 +1,16 @@
 ﻿using K4AdotNet;
 using K4AdotNet.BodyTracking;
 using KinectPoseInferencer.PoseInference;
+using KinectPoseInferencer.Renderers;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace KinectPoseInferencer.Playback;
 
-internal class PlaybackReader: IPlaybackReader
+internal class PlaybackReader : IPlaybackReader
 {
     readonly FrameManager _frameManager;
     readonly ImageWriter _imageWriter;
@@ -18,10 +20,11 @@ internal class PlaybackReader: IPlaybackReader
     Tracker _tracker;
 
     Task? _readingTask;
-    CancellationTokenSource _cts;
-    int _taskCancelTimeoutSec = 2;
+    CancellationTokenSource _cts = new();
+    readonly int _taskCancelTimeoutSec = 2;
 
-    Microseconds64 _currentTimestampMs = 0;
+    Microseconds64 _currentTimestampUs = new(0);
+    Microseconds64 _lastTimestampUs = new(0);
 
     public bool IsReading { get; private set; } = false;
     public event Action<bool> ReadingStateChange; // refactor: Remove this action to rewrite `IsReading` as ReactiveProperty.
@@ -41,36 +44,51 @@ internal class PlaybackReader: IPlaybackReader
     {
         if (string.IsNullOrEmpty(descriptor.VideoFilePath))
             throw new ArgumentNullException(nameof(descriptor.VideoFilePath));
-        Playback = new(descriptor.VideoFilePath);
 
+        // Dispose existing playback and related task
+        if (_readingTask is not null)
+        {
+            StopReadingLoop().GetAwaiter().GetResult();
+            Playback?.Dispose();
+        }
+
+        Playback = new(descriptor.VideoFilePath);
         PlaybackLoaded?.Invoke(Playback);
         Playback.GetCalibration(out var calibration);
+        PointCloud.ComputePointCloudCache(calibration);
+
+        _tracker?.Dispose();
         var trackerConfig = new TrackerConfiguration()
         {
             SensorOrientation = SensorOrientation.Default,
             ProcessingMode = TrackerProcessingMode.Gpu,
         };
-
         _tracker = new(calibration, trackerConfig);
 
-        if (_readingTask is not null)
-        {
-            StopReadingLoop();
-            _readingTask = null;
-        }
+        _cts.Dispose();
         _cts = new();
-        _readingTask = Task.Run(() => FrameReadingLoop(_cts.Token));
+        _readingTask = FrameReadingLoop(_cts.Token);
+
+        _currentTimestampUs = new(0);
+        _lastTimestampUs = new(0);
     }
 
     public void Play()
     {
+        if (IsReading) return;
+
         IsReading = true;
-        Playback.SeekTimestamp(_currentTimestampMs, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
+
+        Playback.SeekTimestamp(_currentTimestampUs, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
+        _lastTimestampUs = _currentTimestampUs;
+
         ReadingStateChange?.Invoke(IsReading);
     }
 
     public void Pause()
     {
+        if (!IsReading) return;
+
         IsReading = false;
         ReadingStateChange?.Invoke(IsReading);
     }
@@ -79,56 +97,111 @@ internal class PlaybackReader: IPlaybackReader
     {
         IsReading = false;
         ReadingStateChange?.Invoke(IsReading);
-        _currentTimestampMs = 0;
+        _currentTimestampUs = new(0);
+        _lastTimestampUs = new(0);
     }
 
-    void FrameReadingLoop(CancellationToken token)
+    async Task FrameReadingLoop(CancellationToken token)
     {
-        while (!token.IsCancellationRequested)
+        try
         {
-            if(IsReading)
-                ReadAndProcessFrame();
+            while (!token.IsCancellationRequested)
+            {
+                if (IsReading)
+                {
+                    var startSystemTime = Stopwatch.GetTimestamp();
+                    var frameTimeDiff = ReadAndProcessFrame();
+                    var endSystemTime = Stopwatch.GetTimestamp();
+                    var processingTime = TimeSpan.FromTicks(endSystemTime - startSystemTime);
+                    var waitTime = frameTimeDiff - processingTime;
+
+                    // Wait to recreate video scene in real time.
+                    if (waitTime.TotalMilliseconds > 0)
+                        await Task.Delay(waitTime, token);
+                }
+                else
+                    await Task.Delay(50, token);    // Suppress polling rate in no-reading state
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            // Stop successfully on cancel requested
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error in FrameReadingLoop: {ex}");
+            IsReading = false;
+            ReadingStateChange?.Invoke(IsReading);
         }
     }
 
-    void StopReadingLoop()
+    async Task StopReadingLoop()
     {
         if (_cts is not null && _readingTask is not null)
         {
             _cts.Cancel();
             try
             {
-                if (!_readingTask.Wait(TimeSpan.FromSeconds(_taskCancelTimeoutSec)))
-                    Console.Error.WriteLine("Warning: Capture loop did not terminate within timeout.");
+                if (!_readingTask.IsCompleted)
+                {
+                    await _readingTask.WaitAsync(TimeSpan.FromSeconds(_taskCancelTimeoutSec));
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // ignore this exception
             }
             catch (AggregateException ex) when (ex.InnerExceptions.All(e => e is TaskCanceledException))
-            { /* ignore this exception */ }
+            {
+                /* ignore this exception */
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Warning: FrameReadingLoop did not terminate gracefully within timeout. Error: {ex.Message}");
+            }
             finally
             {
                 _readingTask = null;
                 _cts.Dispose();
-                _cts = null;
+                _cts = new();
             }
         }
     }
 
-    void ReadAndProcessFrame()
+    TimeSpan ReadAndProcessFrame()
     {
+        if (Playback is null) return TimeSpan.FromMilliseconds(50);
+
         var waitResult = Playback.TryGetNextCapture(out var capture);
+
         if (!waitResult)
         {
-            Console.WriteLine("Error: Failed to get a capture.");
-            return;
+            IsReading = false;
+            ReadingStateChange?.Invoke(IsReading);
+            Console.WriteLine("Info: Playback reached end of file or failed to get a capture.");
+            return TimeSpan.Zero;
         }
 
-        if (capture.DepthImage is null)
-            return;
+        
+        if(capture.DepthImage is null)
+            return TimeSpan.Zero;
+
+        _currentTimestampUs = capture.DepthImage.DeviceTimestamp;
+        var frameTimeDiffTick = TimeSpan.Zero;
+        
+        if (_lastTimestampUs.ValueUsec > 0) // Calculate if this process is NOT the first reading.
+        {
+            var diffUs = _currentTimestampUs.ValueUsec - _lastTimestampUs.ValueUsec;
+            if(diffUs > 0)
+                frameTimeDiffTick = TimeSpan.FromMicroseconds(diffUs);
+        }
+
         _tracker.EnqueueCapture(capture);
         capture.Dispose();
 
         using var frame = _tracker.PopResult();
-        _currentTimestampMs = frame.DeviceTimestamp;
-        if(frame is not null)
+
+        if (frame is not null)
         {
             _frameManager.Frame = frame.DuplicateReference();
 
@@ -146,6 +219,10 @@ internal class PlaybackReader: IPlaybackReader
             if (nullableSkeleton is Skeleton skeleton)
                 SendLandmarks(skeleton);
         }
+
+        _lastTimestampUs = _currentTimestampUs;
+
+        return frameTimeDiffTick;
     }
 
     Skeleton? Inference(BodyFrame frame)
@@ -168,7 +245,10 @@ internal class PlaybackReader: IPlaybackReader
 
     public void Dispose()
     {
-        StopReadingLoop();
-        Playback.Dispose();
+        StopReadingLoop().GetAwaiter().GetResult();
+
+        Playback?.Dispose();
+        _tracker?.Dispose();
+        _cts.Dispose();
     }
 }
