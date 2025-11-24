@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
         xmlns:converters="clr-namespace:KinectPoseInferencer.UI.Converters"
         mc:Ignorable="d"
         Title="Kinect Pose Inferencer" Height="600" Width="800"
@@ -11,51 +12,69 @@
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="400"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,20,20" VerticalAlignment="Top">
-            <Grid Margin="0,0,0,5">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="video" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                <TextBox Grid.Column="1" Text="{Binding VideoFilePath}" Background="#505050" Foreground="White" BorderBrush="#505050" Height="24"/>
-            </Grid>
-            <Grid Margin="0,0,0,5">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="log" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                <TextBox Grid.Column="1" Text="{Binding LogFilePath}" Background="#505050" Foreground="White" BorderBrush="#505050" Height="24"/>
-            </Grid>
-            <Grid Margin="0,0,0,5">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="meta" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                <TextBox Grid.Column="1" Text="{Binding MetaFilePath}" Background="#505050" Foreground="White" BorderBrush="#505050" Height="24"/>
-            </Grid>
-            <Grid>
-              <Button Command="{Binding LoadFilesCommand}" Background="#505050" BorderBrush="#505050">
+        <Grid Grid.Row="0" Grid.Column="0" Margin="0,0,20,20" VerticalAlignment="Top">
+            <Grid.Resources>
+                <sys:Double x:Key="RowHeight">30.0</sys:Double>
+                <SolidColorBrush x:Key="CommonBgColor" Color="#505050"/>
+                <SolidColorBrush x:Key="CommonFgColor" Color="White"/>
+
+                <Style TargetType="{x:Type TextBox}">
+                    <Setter Property="Height" Value="{StaticResource RowHeight}"/>
+                    <Setter Property="Background" Value="{StaticResource CommonBgColor}"/>
+                    <Setter Property="Foreground" Value="{StaticResource CommonFgColor}"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource CommonBgColor}"/>
+                </Style>
+                <Style TargetType="{x:Type Button}">
+                    <Setter Property="Height" Value="{StaticResource RowHeight}"/>
+                    <Setter Property="Background" Value="{StaticResource CommonBgColor}"/>
+                    <Setter Property="Foreground" Value="{StaticResource CommonFgColor}"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource CommonBgColor}"/>
+                </Style>
+            </Grid.Resources>
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="video" VerticalAlignment="Center" Margin="0,0,10,30"/>
+            <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding VideoFilePath}" Margin="0,0,0,30"/>
+
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="log"   VerticalAlignment="Center" Margin="0,0,10,30"/>
+            <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding LogFilePath}" Margin="0,0,0,30"/>
+
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="meta"  VerticalAlignment="Center" Margin="0,0,10,30"/>
+            <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding MetaFilePath}" Margin="0,0,0,30"/>
+
+            <Button Grid.Row="3" Grid.Column="0" Command="{Binding LoadFilesCommand}">
                 <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xED25;"/>
-              </Button>
-            </Grid>
-        </StackPanel>
+            </Button>
+            
+        </Grid>
 
         <!-- Video View (place holder) -->
-        <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Background="Black" CornerRadius="4" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
-            <Viewbox Stretch="Uniform">
+        <Border x:Name="VideoWindowBorder"
+                Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                Background="Black" CornerRadius="4"
+                VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+            <Viewbox x:Name="VideoWindowViewBox" Stretch="Uniform">
                 <TextBlock Text="(video)" FontSize="24" Foreground="#808080" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="100"/>
             </Viewbox>
         </Border>
