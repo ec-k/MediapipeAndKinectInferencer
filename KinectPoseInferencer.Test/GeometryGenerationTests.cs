@@ -11,14 +11,6 @@ using KinectPoseInferencer.Renderers;
 namespace KinectPoseInferencer.Tests;
 
 
-public static class CylinderGeometryBuilder
-{
-    public static void Build(int sectorCount, out List<Vertex> vertices, out List<int> indices)
-    {
-        // implement later
-        throw new System.NotImplementedException("CylinderGeometryBuilder is not yet implemented.");
-    }
-};
 
 [TestClass]
 public class GeometryGenerationTests
