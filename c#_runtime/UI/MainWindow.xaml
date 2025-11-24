@@ -8,10 +8,6 @@
         Title="Kinect Pose Inferencer" Height="600" Width="800"
         Background="#383838" Foreground="White">
 
-  <Window.Resources>
-    <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-  </Window.Resources>
-
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -42,13 +38,18 @@
                 <TextBlock Grid.Column="0" Text="log" VerticalAlignment="Center" Margin="0,0,10,0"/>
                 <TextBox Grid.Column="1" Text="{Binding LogFilePath}" Background="#505050" Foreground="White" BorderBrush="#505050" Height="24"/>
             </Grid>
-            <Grid>
+            <Grid Margin="0,0,0,5">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="meta" VerticalAlignment="Center" Margin="0,0,10,0"/>
                 <TextBox Grid.Column="1" Text="{Binding MetaFilePath}" Background="#505050" Foreground="White" BorderBrush="#505050" Height="24"/>
+            </Grid>
+            <Grid>
+              <Button Command="{Binding LoadFilesCommand}" Background="#505050" BorderBrush="#505050">
+                <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xED25;"/>
+              </Button>
             </Grid>
         </StackPanel>
 
@@ -104,23 +105,10 @@
             </Button>
 
             <!-- Play / Pause Button -->
-            <Button Command="{Binding PlayPauseCommand}" Width="80" Height="60" Background="#505050" BorderBrush="#505050">
+            <Button Command="{Binding PlayOrPauseCommand}" Width="80" Height="60" Background="#505050" BorderBrush="#505050">
 
                 <Grid>
-                    <!-- Play Icon -->
-                    <Path Data="M 10,10 L 50,30 L 10,50 Z" Stretch="Fill" Fill="White" Width="30" Height="30" VerticalAlignment="Center" HorizontalAlignment="Center"
-                          Visibility="{Binding IsPlaying, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter='True'}"/>
-                    <!-- Pause Icon -->
-                    <Grid Width="30" Height="30" VerticalAlignment="Center" HorizontalAlignment="Center"
-                          Visibility="{Binding IsPlaying, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter='False'}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition/>
-                            <ColumnDefinition Width="5"/>
-                            <ColumnDefinition/>
-                        </Grid.ColumnDefinitions>
-                        <Rectangle Grid.Column="0" Fill="White" />
-                        <Rectangle Grid.Column="2" Fill="White" />
-                    </Grid>
+                    <TextBlock FontFamily="Segoe Fluent Icons" Text="{Binding PlayPauseIconUnicode}"/>
                 </Grid>
             </Button>
         </StackPanel>

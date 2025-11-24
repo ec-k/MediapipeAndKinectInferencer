@@ -1,13 +1,10 @@
-﻿using K4AdotNet.Record;
-using K4AdotNet.Sensor;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.IO;
 using System.Windows;
 
 using KinectPoseInferencer.Playback;
-using KinectPoseInferencer.Playback.States;
 using KinectPoseInferencer.Renderers;
 using KinectPoseInferencer.UI;
 
@@ -35,23 +32,6 @@ public partial class App : Application
         mainWindow.Show();
 
         renderer.StartVisualizationThread();
-
-        // Setup a device
-        var testVideoPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyVideos),
-            "KinectAndInputRecorder",
-            "test_video.mkv");                          // This should specified by settings or user (via UI)
-        var recordConfig = new RecordConfiguration()    // This should specified by metafile
-        {
-            ColorFormat = ImageFormat.ColorBgra32,
-            ColorResolution = ColorResolution.R720p,
-            DepthMode = DepthMode.NarrowViewUnbinned,
-            CameraFps = FrameRate.Thirty,
-        };
-        var playbackDesc = new PlaybackDescriptor(testVideoPath, recordConfig);
-        var playbackController = services.GetRequiredService<IPlaybackController>();
-        playbackController.Descriptor = playbackDesc;
-        playbackController.Start();
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -92,22 +72,6 @@ public partial class App : Application
 
                 services.AddSingleton<IPlaybackController, PlaybackController>();
                 services.AddSingleton<IPlaybackReader, PlaybackReader>();
-                services.AddTransient<IdleState>();
-                services.AddTransient<PlayingState>();
-
-                //services.AddSingleton<AppTrayIconViewModel>(sp =>
-                //{
-                //    var host = sp.GetRequiredService<IHost>();
-                //    var engine = sp.GetRequiredService<IApplicationEngine>();
-
-                //    Func<StatusSettingsWindow> factory = () =>
-                //    {
-                //        var viewModel = sp.GetRequiredService<StatusSettingsViewModel>();
-                //        return new StatusSettingsWindow(viewModel);
-                //    };
-
-                //    return new AppTrayIconViewModel(host, factory, engine);
-                //});
             });
 
     string CreateMMFFile()
