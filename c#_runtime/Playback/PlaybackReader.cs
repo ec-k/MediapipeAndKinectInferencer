@@ -1,4 +1,5 @@
-﻿using K4AdotNet.BodyTracking;
+﻿using K4AdotNet;
+using K4AdotNet.BodyTracking;
 using KinectPoseInferencer.PoseInference;
 using System;
 using System.Linq;
@@ -19,6 +20,8 @@ internal class PlaybackReader: IPlaybackReader
     Task? _readingTask;
     CancellationTokenSource _cts;
     int _taskCancelTimeoutSec = 2;
+
+    Microseconds64 _currentTimestampMs = 0;
 
     public bool IsReading { get; private set; } = false;
     public event Action<bool> ReadingStateChange; // refactor: Remove this action to rewrite `IsReading` as ReactiveProperty.
@@ -63,6 +66,7 @@ internal class PlaybackReader: IPlaybackReader
     public void Play()
     {
         IsReading = true;
+        Playback.SeekTimestamp(_currentTimestampMs, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
         ReadingStateChange?.Invoke(IsReading);
     }
 
@@ -76,7 +80,7 @@ internal class PlaybackReader: IPlaybackReader
     {
         IsReading = false;
         ReadingStateChange?.Invoke(IsReading);
-        Playback.SeekTimestamp(0, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
+        _currentTimestampMs = 0;
     }
 
     void FrameReadingLoop(CancellationToken token)
@@ -124,6 +128,7 @@ internal class PlaybackReader: IPlaybackReader
         capture.Dispose();
 
         using var frame = _tracker.PopResult();
+        _currentTimestampMs = frame.DeviceTimestamp;
         if(frame is not null)
         {
             _frameManager.Frame = frame.DuplicateReference();
