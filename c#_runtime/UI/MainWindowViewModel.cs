@@ -2,7 +2,6 @@
 using CommunityToolkit.Mvvm.Input;
 using KinectPoseInferencer.Playback;
 using System;
-using System.IO;
 
 
 namespace KinectPoseInferencer.UI;
@@ -48,6 +47,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         var playbackDesc = new PlaybackDescriptor(VideoFilePath);
         _controller.Descriptor = playbackDesc;
+        _controller.Prepare();
     }
 
     [RelayCommand]

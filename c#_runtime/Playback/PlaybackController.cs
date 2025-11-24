@@ -23,11 +23,13 @@ public class PlaybackController : IPlaybackController
     void OnReaderRedingStateChange(bool isReading) => PlayingStateChange?.Invoke(isReading);
     void OnPlaybackLoaded(K4AdotNet.Record.Playback playback) => PlaybackLoaded?.Invoke(playback);
 
-    public void Play()
+    public void Prepare()
     {
         _reader.Configure(Descriptor);
-        _reader.Playback.GetCalibration(out var calibration);
-        PointCloud.ComputePointCloudCache(calibration);
+    }
+
+    public void Play()
+    {
         _reader.Play();
     }
 
