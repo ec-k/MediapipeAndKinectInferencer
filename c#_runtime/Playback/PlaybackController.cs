@@ -1,5 +1,4 @@
-﻿using KinectPoseInferencer.Playback.States;
-using KinectPoseInferencer.Renderers;
+﻿using KinectPoseInferencer.Renderers;
 using System;
 
 namespace KinectPoseInferencer.Playback;
@@ -9,7 +8,6 @@ public class PlaybackController : IPlaybackController
     readonly IPlaybackReader _reader;
 
     public IPlaybackReader Reader => _reader;
-    public IPlaybackControllerState CurrentState { get; set; }
     public PlaybackDescriptor Descriptor { get; set; }
 
     public event Action<bool> PlayingStateChange;
@@ -18,7 +16,6 @@ public class PlaybackController : IPlaybackController
     public PlaybackController(IPlaybackReader reader)
     {
         _reader = reader;
-        CurrentState = new IdleState(this);
         Reader.ReadingStateChange += OnReaderRedingStateChange;
         Reader.PlaybackLoaded += OnPlaybackLoaded;
     }
@@ -26,27 +23,22 @@ public class PlaybackController : IPlaybackController
     void OnReaderRedingStateChange(bool isReading) => PlayingStateChange?.Invoke(isReading);
     void OnPlaybackLoaded(K4AdotNet.Record.Playback playback) => PlaybackLoaded?.Invoke(playback);
 
-    public void Start()
+    public void Play()
     {
         _reader.Configure(Descriptor);
         _reader.Playback.GetCalibration(out var calibration);
         PointCloud.ComputePointCloudCache(calibration);
-        CurrentState.Start();
+        _reader.Play();
     }
 
     public void Pause()
     {
-        CurrentState.Pause();
+        _reader.Pause();
     }
 
-    public void Resume()
+    public void Rewind()
     {
-        CurrentState.Resume();
-    }
-
-    public void Stop()
-    {
-        CurrentState.Stop();
+        _reader.Rewind();
     }
 
     public void Dispose()

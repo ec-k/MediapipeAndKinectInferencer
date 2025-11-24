@@ -10,8 +10,7 @@ public interface IPlaybackReader: IDisposable
     event Action<K4AdotNet.Record.Playback> PlaybackLoaded;
     bool IsReading { get; }
     void Configure(PlaybackDescriptor descriptor);
-    void Start();
+    void Play();
     void Pause();
-    void Resume();
-    void Stop();
+    void Rewind();
 }

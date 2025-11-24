@@ -50,15 +50,20 @@ internal class PlaybackReader: IPlaybackReader
         };
 
         _tracker = new(calibration, trackerConfig);
+
+        if (_readingTask is not null)
+        {
+            StopReadingLoop();
+            _readingTask = null;
+        }
+        _cts = new();
+        _readingTask = Task.Run(() => FrameReadingLoop(_cts.Token));
     }
 
-    public void Start()
+    public void Play()
     {
         IsReading = true;
         ReadingStateChange?.Invoke(IsReading);
-        Playback.SeekTimestamp(0, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
-        _cts = new();
-        _readingTask = Task.Run(() => FrameReadingLoop(_cts.Token));
     }
 
     public void Pause()
@@ -67,17 +72,10 @@ internal class PlaybackReader: IPlaybackReader
         ReadingStateChange?.Invoke(IsReading);
     }
 
-    public void Resume()
-    {
-        IsReading = true;
-        ReadingStateChange?.Invoke(IsReading);
-    }
-
-    public void Stop()
+    public void Rewind()
     {
         IsReading = false;
         ReadingStateChange?.Invoke(IsReading);
-        StopReadingLoop();
         Playback.SeekTimestamp(0, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
     }
 
@@ -166,6 +164,7 @@ internal class PlaybackReader: IPlaybackReader
 
     public void Dispose()
     {
+        StopReadingLoop();
         Playback.Dispose();
     }
 }
