@@ -44,7 +44,6 @@ internal class PlaybackReader: IPlaybackReader
         Playback = new(descriptor.VideoFilePath);
 
         PlaybackLoaded?.Invoke(Playback);
-        Playback.GetRecordConfiguration(out var recordConfig);
         Playback.GetCalibration(out var calibration);
         var trackerConfig = new TrackerConfiguration()
         {
