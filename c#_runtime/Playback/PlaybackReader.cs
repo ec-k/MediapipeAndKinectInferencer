@@ -19,7 +19,10 @@ internal class PlaybackReader: IPlaybackReader
     Task? _readingTask;
     CancellationTokenSource _cts;
     int _taskCancelTimeoutSec = 2;
-    bool _isReading = false;
+
+    public bool IsReading { get; private set; } = false;
+    public event Action<bool> ReadingStateChange; // refactor: Remove this action to rewrite `IsReading` as ReactiveProperty.
+    public event Action<K4AdotNet.Record.Playback> PlaybackLoaded;
 
     public PlaybackReader(
         FrameManager frameManager,
@@ -37,6 +40,7 @@ internal class PlaybackReader: IPlaybackReader
             throw new ArgumentNullException(nameof(descriptor.VideoFilePath));
         Playback = new(descriptor.VideoFilePath);
 
+        PlaybackLoaded?.Invoke(Playback);
         Playback.GetRecordConfiguration(out var recordConfig);
         Playback.GetCalibration(out var calibration);
         var trackerConfig = new TrackerConfiguration()
@@ -50,7 +54,8 @@ internal class PlaybackReader: IPlaybackReader
 
     public void Start()
     {
-        _isReading = true;
+        IsReading = true;
+        ReadingStateChange?.Invoke(IsReading);
         Playback.SeekTimestamp(0, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
         _cts = new();
         _readingTask = Task.Run(() => FrameReadingLoop(_cts.Token));
@@ -58,17 +63,20 @@ internal class PlaybackReader: IPlaybackReader
 
     public void Pause()
     {
-        _isReading = false;
+        IsReading = false;
+        ReadingStateChange?.Invoke(IsReading);
     }
 
     public void Resume()
     {
-        _isReading = true;
+        IsReading = true;
+        ReadingStateChange?.Invoke(IsReading);
     }
 
     public void Stop()
     {
-        _isReading = false;
+        IsReading = false;
+        ReadingStateChange?.Invoke(IsReading);
         StopReadingLoop();
         Playback.SeekTimestamp(0, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
     }
@@ -77,7 +85,7 @@ internal class PlaybackReader: IPlaybackReader
     {
         while (!token.IsCancellationRequested)
         {
-            if(_isReading)
+            if(IsReading)
                 ReadAndProcessFrame();
         }
     }

@@ -1,5 +1,6 @@
 ﻿using KinectPoseInferencer.Playback.States;
 using KinectPoseInferencer.Renderers;
+using System;
 
 namespace KinectPoseInferencer.Playback;
 
@@ -11,11 +12,19 @@ public class PlaybackController : IPlaybackController
     public IPlaybackControllerState CurrentState { get; set; }
     public PlaybackDescriptor Descriptor { get; set; }
 
+    public event Action<bool> PlayingStateChange;
+    public event Action<K4AdotNet.Record.Playback> PlaybackLoaded;
+
     public PlaybackController(IPlaybackReader reader)
     {
         _reader = reader;
         CurrentState = new IdleState(this);
+        Reader.ReadingStateChange += OnReaderRedingStateChange;
+        Reader.PlaybackLoaded += OnPlaybackLoaded;
     }
+
+    void OnReaderRedingStateChange(bool isReading) => PlayingStateChange?.Invoke(isReading);
+    void OnPlaybackLoaded(K4AdotNet.Record.Playback playback) => PlaybackLoaded?.Invoke(playback);
 
     public void Start()
     {
@@ -43,5 +52,7 @@ public class PlaybackController : IPlaybackController
     public void Dispose()
     {
         _reader.Dispose();
+        Reader.ReadingStateChange -= OnReaderRedingStateChange;
+        Reader.PlaybackLoaded -= OnPlaybackLoaded;
     }
 }
