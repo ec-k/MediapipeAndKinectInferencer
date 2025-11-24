@@ -1,14 +1,13 @@
-﻿using K4AdotNet;
+﻿using R3;
 using System;
 
 namespace KinectPoseInferencer.Playback;
 
 public interface IPlaybackReader: IDisposable
 {
-    K4AdotNet.Record.Playback Playback { get; }
-    event Action<bool> ReadingStateChange;
-    event Action<K4AdotNet.Record.Playback> PlaybackLoaded;
-    bool IsReading { get; }
+    ReadOnlyReactiveProperty<K4AdotNet.Record.Playback> Playback { get; }
+    ReadOnlyReactiveProperty<bool> IsReading { get; }
+
     void Configure(PlaybackDescriptor descriptor);
     void Play();
     void Pause();

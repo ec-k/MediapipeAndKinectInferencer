@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KinectPoseInferencer.Playback;
+using R3;
 using System;
 
 
@@ -17,23 +18,25 @@ public partial class MainWindowViewModel : ObservableObject
 
     const string PlayIconUnicode = "&#xE768;";
     const string PauseIconUnicode = "&#xE769";
+
+    DisposableBag _disposables = new();
     
     public MainWindowViewModel(IPlaybackController controller)
     {
         _controller = controller ?? throw new ArgumentNullException(nameof(controller));
-        _controller.PlayingStateChange += OnPlaybackStateChange;
-        _controller.PlaybackLoaded += OnPlaybackLoaded;
 
-        OnPlaybackStateChange(_controller.Reader.IsReading);
+        _controller.Reader.Playback
+            .Subscribe(playback => UpdatePlaybackLengthDisplay(playback))
+            .AddTo(ref _disposables);
+        _controller.Reader.IsReading
+            .Subscribe(isPlaying => PlayPauseIconUnicode = isPlaying ? PauseIconUnicode : PlayIconUnicode)
+            .AddTo(ref _disposables);
     }
 
-    void OnPlaybackStateChange(bool isPlaying)
+    void UpdatePlaybackLengthDisplay(K4AdotNet.Record.Playback playback)
     {
-        PlayPauseIconUnicode = isPlaying ? PauseIconUnicode : PlayIconUnicode;
-    }
+        if (playback is null) return;
 
-    void OnPlaybackLoaded(K4AdotNet.Record.Playback playback)
-    {
         var minutes = (int)playback.RecordLength.TotalSeconds / 60;
         var seconds = (int)playback.RecordLength.TotalSeconds % 60;
 
@@ -59,7 +62,7 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     public void PlayOrPause()
     {
-        if (_controller.Reader.IsReading)
+        if (_controller.Reader.IsReading.CurrentValue)
             _controller.Pause();
         else
             _controller.Play();

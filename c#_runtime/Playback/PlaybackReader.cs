@@ -2,6 +2,7 @@
 using K4AdotNet.BodyTracking;
 using KinectPoseInferencer.PoseInference;
 using KinectPoseInferencer.Renderers;
+using R3;
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -16,7 +17,12 @@ internal class PlaybackReader : IPlaybackReader
     readonly ImageWriter _imageWriter;
     readonly LandmarkHandler _landmarkHandler;
 
-    public K4AdotNet.Record.Playback Playback { get; private set; }
+    public ReadOnlyReactiveProperty<K4AdotNet.Record.Playback> Playback => _playback;
+    public ReadOnlyReactiveProperty<bool> IsReading => _isReading;
+    
+    ReactiveProperty<K4AdotNet.Record.Playback> _playback = new();
+    ReactiveProperty<bool> _isReading = new(false);
+
     Tracker _tracker;
 
     Task? _readingTask;
@@ -26,9 +32,6 @@ internal class PlaybackReader : IPlaybackReader
     Microseconds64 _currentTimestampUs = new(0);
     Microseconds64 _lastTimestampUs = new(0);
 
-    public bool IsReading { get; private set; } = false;
-    public event Action<bool> ReadingStateChange; // refactor: Remove this action to rewrite `IsReading` as ReactiveProperty.
-    public event Action<K4AdotNet.Record.Playback> PlaybackLoaded;
 
     public PlaybackReader(
         FrameManager frameManager,
@@ -52,9 +55,8 @@ internal class PlaybackReader : IPlaybackReader
             Playback?.Dispose();
         }
 
-        Playback = new(descriptor.VideoFilePath);
-        PlaybackLoaded?.Invoke(Playback);
-        Playback.GetCalibration(out var calibration);
+        _playback.Value = new(descriptor.VideoFilePath);
+        _playback.Value.GetCalibration(out var calibration);
         PointCloud.ComputePointCloudCache(calibration);
 
         _tracker?.Dispose();
@@ -75,28 +77,22 @@ internal class PlaybackReader : IPlaybackReader
 
     public void Play()
     {
-        if (IsReading) return;
+        if (_isReading.Value) return;
 
-        IsReading = true;
-
-        Playback.SeekTimestamp(_currentTimestampUs, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
+        _isReading.Value = true;
+        Playback.CurrentValue.SeekTimestamp(_currentTimestampUs, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
         _lastTimestampUs = _currentTimestampUs;
-
-        ReadingStateChange?.Invoke(IsReading);
     }
 
     public void Pause()
     {
-        if (!IsReading) return;
-
-        IsReading = false;
-        ReadingStateChange?.Invoke(IsReading);
+        if (!_isReading.Value) return;
+        _isReading.Value = false;
     }
 
     public void Rewind()
     {
-        IsReading = false;
-        ReadingStateChange?.Invoke(IsReading);
+        _isReading.Value = false;
         _currentTimestampUs = new(0);
         _lastTimestampUs = new(0);
     }
@@ -107,7 +103,7 @@ internal class PlaybackReader : IPlaybackReader
         {
             while (!token.IsCancellationRequested)
             {
-                if (IsReading)
+                if (_isReading.Value)
                 {
                     var startSystemTime = Stopwatch.GetTimestamp();
                     var frameTimeDiff = ReadAndProcessFrame();
@@ -130,8 +126,7 @@ internal class PlaybackReader : IPlaybackReader
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Error in FrameReadingLoop: {ex}");
-            IsReading = false;
-            ReadingStateChange?.Invoke(IsReading);
+            _isReading.Value = false;
         }
     }
 
@@ -172,12 +167,11 @@ internal class PlaybackReader : IPlaybackReader
     {
         if (Playback is null) return TimeSpan.FromMilliseconds(50);
 
-        var waitResult = Playback.TryGetNextCapture(out var capture);
+        var waitResult = Playback.CurrentValue.TryGetNextCapture(out var capture);
 
         if (!waitResult)
         {
-            IsReading = false;
-            ReadingStateChange?.Invoke(IsReading);
+            _isReading.Value = false;
             Console.WriteLine("Info: Playback reached end of file or failed to get a capture.");
             return TimeSpan.Zero;
         }
