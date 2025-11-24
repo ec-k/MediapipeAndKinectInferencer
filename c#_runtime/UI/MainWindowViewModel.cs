@@ -1,7 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using K4AdotNet.Record;
-using K4AdotNet.Sensor;
 using KinectPoseInferencer.Playback;
 using System;
 using System.IO;
@@ -16,8 +14,8 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] double _currentFrameTimestamp;
     [ObservableProperty] string _playbackLength;
     [ObservableProperty] string _playPauseIconUnicode;
+    [ObservableProperty] string _videoFilePath;
 
-    bool _isPlaying;
     const string PlayIconUnicode = "&#xE768;";
     const string PauseIconUnicode = "&#xE769";
     
@@ -46,25 +44,9 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     void LoadFiles()
     {
-        // implement:
-        //      1. Load files specified in GUI
-        //      2. Compose PlaybackControllerDescriptor
-        //      3. Call playbackController.Configure(desc);
-        //      4. Call playbackController.Start();
+        if (string.IsNullOrEmpty(VideoFilePath)) return;
 
-        // Setup a device
-        var testVideoPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyVideos),
-            "KinectAndInputRecorder",
-            "test_video.mkv");                          // This should specified by settings or user (via UI)
-        var recordConfig = new RecordConfiguration()    // This should specified by metafile
-        {
-            ColorFormat = ImageFormat.ColorBgra32,
-            ColorResolution = ColorResolution.R720p,
-            DepthMode = DepthMode.NarrowViewUnbinned,
-            CameraFps = FrameRate.Thirty,
-        };
-        var playbackDesc = new PlaybackDescriptor(testVideoPath, recordConfig);
+        var playbackDesc = new PlaybackDescriptor(VideoFilePath);
         _controller.Descriptor = playbackDesc;
     }
 
