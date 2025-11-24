@@ -1,4 +1,5 @@
-﻿using K4AdotNet.BodyTracking;
+﻿using K4AdotNet;
+using K4AdotNet.BodyTracking;
 using KinectPoseInferencer.PoseInference;
 using System;
 using System.Linq;
@@ -19,7 +20,12 @@ internal class PlaybackReader: IPlaybackReader
     Task? _readingTask;
     CancellationTokenSource _cts;
     int _taskCancelTimeoutSec = 2;
-    bool _isReading = false;
+
+    Microseconds64 _currentTimestampMs = 0;
+
+    public bool IsReading { get; private set; } = false;
+    public event Action<bool> ReadingStateChange; // refactor: Remove this action to rewrite `IsReading` as ReactiveProperty.
+    public event Action<K4AdotNet.Record.Playback> PlaybackLoaded;
 
     public PlaybackReader(
         FrameManager frameManager,
@@ -37,7 +43,7 @@ internal class PlaybackReader: IPlaybackReader
             throw new ArgumentNullException(nameof(descriptor.VideoFilePath));
         Playback = new(descriptor.VideoFilePath);
 
-        Playback.GetRecordConfiguration(out var recordConfig);
+        PlaybackLoaded?.Invoke(Playback);
         Playback.GetCalibration(out var calibration);
         var trackerConfig = new TrackerConfiguration()
         {
@@ -46,38 +52,41 @@ internal class PlaybackReader: IPlaybackReader
         };
 
         _tracker = new(calibration, trackerConfig);
-    }
 
-    public void Start()
-    {
-        _isReading = true;
-        Playback.SeekTimestamp(0, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
+        if (_readingTask is not null)
+        {
+            StopReadingLoop();
+            _readingTask = null;
+        }
         _cts = new();
         _readingTask = Task.Run(() => FrameReadingLoop(_cts.Token));
     }
 
+    public void Play()
+    {
+        IsReading = true;
+        Playback.SeekTimestamp(_currentTimestampMs, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
+        ReadingStateChange?.Invoke(IsReading);
+    }
+
     public void Pause()
     {
-        _isReading = false;
+        IsReading = false;
+        ReadingStateChange?.Invoke(IsReading);
     }
 
-    public void Resume()
+    public void Rewind()
     {
-        _isReading = true;
-    }
-
-    public void Stop()
-    {
-        _isReading = false;
-        StopReadingLoop();
-        Playback.SeekTimestamp(0, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
+        IsReading = false;
+        ReadingStateChange?.Invoke(IsReading);
+        _currentTimestampMs = 0;
     }
 
     void FrameReadingLoop(CancellationToken token)
     {
         while (!token.IsCancellationRequested)
         {
-            if(_isReading)
+            if(IsReading)
                 ReadAndProcessFrame();
         }
     }
@@ -118,6 +127,7 @@ internal class PlaybackReader: IPlaybackReader
         capture.Dispose();
 
         using var frame = _tracker.PopResult();
+        _currentTimestampMs = frame.DeviceTimestamp;
         if(frame is not null)
         {
             _frameManager.Frame = frame.DuplicateReference();
@@ -158,6 +168,7 @@ internal class PlaybackReader: IPlaybackReader
 
     public void Dispose()
     {
+        StopReadingLoop();
         Playback.Dispose();
     }
 }

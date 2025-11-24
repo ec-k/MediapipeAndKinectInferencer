@@ -5,13 +5,10 @@ namespace KinectPoseInferencer.Playback;
 public class PlaybackDescriptor
 {
     public string VideoFilePath { get; set; }
-    public RecordConfiguration RecordConfig {get;set;}
 
     public PlaybackDescriptor(
-        string videoFilePath,
-        RecordConfiguration recordConfig)
+        string videoFilePath)
     {
         VideoFilePath = videoFilePath;
-        RecordConfig = recordConfig;
     }
 }
