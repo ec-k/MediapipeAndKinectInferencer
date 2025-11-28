@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:helix="clr-namespace:HelixToolkit.Wpf;assembly=HelixToolkit.Wpf"
         xmlns:converters="clr-namespace:KinectPoseInferencer.UI.Converters"
         mc:Ignorable="d"
         Title="Kinect Pose Inferencer" Height="600" Width="800"
@@ -75,7 +76,20 @@
                 Background="Black" CornerRadius="4"
                 VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
             <Viewbox x:Name="VideoWindowViewBox" Stretch="Uniform">
-                <TextBlock Text="(video)" FontSize="24" Foreground="#808080" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="100"/>
+                <helix:HelixViewport3D x:Name="View3D"
+                                       Grid.Row="0" Grid.Column="0"
+                                       ShowCameraInfo="False"
+                                       ShowCoordinateSystem="True"
+                                       IsRotationEnabled="False" IsPanEnabled="False" IsZoomEnabled="False"
+                                       Width="640" Height="360">
+                    <helix:HelixViewport3D.Camera>
+                        <PerspectiveCamera Position="0, 0, -2"
+                                           LookDirection="0, 0, 2"
+                                           UpDirection="0, 1, 0"
+                                           FieldOfView="65"/>
+                    </helix:HelixViewport3D.Camera>
+                    <helix:DefaultLights/>
+                </helix:HelixViewport3D>
             </Viewbox>
         </Border>
 

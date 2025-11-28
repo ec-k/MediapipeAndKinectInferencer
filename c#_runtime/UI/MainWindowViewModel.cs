@@ -3,6 +3,8 @@ using CommunityToolkit.Mvvm.Input;
 using KinectPoseInferencer.Playback;
 using R3;
 using System;
+using System.Collections.ObjectModel;
+using System.Windows.Media.Media3D;
 
 
 namespace KinectPoseInferencer.UI;
@@ -18,6 +20,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     const string PlayIconUnicode = "&#xE768;";
     const string PauseIconUnicode = "&#xE769";
+
+    public ObservableCollection<ModelVisual3D> ModelVisuals { get; } = new();
 
     DisposableBag _disposables = new();
     
