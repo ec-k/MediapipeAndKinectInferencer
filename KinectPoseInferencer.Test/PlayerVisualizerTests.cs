@@ -1,4 +1,5 @@
-﻿using K4AdotNet.BodyTracking;
+﻿using HelixToolkit.Wpf;
+using K4AdotNet.BodyTracking;
 using KinectPoseInferencer.Renderers;
 
 
@@ -62,5 +63,17 @@ public class PlayerVisualizerTests
 
         // Assert
         Assert.IsTrue(models.Any(), "No models are created");
+    }
+
+    [TestMethod]
+    public void UpdateVisuals_WithFrame_GeneratesPointCloudModel()
+    {
+        var visualizer = new PlayerVisualizer();
+
+        BodyFrame? dummyFrame = null;
+        var models = visualizer.UpdateVisuals(dummyFrame);
+
+        Assert.IsNotNull(models);
+        Assert.IsTrue(models.Any(m => m is PointsVisual3D), "PointsVisual3D models are not contained in the list.");
     }
 }
