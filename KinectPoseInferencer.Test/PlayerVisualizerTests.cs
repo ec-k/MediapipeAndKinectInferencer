@@ -1,5 +1,6 @@
 ﻿using HelixToolkit.Wpf;
 using K4AdotNet.BodyTracking;
+using K4AdotNet.Sensor;
 using KinectPoseInferencer.Renderers;
 
 
@@ -46,34 +47,45 @@ public class PlayerVisualizerTests
     const int ExpectedJointCount = 32;
     readonly int ExpectedBoneCount = BodyTrackingTestHelper.GetExpectedBoneCount();
 
+    Calibration _dummyCalibration;
+
+    [TestInitialize]
+    public void TestInitialize()
+    {
+        _dummyCalibration = new();
+    }
+
     [TestMethod]
     public void UpdateVisuals_OneBody_GeneratesCorrectNumberOfModels()
     {
         // Arrange
         var dummySkeleton = BodyTrackingTestHelper.CreateDummySkeleton();
-        var visualizer = new PlayerVisualizer();
-
-        int expectedModelCount = ExpectedJointCount + ExpectedBoneCount;
+        var expectedModelCount = ExpectedJointCount + ExpectedBoneCount;
+        using var visualizer = new PlayerVisualizer(_dummyCalibration);
 
         // Act
         // TODO: Create a mock of BodyTrackingFrame
-        var dummyFrame = new object();
+        BodyFrame? dummyFrame = null;
+        Image? dummyDepthImage = null;
 
-        var models = visualizer.UpdateVisuals(null);
+        var models = visualizer.UpdateVisuals(dummyFrame, dummyDepthImage);
 
         // Assert
+        Assert.AreEqual(0, models.Count, "The frame must not be null.");
         Assert.IsTrue(models.Any(), "No models are created");
     }
 
     [TestMethod]
     public void UpdateVisuals_WithFrame_GeneratesPointCloudModel()
     {
-        var visualizer = new PlayerVisualizer();
+        using var visualizer = new PlayerVisualizer(_dummyCalibration);
 
         BodyFrame? dummyFrame = null;
-        var models = visualizer.UpdateVisuals(dummyFrame);
+        Image? dummyDepthImage = null;
+        var models = visualizer.UpdateVisuals(dummyFrame, dummyDepthImage);
 
         Assert.IsNotNull(models);
+        Assert.IsFalse(models.Any(m => m is PointsVisual3D), "PointCloud model is generated while a null image is fed.");
         Assert.IsTrue(models.Any(m => m is PointsVisual3D), "PointsVisual3D models are not contained in the list.");
     }
 }

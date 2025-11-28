@@ -7,33 +7,53 @@ using System.Numerics;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using KinectPoseInferencer.Helpers;
+using K4AdotNet.Sensor;
+
 
 namespace KinectPoseInferencer.Renderers;
 
-
-public class PlayerVisualizer
+public class PlayerVisualizer : IDisposable
 {
     readonly MeshGeometry3D _sphereMesh;
     readonly MeshGeometry3D _cylinderMesh;
-
-    readonly Material _pointCloudMaterial = MaterialHelper.CreateMaterial(Colors.White);
+    readonly PointCloudProcessor _pointCloudProcessor;
+    readonly Color _pointCloudColor = Colors.White;
     readonly List<(JointType Parent, JointType Child)> _boneConnection = BodyTrackingHelper.GetBoneConnections();
 
-    public PlayerVisualizer()
+    List<Vertex> _pointCloudVertices = new();
+
+    public PlayerVisualizer(Calibration calibration)
     {
         SphereGeometryBuilder.Build(36, 18, out var sphereVertices, out var sphereIndices);
         _sphereMesh = HelixGeometryFactory.CreateMesh(sphereVertices, sphereIndices);
 
         CylinderGeometryBuilder.Build(36, out var cylinderVertices, out var cylinderIndices);
         _cylinderMesh = HelixGeometryFactory.CreateMesh(cylinderVertices, cylinderIndices);
+
+        _pointCloudProcessor = new PointCloudProcessor(calibration);
     }
 
-    public List<ModelVisual3D> UpdateVisuals(BodyFrame bodyFrame)
+    public List<ModelVisual3D> UpdateVisuals(BodyFrame bodyFrame, Image depthImage)
     {
         var visualModels = new List<ModelVisual3D>();
 
-        if (bodyFrame is null) return visualModels;
+        // Render point clouds
+        if(depthImage is not null)
+        {
+            _pointCloudProcessor.ComputePointCloud(depthImage, ref _pointCloudVertices);
 
+            if (_pointCloudVertices.Any())
+            {
+                var positions = _pointCloudVertices.Select(v => v.Position).ToList();
+
+                var pointsVisual = PointCloudAdapter.CreatePointsVisual(positions);
+                pointsVisual.Color = _pointCloudColor;
+                visualModels.Add(pointsVisual);
+            }
+        }
+
+        // Render skeletons
+        if (bodyFrame is null) return visualModels;
 
         for (var i = 0; i < bodyFrame.BodyCount; ++i)
         {
@@ -99,5 +119,10 @@ public class PlayerVisualizer
             Transform = boneTransform
         };
         return boneVisual;
+    }
+
+    public void Dispose()
+    {
+        _pointCloudProcessor?.Dispose();
     }
 }
