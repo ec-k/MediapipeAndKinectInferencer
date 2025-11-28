@@ -1,17 +1,25 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using K4AdotNet.Sensor;
+using K4AdotNet.BodyTracking;
 using KinectPoseInferencer.Playback;
+using KinectPoseInferencer.Renderers;
 using R3;
 using System;
-using System.Collections.ObjectModel;
 using System.Windows.Media.Media3D;
+using System.Windows;
+using System.Linq;
+using System.Collections.ObjectModel;
 
 
 namespace KinectPoseInferencer.UI;
 
-public partial class MainWindowViewModel : ObservableObject
+public partial class MainWindowViewModel : ObservableObject, IDisposable
 {
-    IPlaybackController _controller;
+    readonly IPlaybackController _controller;
+    readonly ObservableCollection<ModelVisual3D> _modelVisuals = new();
+
+    PlayerVisualizer _visualizer;
 
     [ObservableProperty] double _currentFrameTimestamp;
     [ObservableProperty] string _playbackLength;
@@ -21,7 +29,7 @@ public partial class MainWindowViewModel : ObservableObject
     const string PlayIconUnicode = "&#xE768;";
     const string PauseIconUnicode = "&#xE769";
 
-    public ObservableCollection<ModelVisual3D> ModelVisuals { get; } = new();
+    public ObservableCollection<ModelVisual3D> ModelVisuals => _modelVisuals;
 
     DisposableBag _disposables = new();
     
@@ -30,11 +38,35 @@ public partial class MainWindowViewModel : ObservableObject
         _controller = controller ?? throw new ArgumentNullException(nameof(controller));
 
         _controller.Reader.Playback
-            .Subscribe(playback => UpdatePlaybackLengthDisplay(playback))
+            .Where(playback => playback is not null)
+            .Subscribe(playback => {
+                    UpdatePlaybackLengthDisplay(playback);
+                    playback.GetCalibration(out var calibration);
+                    _visualizer = new PlayerVisualizer(calibration);
+            })
             .AddTo(ref _disposables);
         _controller.Reader.IsReading
             .Subscribe(isPlaying => PlayPauseIconUnicode = isPlaying ? PauseIconUnicode : PlayIconUnicode)
             .AddTo(ref _disposables);
+
+        _controller.Reader.OnNewFrame += OnNewFrame;
+    }
+
+    void OnNewFrame(BodyFrame frame, Capture capture)
+    {
+        var depthImage = capture.DepthImage;
+
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            var newModels = _visualizer.UpdateVisuals(frame, depthImage);
+            _modelVisuals.Clear();
+            foreach (var model in newModels)
+            {
+                _modelVisuals.Add(model);
+            }
+        });
+        frame.Dispose();
+        capture.Dispose();
     }
 
     void UpdatePlaybackLengthDisplay(K4AdotNet.Record.Playback playback)
@@ -77,4 +109,11 @@ public partial class MainWindowViewModel : ObservableObject
 
     [RelayCommand]
     public void Pause() { }
+
+    public void Dispose()
+    {
+        _controller.Reader.OnNewFrame -= OnNewFrame;
+        _visualizer?.Dispose();
+        _disposables.Dispose();
+    }
 }

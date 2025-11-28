@@ -70,7 +70,7 @@
             
         </Grid>
 
-        <!-- Video View (place holder) -->
+        <!-- Video View -->
         <Border x:Name="VideoWindowBorder"
                 Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
                 Background="Black" CornerRadius="4"
@@ -80,13 +80,15 @@
                                        Grid.Row="0" Grid.Column="0"
                                        ShowCameraInfo="False"
                                        ShowCoordinateSystem="True"
-                                       IsRotationEnabled="False" IsPanEnabled="False" IsZoomEnabled="False"
+                                       IsRotationEnabled="True" IsPanEnabled="True" IsZoomEnabled="True"
                                        Width="640" Height="360">
                     <helix:HelixViewport3D.Camera>
-                        <PerspectiveCamera Position="0, 0, -2"
-                                           LookDirection="0, 0, 2"
+                        <PerspectiveCamera Position="0, 0, 3"
+                                           LookDirection="0, 0, -3"
                                            UpDirection="0, 1, 0"
-                                           FieldOfView="65"/>
+                                           FieldOfView="65"
+                                           NearPlaneDistance="0.01"
+                                           FarPlaneDistance="10.0"/>
                     </helix:HelixViewport3D.Camera>
                     <helix:DefaultLights/>
                 </helix:HelixViewport3D>
