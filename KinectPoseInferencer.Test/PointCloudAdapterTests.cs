@@ -1,19 +1,8 @@
 ﻿using System.Numerics;
-using HelixToolkit.Wpf;
 
+using KinectPoseInferencer.Renderers;
 
-namespace KinectPoseInferencer.Renderers
-{
-    public static class PointCloudAdapter
-    {
-        public static PointsVisual3D CreatePointsVisual(List<Vector3> points)
-        {
-            throw new System.NotImplementedException("PointCloudAdapter is not yet implemented.");
-        }
-    }
-}
-
-namespace KinectAndInputRecorder.Tests
+namespace KinectPoseInferencer.Tests
 {
 
     [TestClass]
