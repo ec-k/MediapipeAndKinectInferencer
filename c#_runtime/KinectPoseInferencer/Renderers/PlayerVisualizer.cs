@@ -6,6 +6,7 @@ using System.Linq;
 using System.Numerics;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using KinectPoseInferencer.Helpers;
 
 namespace KinectPoseInferencer.Renderers;
 
@@ -16,6 +17,7 @@ public class PlayerVisualizer
     readonly MeshGeometry3D _cylinderMesh;
 
     readonly Material _pointCloudMaterial = MaterialHelper.CreateMaterial(Colors.White);
+    readonly List<(JointType Parent, JointType Child)> _boneConnection = BodyTrackingHelper.GetBoneConnections();
 
     public PlayerVisualizer()
     {
@@ -37,61 +39,65 @@ public class PlayerVisualizer
         {
             bodyFrame.GetBodySkeleton(i, out var skeleton);
             var bodyId = bodyFrame.GetBodyId((int)i);
+            var bodyColor = BodyTrackingHelper.GetBodyColor(bodyId.Value);
+            var bodyMaterial = MaterialHelper.CreateMaterial(bodyColor);
 
-            var color = GetBodyColor(bodyId.Value);
-            var bodyMaterial = MaterialHelper.CreateMaterial(color);
-
+            // Render joints
             var jointTypes = Enum.GetValues(typeof(JointType)).Cast<JointType>();
             foreach (var jointType in jointTypes)
             {
                 var joint = skeleton[jointType];
-                var position = new Vector3(joint.PositionMm.X, joint.PositionMm.Y, joint.PositionMm.Z) / 1000f; // mm -> m
+                var position = BodyTrackingHelper.ConvertPositionToMeters(joint.PositionMm);
+                visualModels.Add(CreateSphereModel(position, bodyMaterial));
+            }
 
-                // Create sphere (joint model)
-                var jointVisual = new ModelVisual3D();
 
-                var jointTransformGroup = new Transform3DGroup();
-                jointTransformGroup.Children.Add(new ScaleTransform3D(0.024, 0.024, 0.024));
-                jointTransformGroup.Children.Add(new TranslateTransform3D(position.X, position.Y, position.Z));
+            // Render bones
+            foreach(var bone in _boneConnection)
+            {
+                var parentJoint = skeleton[bone.Parent];
+                var childJoint = skeleton[bone.Child];
 
-                jointVisual.Content = new GeometryModel3D
-                {
-                    Geometry = _sphereMesh,
-                    Material = bodyMaterial,
-                    Transform = jointTransformGroup
-                };
-                visualModels.Add(jointVisual);
+                var parentPosition = BodyTrackingHelper.ConvertPositionToMeters(parentJoint.PositionMm);
+                var childPosition = BodyTrackingHelper.ConvertPositionToMeters(childJoint.PositionMm);
 
-                // Render bones (cylinders)
-                try
-                {
-                    var parentType = jointType.GetParent();
-                    var parentJoint = skeleton[parentType];
-
-                    var parentPosition = new Vector3(parentJoint.PositionMm.X, parentJoint.PositionMm.Y, parentJoint.PositionMm.Z) / 1000f;
-
-                    var modelMatrix = BoneMatrixBuilder.Build(parentPosition, position);
-                    var boneTransform = Transform3DBuilder.CreateTransform(modelMatrix);
-
-                    var boneVisual = new ModelVisual3D();
-                    boneVisual.Content = new GeometryModel3D
-                    {
-                        Geometry = _cylinderMesh,
-                        Material = bodyMaterial,
-                        Transform = boneTransform
-                    };
-                    visualModels.Add(boneVisual);
-                }
-                catch { /* skip for Joints that have no parents (like Plvis) */ }
+                visualModels.Add(CreateCylinderModel(parentPosition, childPosition, bodyMaterial));
             }
         }
 
         return visualModels;
     }
 
-    Color GetBodyColor(int bodyId)
+    ModelVisual3D CreateSphereModel(Vector3 position, Material material)
     {
-        var colors = new List<Color> { Colors.Red, Colors.Blue, Colors.Green, Colors.Yellow };
-        return colors[(bodyId % colors.Count)];
+        const double Radius = 0.024;
+
+        var jointTransformGroup = new Transform3DGroup();
+        jointTransformGroup.Children.Add(new ScaleTransform3D(Radius, Radius, Radius));
+        jointTransformGroup.Children.Add(new TranslateTransform3D(position.X, position.Y, position.Z));
+
+        var jointVisual = new ModelVisual3D();
+        jointVisual.Content = new GeometryModel3D
+        {
+            Geometry = _sphereMesh,
+            Material = material,
+            Transform = jointTransformGroup
+        };
+        return jointVisual;
+    }
+
+    ModelVisual3D CreateCylinderModel(Vector3 start, Vector3 end, Material material)
+    {
+        var modelMatrix = BoneMatrixBuilder.Build(start, end);
+        var boneTransform = Transform3DBuilder.CreateTransform(modelMatrix);
+
+        var boneVisual = new ModelVisual3D();
+        boneVisual.Content = new GeometryModel3D
+        {
+            Geometry = _cylinderMesh,
+            Material = material,
+            Transform = boneTransform
+        };
+        return boneVisual;
     }
 }
