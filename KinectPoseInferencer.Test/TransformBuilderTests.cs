@@ -1,25 +1,15 @@
-﻿using System.Numerics;
+﻿using KinectPoseInferencer.Renderers;
+using System.Numerics;
 using System.Windows.Media.Media3D;
 
 
 namespace KinectAndInputRecorder.Tests;
 
 
-public static class BoneMatrixBuilder
-{
-    private const float BaseScale = 0.01f;
-
-    public static Matrix4x4 Build(Vector3 start, Vector3 end)
-    {
-        // implement later
-        throw new System.NotImplementedException("BoneMatrixBuilder is not yet implemented.");
-    }
-}
-
 [TestClass]
 public class TransformBuilderTests
 {
-    private static readonly float Delta = 0.0001f;
+    static readonly float delta = 0.0001f;
 
     [TestMethod]
     public void BoneMatrixBuilder_ZeroVector_ReturnsIdentityScale()
@@ -37,10 +27,10 @@ public class TransformBuilderTests
         //           (0,      0,   1, 0)
         //           (0,      0, 0.5, 1) <--- Translation(0, 0, 0.5)
 
-        Assert.AreEqual(0.01f, modelMatrix.M11, Delta, "X Scale is incorrect.");
-        Assert.AreEqual(0.01f, modelMatrix.M22, Delta, "Y Scale is incorrect.");
-        Assert.AreEqual(1.0f,  modelMatrix.M33, Delta, "Z Scale (length) is incorrect.");
-        Assert.AreEqual(0.5f,  modelMatrix.M43, Delta, "Z Translation is incorrect.");
+        Assert.AreEqual(0.01f, modelMatrix.M11, delta, "X Scale is incorrect.");
+        Assert.AreEqual(0.01f, modelMatrix.M22, delta, "Y Scale is incorrect.");
+        Assert.AreEqual(1.0f,  modelMatrix.M33, delta, "Z Scale (length) is incorrect.");
+        Assert.AreEqual(0.5f,  modelMatrix.M43, delta, "Z Translation is incorrect.");
     }
 
     [TestMethod]
@@ -54,11 +44,19 @@ public class TransformBuilderTests
         var modelMatrix = BoneMatrixBuilder.Build(start, end);
 
         // Assert
-        Assert.AreEqual(0.0f, modelMatrix.M41, Delta, "X Translation is incorrect.");
-        Assert.AreEqual(0.0f, modelMatrix.M42, Delta, "Y Translation is incorrect.");
-        Assert.AreEqual(0.0f, modelMatrix.M43, Delta, "Z Translation is incorrect.");
+        // 1. about translation
+        Assert.AreEqual(0.0f, modelMatrix.M41, delta, "X Translation is incorrect.");
+        Assert.AreEqual(0.0f, modelMatrix.M42, delta, "Y Translation is incorrect.");
+        Assert.AreEqual(0.0f, modelMatrix.M43, delta, "Z Translation is incorrect.");
 
-        Assert.AreEqual(2.0f, modelMatrix.M33, Delta, "Z Scale (length) is incorrect.");
+        // 2. about scale
+        var xScale = new Vector3(modelMatrix.M11, modelMatrix.M21, modelMatrix.M31);
+        var yScale = new Vector3(modelMatrix.M12, modelMatrix.M22, modelMatrix.M32);
+        var zScale = new Vector3(modelMatrix.M13, modelMatrix.M23, modelMatrix.M33);
+
+        Assert.AreEqual(0.01f, xScale.Length(), delta, "X Scale is incorrect.");
+        Assert.AreEqual(0.01f, yScale.Length(), delta, "Y Scale is incorrect.");
+        Assert.AreEqual(2.0f , zScale.Length(), delta, "Z Scale (length) is incorrect.");
     }
 
     [TestMethod]
@@ -67,7 +65,7 @@ public class TransformBuilderTests
         // Arrange:
         var rotation = Matrix4x4.CreateRotationY(MathF.PI / 2.0f);
         var translation = Matrix4x4.CreateTranslation(10, 20, 30);
-        var sourceMatrix = rotation * translation;
+        var sourceMatrix =  rotation * translation;
 
         // Act
         var transform = Transform3DBuilder.CreateTransform(sourceMatrix);
@@ -78,11 +76,11 @@ public class TransformBuilderTests
 
         var resultMatrix = transform.Matrix;
 
-        Assert.AreEqual(sourceMatrix.M41, resultMatrix.OffsetX, Delta, "Translation X is incorrect.");
-        Assert.AreEqual(sourceMatrix.M42, resultMatrix.OffsetY, Delta, "Translation Y is incorrect.");
-        Assert.AreEqual(sourceMatrix.M43, resultMatrix.OffsetZ, Delta, "Translation Z is incorrect.");
+        Assert.AreEqual(sourceMatrix.M41, resultMatrix.OffsetX, delta, "Translation X is incorrect.");
+        Assert.AreEqual(sourceMatrix.M42, resultMatrix.OffsetY, delta, "Translation Y is incorrect.");
+        Assert.AreEqual(sourceMatrix.M43, resultMatrix.OffsetZ, delta, "Translation Z is incorrect.");
 
-        Assert.AreEqual(0.0f, resultMatrix.M11, Delta, "Rotation M11 is incorrect.");
-        Assert.AreEqual(1.0f, resultMatrix.M13, Delta, "Rotation M13 is incorrect.");
+        Assert.AreEqual(0.0f, resultMatrix.M11, delta, "Rotation M11 is incorrect.");
+        Assert.AreEqual(1.0f, resultMatrix.M13, delta, "Rotation M13 is incorrect.");
     }
 }
