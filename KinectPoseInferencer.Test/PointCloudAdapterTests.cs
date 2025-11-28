@@ -1,0 +1,43 @@
+﻿using System.Numerics;
+using HelixToolkit.Wpf;
+
+
+namespace KinectPoseInferencer.Renderers
+{
+    public static class PointCloudAdapter
+    {
+        public static PointsVisual3D CreatePointsVisual(List<Vector3> points)
+        {
+            throw new System.NotImplementedException("PointCloudAdapter is not yet implemented.");
+        }
+    }
+}
+
+namespace KinectAndInputRecorder.Tests
+{
+
+    [TestClass]
+    public class PointCloudAdapterTests
+    {
+        [TestMethod]
+        public void CreatePointsVisual_WithData_ReturnsCorrectCount()
+        {
+            // Arrange
+            const int expectedPointCount = 100;
+            var dummyPoints = new List<Vector3>();
+
+            for (int i = 0; i < expectedPointCount; i++)
+                dummyPoints.Add(new Vector3(i, i * 2, 1.0f + i / 100.0f));
+
+            // Act
+            var pointsVisual = PointCloudAdapter.CreatePointsVisual(dummyPoints);
+
+            // Assert
+            Assert.IsNotNull(pointsVisual);
+            var points = pointsVisual.Points;
+
+            Assert.IsNotNull(points);
+            Assert.AreEqual(expectedPointCount, points.Count);
+        }
+    }
+}
