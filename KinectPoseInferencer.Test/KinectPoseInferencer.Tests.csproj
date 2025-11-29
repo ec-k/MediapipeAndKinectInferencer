@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <PackageReference Include="HelixToolkit.Wpf" Version="3.1.1" />
+    <PackageReference Include="Moq" Version="4.20.72" />
   </ItemGroup>
 
   <ItemGroup>
