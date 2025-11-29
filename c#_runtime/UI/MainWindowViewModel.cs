@@ -1,18 +1,19 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using K4AdotNet.Sensor;
+using K4AdotNet;
 using K4AdotNet.BodyTracking;
+using K4AdotNet.Record;
+using K4AdotNet.Sensor;
 using KinectPoseInferencer.Playback;
 using KinectPoseInferencer.Renderers;
 using R3;
 using System;
-using System.Windows;
-using System.Linq;
 using System.Collections.Generic;
-using System.Windows.Media.Media3D;
-using System.Collections.ObjectModel; // For ObservableCollection
-using System.Windows.Controls;      // For UIElement
-using System.Windows.Media.Imaging; // For WriteableBitmap
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Media.Imaging;
 
 namespace KinectPoseInferencer.UI;
 
@@ -31,9 +32,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     const string PlayIconUnicode = "\uE768";
     const string PauseIconUnicode = "\uE769";
 
+    readonly int MaxSeekFramesForColorImage = 100;
+
     public event Action<List<UIElement>> UpdateVisuals; // Change signature of event
 
     DisposableBag _disposables = new();
+    CancellationTokenSource _cts = new();
     
     public MainWindowViewModel(IPlaybackController controller)
     {
@@ -48,6 +52,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     UpdatePlaybackLengthDisplay(playback);
                     playback.GetCalibration(out var calibration);
                     _visualizer = new PlayerVisualizer(calibration);
+
+                    _ = Task.Run(() => DisplayFirstColorFrame(playback), _cts.Token);
             })
             .AddTo(ref _disposables);
         _controller.Reader.IsReading
@@ -55,6 +61,63 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .AddTo(ref _disposables);
 
         _controller.Reader.OnNewFrame += OnNewFrame;
+    }
+
+    void DisplayFirstColorFrame(K4AdotNet.Record.Playback playback)
+    {
+        try
+        {
+            playback.SeekTimestamp(new Microseconds64(0), K4AdotNet.Record.PlaybackSeekOrigin.Begin);
+
+            Capture? captureToDisplay = null;
+            bool foundColorImage = false;
+
+            for (int i = 0; i < MaxSeekFramesForColorImage; i++)
+            {
+                if (!playback.TryGetNextCapture(out var currentCapture))
+                {
+                    break;  // Probably at EOF
+                }
+
+                if (currentCapture.ColorImage is not null)
+                {
+                    captureToDisplay = currentCapture;
+                    foundColorImage = true;
+                    break;
+                }
+                currentCapture.Dispose();
+            }
+
+            if (foundColorImage && captureToDisplay is not null)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    ColorBitmap = captureToDisplay.ColorImage.ToWriteableBitmap(ColorBitmap);
+                });
+            }
+            else
+            {
+                // Display gray scale image when no color image is found.
+                playback.SeekTimestamp(new Microseconds64(0), PlaybackSeekOrigin.Begin);
+                if (playback.TryGetNextCapture(out var firstCapture))
+                {
+                    if (firstCapture.DepthImage is not null)
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            ColorBitmap = firstCapture.DepthImage.ToWriteableBitmap(ColorBitmap);
+                        });
+                    }
+                    firstCapture.Dispose();
+                }
+            }
+
+            captureToDisplay?.Dispose();
+        }
+        finally
+        {
+            playback?.SeekTimestamp(new Microseconds64(0), PlaybackSeekOrigin.Begin);
+        }
     }
 
     void OnNewFrame(BodyFrame frame, Capture capture)
