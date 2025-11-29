@@ -1,4 +1,10 @@
-﻿using K4AdotNet;
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Released under the MIT license.
+// Source: https://github.com/microsoft/Azure-Kinect-Samples/blob/master/LICENSE
+
+// The original code has been modified and adapted for the MediapipeAndKinectInferencer project.
+
+using K4AdotNet;
 using K4AdotNet.BodyTracking;
 using System;
 using System.Collections.Generic;

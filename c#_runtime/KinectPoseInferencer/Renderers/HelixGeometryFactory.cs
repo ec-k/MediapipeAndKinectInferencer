@@ -1,4 +1,10 @@
-﻿using System.Collections.Generic;
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Released under the MIT license.
+// Source: https://github.com/microsoft/Azure-Kinect-Samples/blob/master/LICENSE
+
+// The original code has been modified and adapted for the MediapipeAndKinectInferencer project.
+
+using System.Collections.Generic;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 
