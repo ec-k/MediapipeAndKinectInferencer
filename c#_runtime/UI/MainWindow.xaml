@@ -102,17 +102,7 @@
             <Button Command="{Binding RewindCommand}" Width="80" Height="60" Margin="0,0,20,0">
                 <!-- Rewind Icon -->
                 <Grid>
-                    <Rectangle Width="8" Height="30" Fill="White" HorizontalAlignment="Left"/>
-                    <Path Data="M 30,15 L 50,25 L 30,35 Z" Stretch="Fill" Fill="White" Width="23" HorizontalAlignment="Center" Margin="0,14,0,14" RenderTransformOrigin="0.5,0.5">
-                        <Path.RenderTransform>
-                            <TransformGroup>
-                                <ScaleTransform ScaleX="-1"/>
-                                <SkewTransform/>
-                                <RotateTransform/>
-                                <TranslateTransform/>
-                            </TransformGroup>
-                        </Path.RenderTransform>
-                    </Path>
+                    <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xE892;"/>
                 </Grid>
             </Button>
 
