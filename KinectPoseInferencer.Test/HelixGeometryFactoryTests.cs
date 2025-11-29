@@ -1,6 +1,6 @@
 ﻿using KinectPoseInferencer.Renderers;
 
-namespace KinectAndInputRecorder.Tests;
+namespace KinectPoseInferencer.Tests;
 
 
 [TestClass]

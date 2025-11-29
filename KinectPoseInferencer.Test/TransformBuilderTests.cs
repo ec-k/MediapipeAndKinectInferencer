@@ -3,7 +3,7 @@ using System.Numerics;
 using System.Windows.Media.Media3D;
 
 
-namespace KinectAndInputRecorder.Tests;
+namespace KinectPoseInferencer.Tests;
 
 
 [TestClass]
