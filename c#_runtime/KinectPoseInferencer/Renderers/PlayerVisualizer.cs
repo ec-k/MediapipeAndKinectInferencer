@@ -19,6 +19,7 @@ public class PlayerVisualizer : IDisposable
 
     readonly MeshGeometry3D _sphereMesh;
     readonly MeshGeometry3D _cylinderMesh;
+    readonly ModelVisual3D _pointCloudVisual;
     readonly PointCloudProcessor _pointCloudProcessor;
     readonly Color _pointCloudColor = Colors.White;
     readonly List<(JointType Parent, JointType Child)> _boneConnection = BodyTrackingHelper.GetBoneConnections();
@@ -27,6 +28,7 @@ public class PlayerVisualizer : IDisposable
 
     List<Vertex> _pointCloudVertices = new();
 
+    public bool HandlePointCloud { get; set; } = false;
 
     public PlayerVisualizer(Calibration calibration)
     {
@@ -37,6 +39,8 @@ public class PlayerVisualizer : IDisposable
         _cylinderMesh = HelixGeometryFactory.CreateMesh(cylinderVertices, cylinderIndices);
 
         _pointCloudProcessor = new PointCloudProcessor(calibration);
+        _pointCloudVisual = PointCloudAdapter.CreatePointsVisual(new List<Vector3>());
+        ((PointsVisual3D)_pointCloudVisual).Color = _pointCloudColor;
 
         _bodyVisuals = new();
         var totalVisualsPerBody = _jointTypes.Count + _boneConnection.Count;
@@ -87,19 +91,20 @@ public class PlayerVisualizer : IDisposable
         var visualModels = new List<ModelVisual3D>();
 
         // Render point clouds
-        //if(depthImage is not null)
-        //{
-        //    _pointCloudProcessor.ComputePointCloud(depthImage, ref _pointCloudVertices);
+        if(depthImage is not null && HandlePointCloud)
+        {
+            _pointCloudProcessor.ComputePointCloud(depthImage, ref _pointCloudVertices);
 
-        //    if (_pointCloudVertices.Any())
-        //    {
-        //        var positions = _pointCloudVertices.Select(v => v.Position).ToList();
+            if (_pointCloudVertices.Any())
+            {
+                var positions = _pointCloudVertices.Select(v => v.Position).ToList();
 
-        //        var pointsVisual = PointCloudAdapter.CreatePointsVisual(positions);
-        //        pointsVisual.Color = _pointCloudColor;
-        //        visualModels.Add(pointsVisual);
-        //    }
-        //}
+                var pointsVisual = _pointCloudVisual as PointsVisual3D;
+                pointsVisual.Points = positions.ToWndPoint3DCollection();
+
+                visualModels.Add(pointsVisual);
+            }
+        }
 
         // Render skeletons
         if (bodyFrame is null)
@@ -204,7 +209,10 @@ public class PlayerVisualizer : IDisposable
                 ((GeometryModel3D)visual.Content).Material = MaterialHelper.CreateMaterial(Colors.Transparent);
     }
 
-    public IEnumerable<ModelVisual3D> GetAllVisuals() => _bodyVisuals.SelectMany(list => list);
+    public IEnumerable<ModelVisual3D> GetAllVisuals() =>
+        HandlePointCloud ? 
+        _bodyVisuals.SelectMany(list => list).Concat(new[] { _pointCloudVisual }) 
+        : _bodyVisuals.SelectMany(list => list);
 
 
     public void Dispose()
