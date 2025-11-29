@@ -1,7 +1,7 @@
 ﻿using K4AdotNet;
 using K4AdotNet.BodyTracking;
+using K4AdotNet.Sensor;
 using KinectPoseInferencer.PoseInference;
-using KinectPoseInferencer.Renderers;
 using R3;
 using System;
 using System.Diagnostics;
@@ -19,7 +19,8 @@ internal class PlaybackReader : IPlaybackReader
 
     public ReadOnlyReactiveProperty<K4AdotNet.Record.Playback> Playback => _playback;
     public ReadOnlyReactiveProperty<bool> IsReading => _isReading;
-    
+    public event Action<BodyFrame, Capture> OnNewFrame;
+
     ReactiveProperty<K4AdotNet.Record.Playback> _playback = new();
     ReactiveProperty<bool> _isReading = new(false);
 
@@ -57,7 +58,6 @@ internal class PlaybackReader : IPlaybackReader
 
         _playback.Value = new(descriptor.VideoFilePath);
         _playback.Value.GetCalibration(out var calibration);
-        PointCloud.ComputePointCloudCache(calibration);
 
         _tracker?.Dispose();
         var trackerConfig = new TrackerConfiguration()
@@ -191,9 +191,9 @@ internal class PlaybackReader : IPlaybackReader
         }
 
         _tracker.EnqueueCapture(capture);
-        capture.Dispose();
 
         using var frame = _tracker.PopResult();
+        OnNewFrame?.Invoke(frame.DuplicateReference(), capture.DuplicateReference());
 
         if (frame is not null)
         {
@@ -215,6 +215,7 @@ internal class PlaybackReader : IPlaybackReader
         }
 
         _lastTimestampUs = _currentTimestampUs;
+        capture.Dispose();
 
         return frameTimeDiffTick;
     }

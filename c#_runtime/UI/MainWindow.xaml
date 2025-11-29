@@ -4,10 +4,10 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:helix="clr-namespace:HelixToolkit.Wpf;assembly=HelixToolkit.Wpf"
         xmlns:converters="clr-namespace:KinectPoseInferencer.UI.Converters"
         mc:Ignorable="d"
-        Title="Kinect Pose Inferencer" Height="600" Width="800"
-        Background="#383838" Foreground="White">
+        Title="Kinect Pose Inferencer" Height="600" Width="800">
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -25,20 +25,12 @@
         <Grid Grid.Row="0" Grid.Column="0" Margin="0,0,20,20" VerticalAlignment="Top">
             <Grid.Resources>
                 <sys:Double x:Key="RowHeight">30.0</sys:Double>
-                <SolidColorBrush x:Key="CommonBgColor" Color="#505050"/>
-                <SolidColorBrush x:Key="CommonFgColor" Color="White"/>
 
                 <Style TargetType="{x:Type TextBox}">
                     <Setter Property="Height" Value="{StaticResource RowHeight}"/>
-                    <Setter Property="Background" Value="{StaticResource CommonBgColor}"/>
-                    <Setter Property="Foreground" Value="{StaticResource CommonFgColor}"/>
-                    <Setter Property="BorderBrush" Value="{StaticResource CommonBgColor}"/>
                 </Style>
                 <Style TargetType="{x:Type Button}">
                     <Setter Property="Height" Value="{StaticResource RowHeight}"/>
-                    <Setter Property="Background" Value="{StaticResource CommonBgColor}"/>
-                    <Setter Property="Foreground" Value="{StaticResource CommonFgColor}"/>
-                    <Setter Property="BorderBrush" Value="{StaticResource CommonBgColor}"/>
                 </Style>
             </Grid.Resources>
 
@@ -69,13 +61,16 @@
             
         </Grid>
 
-        <!-- Video View (place holder) -->
+        <!-- Video View -->
         <Border x:Name="VideoWindowBorder"
                 Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
                 Background="Black" CornerRadius="4"
                 VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
             <Viewbox x:Name="VideoWindowViewBox" Stretch="Uniform">
-                <TextBlock Text="(video)" FontSize="24" Foreground="#808080" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="100"/>
+                <Grid Width="640" Height="360" ClipToBounds="True">
+                    <Image Source="{Binding ColorBitmap}" Stretch="Fill"/>
+                    <Canvas x:Name="DrawingCanvas"/>
+                </Grid>
             </Viewbox>
         </Border>
 
@@ -91,8 +86,6 @@
                     Minimum="0"
                     Maximum="{Binding TotalDurationSeconds}"
                     Value="{Binding CurrentPositionSeconds}"
-                    Background="#505050"
-                    Foreground="#808080"
                     Height="8"
                     VerticalAlignment="Center"
                     Style="{DynamicResource SeekSliderStyle}"
@@ -106,7 +99,7 @@
         <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
 
             <!-- Stop / Rewind Button -->
-            <Button Command="{Binding RewindCommand}" Width="80" Height="60" Margin="0,0,20,0" Background="#505050" BorderBrush="#505050">
+            <Button Command="{Binding RewindCommand}" Width="80" Height="60" Margin="0,0,20,0">
                 <!-- Rewind Icon -->
                 <Grid>
                     <Rectangle Width="8" Height="30" Fill="White" HorizontalAlignment="Left"/>
@@ -124,7 +117,7 @@
             </Button>
 
             <!-- Play / Pause Button -->
-            <Button Command="{Binding PlayOrPauseCommand}" Width="80" Height="60" Background="#505050" BorderBrush="#505050">
+            <Button Command="{Binding PlayOrPauseCommand}" Width="80" Height="60">
 
                 <Grid>
                     <TextBlock FontFamily="Segoe Fluent Icons" Text="{Binding PlayPauseIconUnicode}"/>
