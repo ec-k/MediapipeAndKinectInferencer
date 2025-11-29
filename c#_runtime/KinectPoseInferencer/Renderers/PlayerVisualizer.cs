@@ -14,13 +14,19 @@ namespace KinectPoseInferencer.Renderers;
 
 public class PlayerVisualizer : IDisposable
 {
+    const double JointRadius = 0.024;
+    const int MaxBodies = 6;
+
     readonly MeshGeometry3D _sphereMesh;
     readonly MeshGeometry3D _cylinderMesh;
     readonly PointCloudProcessor _pointCloudProcessor;
     readonly Color _pointCloudColor = Colors.White;
     readonly List<(JointType Parent, JointType Child)> _boneConnection = BodyTrackingHelper.GetBoneConnections();
+    readonly List<List<ModelVisual3D>> _bodyVisuals;
+    readonly List<JointType> _jointTypes = Enum.GetValues(typeof(JointType)).Cast<JointType>().ToList();
 
     List<Vertex> _pointCloudVertices = new();
+
 
     public PlayerVisualizer(Calibration calibration)
     {
@@ -31,6 +37,49 @@ public class PlayerVisualizer : IDisposable
         _cylinderMesh = HelixGeometryFactory.CreateMesh(cylinderVertices, cylinderIndices);
 
         _pointCloudProcessor = new PointCloudProcessor(calibration);
+
+        _bodyVisuals = new();
+        var totalVisualsPerBody = _jointTypes.Count + _boneConnection.Count;
+        for(var i_body = 0; i_body < MaxBodies; i_body++)
+        {
+            var bodyVisual = new List<ModelVisual3D>();
+            for (var i_visual = 0; i_visual < totalVisualsPerBody; i_visual++)
+            {
+                ModelVisual3D visual;
+                if (i_visual < _jointTypes.Count)
+                    visual = CreateInitialSphereVisual();
+                else
+                    visual = CreateInitialCylinderVisual();
+                bodyVisual.Add(visual);
+            }
+            _bodyVisuals.Add(bodyVisual);
+        }
+    }
+
+    ModelVisual3D CreateInitialSphereVisual()
+    {
+        var model = new ModelVisual3D();
+        model.Content = new GeometryModel3D
+        {
+            Geometry = _sphereMesh,
+            Material = MaterialHelper.CreateMaterial(Colors.Transparent),
+            BackMaterial = MaterialHelper.CreateMaterial(Colors.Transparent),
+            Transform = new Transform3DGroup(),
+        };
+        return model;
+    }
+
+    ModelVisual3D CreateInitialCylinderVisual()
+    {
+        var model = new ModelVisual3D();
+        model.Content = new GeometryModel3D
+        {
+            Geometry = _cylinderMesh,
+            Material = MaterialHelper.CreateMaterial(Colors.Transparent),
+            BackMaterial = MaterialHelper.CreateMaterial(Colors.Transparent),
+            Transform = new Transform3DGroup()
+        };
+        return model;
     }
 
     public List<ModelVisual3D> UpdateVisuals(BodyFrame bodyFrame, Image depthImage)
@@ -38,88 +87,125 @@ public class PlayerVisualizer : IDisposable
         var visualModels = new List<ModelVisual3D>();
 
         // Render point clouds
-        if(depthImage is not null)
-        {
-            _pointCloudProcessor.ComputePointCloud(depthImage, ref _pointCloudVertices);
+        //if(depthImage is not null)
+        //{
+        //    _pointCloudProcessor.ComputePointCloud(depthImage, ref _pointCloudVertices);
 
-            if (_pointCloudVertices.Any())
-            {
-                var positions = _pointCloudVertices.Select(v => v.Position).ToList();
+        //    if (_pointCloudVertices.Any())
+        //    {
+        //        var positions = _pointCloudVertices.Select(v => v.Position).ToList();
 
-                var pointsVisual = PointCloudAdapter.CreatePointsVisual(positions);
-                pointsVisual.Color = _pointCloudColor;
-                visualModels.Add(pointsVisual);
-            }
-        }
+        //        var pointsVisual = PointCloudAdapter.CreatePointsVisual(positions);
+        //        pointsVisual.Color = _pointCloudColor;
+        //        visualModels.Add(pointsVisual);
+        //    }
+        //}
 
         // Render skeletons
-        if (bodyFrame is null) return visualModels;
-
-        for (var i = 0; i < bodyFrame.BodyCount; ++i)
+        if (bodyFrame is null)
         {
-            bodyFrame.GetBodySkeleton(i, out var skeleton);
-            var bodyId = bodyFrame.GetBodyId((int)i);
+            HideAllVisuals();
+            return visualModels;
+        }
+
+        var visualIndexOffset = 0;
+        for (var i_body = 0; i_body < Math.Min(bodyFrame.BodyCount, MaxBodies); i_body++)
+        {
+            bodyFrame.GetBodySkeleton(i_body, out var skeleton);
+            var bodyId = bodyFrame.GetBodyId(i_body);
             var bodyColor = BodyTrackingHelper.GetBodyColor(bodyId.Value);
             var bodyMaterial = MaterialHelper.CreateMaterial(bodyColor);
 
-            // Render joints
-            var jointTypes = Enum.GetValues(typeof(JointType)).Cast<JointType>();
-            foreach (var jointType in jointTypes)
+            var bodyVisualModels = _bodyVisuals[i_body];
+
+            // Update joints
+            for(var i_joint=0;i_joint< _jointTypes.Count; i_joint++)
             {
+                var jointType = _jointTypes[i_joint];
                 var joint = skeleton[jointType];
                 var position = BodyTrackingHelper.ConvertPositionToMeters(joint.PositionMm);
-                visualModels.Add(CreateSphereModel(position, bodyMaterial));
+
+                var jointVisual = bodyVisualModels[i_joint];
+                UpdateSphereModel(jointVisual, position, bodyMaterial);
+
+                visualModels.Add(jointVisual);
             }
 
 
             // Render bones
-            foreach(var bone in _boneConnection)
+            visualIndexOffset = _jointTypes.Count;
+            for (var i_bones = 0; i_bones < _boneConnection.Count; i_bones++)
             {
+                var bone = _boneConnection[i_bones];
                 var parentJoint = skeleton[bone.Parent];
                 var childJoint = skeleton[bone.Child];
 
                 var parentPosition = BodyTrackingHelper.ConvertPositionToMeters(parentJoint.PositionMm);
                 var childPosition = BodyTrackingHelper.ConvertPositionToMeters(childJoint.PositionMm);
 
-                visualModels.Add(CreateCylinderModel(parentPosition, childPosition, bodyMaterial));
+                var boneVisual = bodyVisualModels[visualIndexOffset + i_bones];
+                UpdateCylinderModel(boneVisual, parentPosition, childPosition, bodyMaterial);
+
+                visualModels.Add(boneVisual);
             }
         }
 
         return visualModels;
     }
 
-    ModelVisual3D CreateSphereModel(Vector3 position, Material material)
+    void UpdateSphereModel(ModelVisual3D visual, Vector3 position, Material material)
     {
-        const double Radius = 0.024;
+        // 1. Update materials
+        var content = (GeometryModel3D)visual.Content;
+        content.Material = material;
+        content.BackMaterial = material;
 
-        var jointTransformGroup = new Transform3DGroup();
-        jointTransformGroup.Children.Add(new ScaleTransform3D(Radius, Radius, Radius));
-        jointTransformGroup.Children.Add(new TranslateTransform3D(position.X, position.Y, position.Z));
+        // 2. Update transforms
+        var transformGroup = (Transform3DGroup)content.Transform;
 
-        var jointVisual = new ModelVisual3D();
-        jointVisual.Content = new GeometryModel3D
+        var translate = transformGroup.Children.OfType<TranslateTransform3D>().FirstOrDefault();
+        if (translate is null)
         {
-            Geometry = _sphereMesh,
-            Material = material,
-            Transform = jointTransformGroup
-        };
-        return jointVisual;
+            translate = new TranslateTransform3D(position.X, position.Y, position.Z);
+
+            var newTransformGroup = new Transform3DGroup();
+            newTransformGroup.Children.Add(new ScaleTransform3D(JointRadius, JointRadius, JointRadius));
+            newTransformGroup.Children.Add(new TranslateTransform3D(position.X, position.Y, position.Z));
+            content.Transform = newTransformGroup;
+        }
+        else
+        {
+            // NOTE: Transforms should be updated in UI thread.
+            translate.OffsetX = position.X;
+            translate.OffsetY = position.Y;
+            translate.OffsetZ = position.Z;
+        }
     }
 
-    ModelVisual3D CreateCylinderModel(Vector3 start, Vector3 end, Material material)
+    void UpdateCylinderModel(ModelVisual3D visual, Vector3 start, Vector3 end, Material material)
     {
+        // 1. Update materials
+        var content = (GeometryModel3D)visual.Content;
+        content.Material = material;
+        content.BackMaterial = material;
+
+        // 2. Update transforms
         var modelMatrix = BoneMatrixBuilder.Build(start, end);
         var boneTransform = Transform3DBuilder.CreateTransform(modelMatrix);
 
-        var boneVisual = new ModelVisual3D();
-        boneVisual.Content = new GeometryModel3D
-        {
-            Geometry = _cylinderMesh,
-            Material = material,
-            Transform = boneTransform
-        };
-        return boneVisual;
+        // NOTE: Transforms should be updated in UI thread.
+        content.Transform = boneTransform;
     }
+
+    void HideAllVisuals()
+    {
+        foreach(var visuals in _bodyVisuals)
+            foreach(var visual in visuals)
+                ((GeometryModel3D)visual.Content).Material = MaterialHelper.CreateMaterial(Colors.Transparent);
+    }
+
+    public IEnumerable<ModelVisual3D> GetAllVisuals() => _bodyVisuals.SelectMany(list => list);
+
 
     public void Dispose()
     {

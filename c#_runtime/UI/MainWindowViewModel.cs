@@ -6,10 +6,10 @@ using KinectPoseInferencer.Playback;
 using KinectPoseInferencer.Renderers;
 using R3;
 using System;
-using System.Windows.Media.Media3D;
 using System.Windows;
 using System.Linq;
-using System.Collections.ObjectModel;
+using System.Collections.Generic;
+using System.Windows.Media.Media3D;
 
 
 namespace KinectPoseInferencer.UI;
@@ -17,7 +17,6 @@ namespace KinectPoseInferencer.UI;
 public partial class MainWindowViewModel : ObservableObject, IDisposable
 {
     readonly IPlaybackController _controller;
-    readonly ObservableCollection<ModelVisual3D> _modelVisuals = new();
 
     PlayerVisualizer _visualizer;
 
@@ -29,7 +28,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     const string PlayIconUnicode = "&#xE768;";
     const string PauseIconUnicode = "&#xE769";
 
-    public ObservableCollection<ModelVisual3D> ModelVisuals => _modelVisuals;
+    public IEnumerable<ModelVisual3D> InitialVisuals => _visualizer?.GetAllVisuals();
+    public event Action UpdateVisuals;
 
     DisposableBag _disposables = new();
     
@@ -59,11 +59,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         Application.Current.Dispatcher.Invoke(() =>
         {
             var newModels = _visualizer.UpdateVisuals(frame, depthImage);
-            _modelVisuals.Clear();
-            foreach (var model in newModels)
-            {
-                _modelVisuals.Add(model);
-            }
+            UpdateVisuals?.Invoke();
         });
         frame.Dispose();
         capture.Dispose();
