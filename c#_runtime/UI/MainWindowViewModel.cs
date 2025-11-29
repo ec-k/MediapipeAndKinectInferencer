@@ -28,8 +28,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] string _videoFilePath;
     [ObservableProperty] WriteableBitmap _colorBitmap;
 
-    const string PlayIconUnicode = "&#xE768;";
-    const string PauseIconUnicode = "&#xE769";
+    const string PlayIconUnicode = "\uE768";
+    const string PauseIconUnicode = "\uE769";
 
     public event Action<List<UIElement>> UpdateVisuals; // Change signature of event
 
