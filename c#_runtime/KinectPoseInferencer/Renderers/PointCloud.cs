@@ -58,7 +58,7 @@ namespace KinectPoseInferencer.Renderers
 
             pointCloud.Clear();
 
-            var depthPixels = depth.GetSpan<ushort>().ToArray();
+            var depthPixels = depth.GetSpan<ushort>();
 
             for (int v = 0, pixelIndex = 0; v < depth.HeightPixels; ++v)
             {

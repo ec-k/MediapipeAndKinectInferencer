@@ -31,7 +31,7 @@ public partial class App : Application
         var mainWindow = services.GetRequiredService<MainWindow>();
         mainWindow.Show();
 
-        renderer.StartVisualizationThread();
+        //renderer.StartVisualizationThread();
     }
 
     protected override void OnExit(ExitEventArgs e)

@@ -1,228 +1,213 @@
-﻿// Copyright (c) Microsoft Corporation. All rights reserved.
-// Released under the MIT license.
-// Source: https://github.com/microsoft/Azure-Kinect-Samples/blob/master/LICENSE
-
-// The original code has been modified and adapted for the MediapipeAndKinectInferencer project.
-
-using HelixToolkit.Wpf;
 using K4AdotNet.BodyTracking;
-using System.Collections.Generic;
-using System;
-using System.Linq;
-using System.Numerics;
-using System.Windows.Media;
-using System.Windows.Media.Media3D;
-using KinectPoseInferencer.Helpers;
 using K4AdotNet.Sensor;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Controls; // For UIElement
+using System.Windows.Shapes; // For Ellipse, Line
 
+using KinectPoseInferencer.Helpers;
+using K4AdotNet;
 
 namespace KinectPoseInferencer.Renderers;
 
 public class PlayerVisualizer : IDisposable
 {
-    const double JointRadius = 0.024;
+    const double JointRadius = 0.024; // This might still be useful for 2D visualization (e.g., circle size)
     const int MaxBodies = 6;
 
-    readonly MeshGeometry3D _sphereMesh;
-    readonly MeshGeometry3D _cylinderMesh;
-    readonly ModelVisual3D _pointCloudVisual;
-    readonly PointCloudProcessor _pointCloudProcessor;
-    readonly Color _pointCloudColor = Colors.White;
     readonly List<(JointType Parent, JointType Child)> _boneConnection = BodyTrackingHelper.GetBoneConnections();
-    readonly List<List<ModelVisual3D>> _bodyVisuals;
     readonly List<JointType> _jointTypes = Enum.GetValues(typeof(JointType)).Cast<JointType>().ToList();
 
-    List<Vertex> _pointCloudVertices = new();
+    // 中間データ構造の定義
+    public class VisualData
+    {
+        public List<BodyVisualData> BodyData { get; set; } = new List<BodyVisualData>();
+    }
 
-    public bool HandlePointCloud { get; set; } = false;
+    public class BodyVisualData
+    {
+        public Color BodyColor { get; set; }
+        public List<JointVisualData> JointData { get; set; } = new List<JointVisualData>();
+        public List<BoneVisualData> BoneData { get; set; } = new List<BoneVisualData>();
+    }
+
+    public class JointVisualData
+    {
+        public Point Position { get; set; } // Changed to 2D Point
+    }
+
+    public class BoneVisualData
+    {
+        public Point ParentPosition { get; set; } // Changed to 2D Point
+        public Point ChildPosition { get; set; } // Changed to 2D Point
+    }
+
+    // Kinect のキャリブレーション情報を保存するためのフィールドを追加
+    readonly Calibration _calibration;
 
     public PlayerVisualizer(Calibration calibration)
     {
-        SphereGeometryBuilder.Build(36, 18, out var sphereVertices, out var sphereIndices);
-        _sphereMesh = HelixGeometryFactory.CreateMesh(sphereVertices, sphereIndices);
+        _calibration = calibration; // Store calibration for 3D to 2D transformation
+    }
 
-        CylinderGeometryBuilder.Build(36, out var cylinderVertices, out var cylinderIndices);
-        _cylinderMesh = HelixGeometryFactory.CreateMesh(cylinderVertices, cylinderIndices);
+    // 3D関連のメソッドは削除
+    // ModelVisual3D CreateInitialSphereVisual() { ... }
+    // ModelVisual3D CreateInitialCylinderVisual() { ... }
+    // void UpdateSphereModel(ModelVisual3D visual, Vector3 position, Material material) { ... }
+    // void UpdateCylinderModel(ModelVisual3D visual, Vector3 start, Vector3 end, Material material) { ... }
+    // void HideAllVisuals() { ... }
 
-        _pointCloudProcessor = new PointCloudProcessor(calibration);
-        _pointCloudVisual = PointCloudAdapter.CreatePointsVisual(new List<Vector3>());
-        ((PointsVisual3D)_pointCloudVisual).Color = _pointCloudColor;
+    public List<UIElement> UpdateVisuals(VisualData data, double canvasWidth, double canvasHeight) // imageWidth/Height を canvasWidth/Height に変更
+    {
+        var elements = new List<UIElement>();
 
-        _bodyVisuals = new();
-        var totalVisualsPerBody = _jointTypes.Count + _boneConnection.Count;
-        for(var i_body = 0; i_body < MaxBodies; i_body++)
+        // Kinect のカラー画像解像度を取得
+        var kinectColorImageWidth = _calibration.ColorCameraCalibration.ResolutionWidth;
+        var kinectColorImageHeight = _calibration.ColorCameraCalibration.ResolutionHeight;
+
+        // 各Bodyのジョイントとボーンを描画
+        foreach (var bodyData in data.BodyData)
         {
-            var bodyVisual = new List<ModelVisual3D>();
-            for (var i_visual = 0; i_visual < totalVisualsPerBody; i_visual++)
+            var brush = new SolidColorBrush(bodyData.BodyColor);
+
+            // ジョイントの描画
+            foreach (var jointData in bodyData.JointData)
             {
-                ModelVisual3D visual;
-                if (i_visual < _jointTypes.Count)
-                    visual = CreateInitialSphereVisual();
-                else
-                    visual = CreateInitialCylinderVisual();
-                bodyVisual.Add(visual);
+                if (jointData.Position.X >= 0 && jointData.Position.Y >= 0) // 有効な点のみ描画
+                {
+                    // スケール調整: Kinect 解像度 -> Canvas 解像度
+                    var scaledX = (jointData.Position.X / kinectColorImageWidth) * canvasWidth;
+                    var scaledY = (jointData.Position.Y / kinectColorImageHeight) * canvasHeight;
+
+                    var ellipse = new Ellipse
+                    {
+                        Width = JointRadius * 200 * (canvasWidth / kinectColorImageWidth), // スケール調整
+                        Height = JointRadius * 200 * (canvasHeight / kinectColorImageHeight), // スケール調整
+                        Fill = brush,
+                        Stroke = brush,
+                        StrokeThickness = 1
+                    };
+                    Canvas.SetLeft(ellipse, scaledX - ellipse.Width / 2);
+                    Canvas.SetTop(ellipse, scaledY - ellipse.Height / 2);
+                    elements.Add(ellipse);
+                }
             }
-            _bodyVisuals.Add(bodyVisual);
-        }
-    }
 
-    ModelVisual3D CreateInitialSphereVisual()
-    {
-        var model = new ModelVisual3D();
-        model.Content = new GeometryModel3D
-        {
-            Geometry = _sphereMesh,
-            Material = MaterialHelper.CreateMaterial(Colors.Transparent),
-            BackMaterial = MaterialHelper.CreateMaterial(Colors.Transparent),
-            Transform = new Transform3DGroup(),
-        };
-        return model;
-    }
-
-    ModelVisual3D CreateInitialCylinderVisual()
-    {
-        var model = new ModelVisual3D();
-        model.Content = new GeometryModel3D
-        {
-            Geometry = _cylinderMesh,
-            Material = MaterialHelper.CreateMaterial(Colors.Transparent),
-            BackMaterial = MaterialHelper.CreateMaterial(Colors.Transparent),
-            Transform = new Transform3DGroup()
-        };
-        return model;
-    }
-
-    public List<ModelVisual3D> UpdateVisuals(BodyFrame bodyFrame, Image depthImage)
-    {
-        var visualModels = new List<ModelVisual3D>();
-
-        // Render point clouds
-        if(depthImage is not null && HandlePointCloud)
-        {
-            _pointCloudProcessor.ComputePointCloud(depthImage, ref _pointCloudVertices);
-
-            if (_pointCloudVertices.Any())
+            // ボーンの描画
+            foreach (var boneData in bodyData.BoneData)
             {
-                var positions = _pointCloudVertices.Select(v => v.Position).ToList();
+                if (boneData.ParentPosition.X >= 0 && boneData.ParentPosition.Y >= 0 &&
+                    boneData.ChildPosition.X >= 0 && boneData.ChildPosition.Y >= 0) // 有効な点のみ描画
+                {
+                    // スケール調整: Kinect 解像度 -> Canvas 解像度
+                    var scaledParentX = (boneData.ParentPosition.X / kinectColorImageWidth) * canvasWidth;
+                    var scaledParentY = (boneData.ParentPosition.Y / kinectColorImageHeight) * canvasHeight;
+                    var scaledChildX = (boneData.ChildPosition.X / kinectColorImageWidth) * canvasWidth;
+                    var scaledChildY = (boneData.ChildPosition.Y / kinectColorImageHeight) * canvasHeight;
 
-                var pointsVisual = _pointCloudVisual as PointsVisual3D;
-                pointsVisual.Points = positions.ToWndPoint3DCollection();
-
-                visualModels.Add(pointsVisual);
+                    var line = new Line
+                    {
+                        X1 = scaledParentX,
+                        Y1 = scaledParentY,
+                        X2 = scaledChildX,
+                        Y2 = scaledChildY,
+                        Stroke = brush,
+                        StrokeThickness = 3 * (canvasWidth / kinectColorImageWidth), // 太さもスケール調整
+                    };
+                    elements.Add(line);
+                }
             }
         }
+        return elements;
+    }
+
+    public IEnumerable<UIElement> GetAllVisuals() => new List<UIElement>(); // No longer returns 3D visuals
+
+    public VisualData ProcessFrame(BodyFrame bodyFrame, K4AdotNet.Sensor.Image depthImage)
+    {
+        var visualData = new VisualData();
 
         // Render skeletons
         if (bodyFrame is null)
         {
-            HideAllVisuals();
-            return visualModels;
+            return visualData;
         }
 
-        var visualIndexOffset = 0;
-        for (var i_body = 0; i_body < Math.Min(bodyFrame.BodyCount, MaxBodies); i_body++)
+        // --- Start 3D to 2D Transformation Logic ---
+        using (var transformation = _calibration.CreateTransformation())
         {
-            bodyFrame.GetBodySkeleton(i_body, out var skeleton);
-            var bodyId = bodyFrame.GetBodyId(i_body);
-            var bodyColor = BodyTrackingHelper.GetBodyColor(bodyId.Value);
-            var bodyMaterial = MaterialHelper.CreateMaterial(bodyColor);
+            var colorImageResolution = _calibration.ColorResolution;
+            var depthWidth = _calibration.DepthCameraCalibration.ResolutionWidth;
+            var depthHeight = _calibration.DepthCameraCalibration.ResolutionHeight;
 
-            var bodyVisualModels = _bodyVisuals[i_body];
-
-            // Update joints
-            for(var i_joint=0;i_joint< _jointTypes.Count; i_joint++)
+            // Create a dummy depth image to get the 2D coordinates in color space
+            // This is a workaround as TransformTo2D requires a depth image (even if dummy)
+            // The size of dummyDepthImage should match the depth camera resolution for correct transformation.
+            using (var dummyDepthImage = new K4AdotNet.Sensor.Image(ImageFormat.Depth16, depthWidth, depthHeight))
             {
-                var jointType = _jointTypes[i_joint];
-                var joint = skeleton[jointType];
-                var position = BodyTrackingHelper.ConvertPositionToMeters(joint.PositionMm);
+                for (var i_body = 0; i_body < Math.Min(bodyFrame.BodyCount, MaxBodies); i_body++)
+                {
+                    bodyFrame.GetBodySkeleton(i_body, out var skeleton);
+                    var bodyId = bodyFrame.GetBodyId(i_body);
+                    var bodyColor = BodyTrackingHelper.GetBodyColor(bodyId.Value);
 
-                var jointVisual = bodyVisualModels[i_joint];
-                UpdateSphereModel(jointVisual, position, bodyMaterial);
+                    var bodyVisualData = new BodyVisualData { BodyColor = bodyColor };
 
-                visualModels.Add(jointVisual);
+                    // Process joints
+                    foreach (var jointType in _jointTypes)
+                    {
+                        var joint = skeleton[jointType];
+                        // Transform 3D joint position to 2D color image coordinate
+                        var point2D = _calibration.Convert3DTo2D(joint.PositionMm, CalibrationGeometry.Depth, CalibrationGeometry.Color);
+
+                        // K4AdotNet TransformTo2D returns 0,0 for invalid points, check for that
+                        if (point2D is not null && point2D?.X != 0 && point2D?.Y != 0)
+                        {
+                            // Map to actual image size (if different from calibration resolution)
+                            // Assuming the target image (e.g., in UI) will be scaled to match original color image resolution
+                            bodyVisualData.JointData.Add(new JointVisualData { Position = new Point((double)point2D?.X, (double)point2D?.Y) });
+                        }
+                        else
+                        {
+                            // If invalid, add a default/invisible point (e.g., -1,-1 or NaN)
+                            bodyVisualData.JointData.Add(new JointVisualData { Position = new Point(-1, -1) }); // Indicate invalid point
+                        }
+                    }
+
+                    // Process bones - connect only valid joints
+                    foreach (var bone in _boneConnection)
+                    {
+                        var parentJoint = skeleton[bone.Parent];
+                        var childJoint = skeleton[bone.Child];
+
+                        var parentPoint2D = _calibration.Convert3DTo2D(parentJoint.PositionMm, CalibrationGeometry.Depth, CalibrationGeometry.Color);
+                        var childPoint2D = _calibration.Convert3DTo2D(childJoint.PositionMm, CalibrationGeometry.Depth, CalibrationGeometry.Color);
+
+                        if (parentPoint2D is not null && childPoint2D is not null
+                            && parentPoint2D?.X != 0 && parentPoint2D?.Y != 0 
+                            && childPoint2D?.X != 0 && childPoint2D?.Y != 0)
+                        {
+                            bodyVisualData.BoneData.Add(new BoneVisualData
+                            {
+                                ParentPosition = new Point((double)parentPoint2D?.X, (double)parentPoint2D?.Y),
+                                ChildPosition = new Point((double)childPoint2D?.X, (double)childPoint2D?.Y)
+                            });
+                        }
+                    }
+                    visualData.BodyData.Add(bodyVisualData);
+                }
             }
-
-
-            // Render bones
-            visualIndexOffset = _jointTypes.Count;
-            for (var i_bones = 0; i_bones < _boneConnection.Count; i_bones++)
-            {
-                var bone = _boneConnection[i_bones];
-                var parentJoint = skeleton[bone.Parent];
-                var childJoint = skeleton[bone.Child];
-
-                var parentPosition = BodyTrackingHelper.ConvertPositionToMeters(parentJoint.PositionMm);
-                var childPosition = BodyTrackingHelper.ConvertPositionToMeters(childJoint.PositionMm);
-
-                var boneVisual = bodyVisualModels[visualIndexOffset + i_bones];
-                UpdateCylinderModel(boneVisual, parentPosition, childPosition, bodyMaterial);
-
-                visualModels.Add(boneVisual);
-            }
         }
+        // --- End 3D to 2D Transformation Logic ---
 
-        return visualModels;
+        return visualData;
     }
-
-    void UpdateSphereModel(ModelVisual3D visual, Vector3 position, Material material)
-    {
-        // 1. Update materials
-        var content = (GeometryModel3D)visual.Content;
-        content.Material = material;
-        content.BackMaterial = material;
-
-        // 2. Update transforms
-        var transformGroup = (Transform3DGroup)content.Transform;
-
-        var translate = transformGroup.Children.OfType<TranslateTransform3D>().FirstOrDefault();
-        if (translate is null)
-        {
-            translate = new TranslateTransform3D(position.X, position.Y, position.Z);
-
-            var newTransformGroup = new Transform3DGroup();
-            newTransformGroup.Children.Add(new ScaleTransform3D(JointRadius, JointRadius, JointRadius));
-            newTransformGroup.Children.Add(new TranslateTransform3D(position.X, position.Y, position.Z));
-            content.Transform = newTransformGroup;
-        }
-        else
-        {
-            // NOTE: Transforms should be updated in UI thread.
-            translate.OffsetX = position.X;
-            translate.OffsetY = position.Y;
-            translate.OffsetZ = position.Z;
-        }
-    }
-
-    void UpdateCylinderModel(ModelVisual3D visual, Vector3 start, Vector3 end, Material material)
-    {
-        // 1. Update materials
-        var content = (GeometryModel3D)visual.Content;
-        content.Material = material;
-        content.BackMaterial = material;
-
-        // 2. Update transforms
-        var modelMatrix = BoneMatrixBuilder.Build(start, end);
-        var boneTransform = Transform3DBuilder.CreateTransform(modelMatrix);
-
-        // NOTE: Transforms should be updated in UI thread.
-        content.Transform = boneTransform;
-    }
-
-    void HideAllVisuals()
-    {
-        foreach(var visuals in _bodyVisuals)
-            foreach(var visual in visuals)
-                ((GeometryModel3D)visual.Content).Material = MaterialHelper.CreateMaterial(Colors.Transparent);
-    }
-
-    public IEnumerable<ModelVisual3D> GetAllVisuals() =>
-        HandlePointCloud ? 
-        _bodyVisuals.SelectMany(list => list).Concat(new[] { _pointCloudVisual }) 
-        : _bodyVisuals.SelectMany(list => list);
-
 
     public void Dispose()
     {
-        _pointCloudProcessor?.Dispose();
+        // No _pointCloudProcessor to dispose anymore
     }
 }

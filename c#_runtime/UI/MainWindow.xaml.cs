@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows;
+using System.Collections.Generic;
 
 namespace KinectPoseInferencer.UI;
 
@@ -8,29 +9,27 @@ public partial class MainWindow
     const double VideoWindowIdealAspectRatio = 16.0 / 9.0;
     readonly MainWindowViewModel _viewModel;
 
-    bool _isVisualInitialized = false;
-
     public MainWindow(MainWindowViewModel viewModel)
     {
         InitializeComponent();
         _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
         this.DataContext = _viewModel;
 
-        _viewModel.UpdateVisuals += OnUpdateVisualsRequested;
+        // _viewModel.UpdateVisuals += OnUpdateVisualsRequested; // Keep this line for now, but it might be removed
         VideoWindowBorder.SizeChanged += OnVideoWindowSizeChanged;
+
+        // Subscribe to CollectionChanged event of BodyVisualElements // No longer needed
+        _viewModel.UpdateVisuals += OnUpdateVisualsRequested; // Subscribe to new UpdateVisuals event
+
     }
 
-    void OnUpdateVisualsRequested()
+    void OnUpdateVisualsRequested(List<UIElement> elements) // Change signature
     {
-        if(!_isVisualInitialized)
+        DrawingCanvas.Children.Clear();
+        foreach (var element in elements)
         {
-            foreach (var visual in _viewModel?.InitialVisuals)
-                View3D.Children.Add(visual);
-
-            _isVisualInitialized = true;
+            DrawingCanvas.Children.Add(element);
         }
-
-        View3D.InvalidateVisual();
     }
 
     void OnVideoWindowSizeChanged(object sender, SizeChangedEventArgs e)
@@ -59,8 +58,8 @@ public partial class MainWindow
         base.OnClosed(e);
 
         VideoWindowBorder.SizeChanged -= OnVideoWindowSizeChanged;
-        _viewModel.UpdateVisuals -= OnUpdateVisualsRequested;
-
+        // _viewModel.UpdateVisuals -= OnUpdateVisualsRequested; // Keep this line for now
+        _viewModel.UpdateVisuals -= OnUpdateVisualsRequested; // Unsubscribe from new UpdateVisuals event
         _viewModel?.Dispose();
     }
 }

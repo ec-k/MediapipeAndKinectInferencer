@@ -76,22 +76,10 @@
                 Background="Black" CornerRadius="4"
                 VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
             <Viewbox x:Name="VideoWindowViewBox" Stretch="Uniform">
-                <helix:HelixViewport3D x:Name="View3D"
-                                       Grid.Row="0" Grid.Column="0"
-                                       ShowCameraInfo="False"
-                                       ShowCoordinateSystem="True"
-                                       IsRotationEnabled="True" IsPanEnabled="True" IsZoomEnabled="True"
-                                       Width="640" Height="360">
-                    <helix:HelixViewport3D.Camera>
-                        <PerspectiveCamera Position="0, 0, 3"
-                                           LookDirection="0, 0, -3"
-                                           UpDirection="0, 1, 0"
-                                           FieldOfView="65"
-                                           NearPlaneDistance="0.01"
-                                           FarPlaneDistance="10.0"/>
-                    </helix:HelixViewport3D.Camera>
-                    <helix:DefaultLights/>
-                </helix:HelixViewport3D>
+                <Grid Width="640" Height="360" ClipToBounds="True">
+                    <Image Source="{Binding ColorBitmap}" Stretch="Fill"/>
+                    <Canvas x:Name="DrawingCanvas"/>
+                </Grid>
             </Viewbox>
         </Border>
 
