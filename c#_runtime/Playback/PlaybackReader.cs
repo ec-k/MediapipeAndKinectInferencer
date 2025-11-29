@@ -2,7 +2,6 @@
 using K4AdotNet.BodyTracking;
 using K4AdotNet.Sensor;
 using KinectPoseInferencer.PoseInference;
-using KinectPoseInferencer.Renderers;
 using R3;
 using System;
 using System.Diagnostics;
@@ -59,7 +58,6 @@ internal class PlaybackReader : IPlaybackReader
 
         _playback.Value = new(descriptor.VideoFilePath);
         _playback.Value.GetCalibration(out var calibration);
-        PointCloud.ComputePointCloudCache(calibration);
 
         _tracker?.Dispose();
         var trackerConfig = new TrackerConfiguration()
