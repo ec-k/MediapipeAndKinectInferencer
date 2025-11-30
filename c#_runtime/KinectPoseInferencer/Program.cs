@@ -171,7 +171,7 @@ namespace KinectPoseInferencer
             services.AddSingleton<PoseInference.SkeletonToPoseLandmarksConverter>();
             services.AddSingleton<Renderers.Renderer>();
             services.AddSingleton(provider => new ImageWriter(mmfFilePath));
-            services.AddSingleton<FrameManager>();
+            services.AddSingleton<FrameCaptureBroker>();
             services.AddSingleton<KinectOnlineProcessor>();
             services.AddSingleton<KinectOfflineProcessor>();
 
@@ -198,8 +198,17 @@ namespace KinectPoseInferencer
                 );
             services.AddSingleton<PoseInference.Filters.IPositionFilter, PoseInference.Filters.TransformCoordinator>();
 
-            services.AddSingleton<Playback.IPlaybackController, Playback.PlaybackController>();
-            services.AddSingleton<Playback.IPlaybackReader, Playback.PlaybackReader>();
+            // Register PlaybackController using a factory to provide FrameCaptureBroker
+            services.AddSingleton<Playback.IPlaybackController, Playback.PlaybackController>(provider =>
+                new Playback.PlaybackController(
+                    provider.GetRequiredService<Playback.IPlaybackReader>(),
+                    provider.GetRequiredService<FrameCaptureBroker>()));
+            // Register PlaybackReader using a factory to provide FrameCaptureBroker
+            services.AddSingleton<Playback.IPlaybackReader, Playback.PlaybackReader>(provider =>
+                new Playback.PlaybackReader(
+                    provider.GetRequiredService<FrameCaptureBroker>(),
+                    provider.GetRequiredService<ImageWriter>(),
+                    provider.GetRequiredService<PoseInference.LandmarkHandler>()));
             services.AddTransient<Playback.States.IdleState>();
             services.AddTransient<Playback.States.PlayingState>();
 

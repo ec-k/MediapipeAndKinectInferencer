@@ -9,12 +9,14 @@ public class PlaybackController : IPlaybackController
     readonly IPlaybackReader _reader;
 
     public IPlaybackReader Reader => _reader;
+    public FrameCaptureBroker Broker { get; }
     public PlaybackDescriptor Descriptor { get; set; }
 
 
-    public PlaybackController(IPlaybackReader reader)
+    public PlaybackController(IPlaybackReader reader, FrameCaptureBroker broker)
     {
         _reader = reader;
+        Broker = broker;
     }
 
     public async Task Prepare(CancellationToken token)

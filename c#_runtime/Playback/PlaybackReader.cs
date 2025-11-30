@@ -1,6 +1,5 @@
 ﻿using K4AdotNet;
 using K4AdotNet.BodyTracking;
-using K4AdotNet.Sensor;
 using KinectPoseInferencer.PoseInference;
 using R3;
 using System;
@@ -13,14 +12,13 @@ namespace KinectPoseInferencer.Playback;
 
 internal class PlaybackReader : IPlaybackReader
 {
-    readonly FrameManager _frameManager;
+    readonly FrameCaptureBroker _frameCaptureBroker;
     readonly ImageWriter _imageWriter;
     readonly LandmarkHandler _landmarkHandler;
 
     public ReadOnlyReactiveProperty<K4AdotNet.Record.Playback> Playback => _playback;
     public ReadOnlyReactiveProperty<bool> IsReading => _isReading;
     public ReadOnlyReactiveProperty<Microseconds64> CurrentPositionUs => _currentPositionUs;
-    public event Action<BodyFrame, Capture> OnNewFrame;
 
     ReactiveProperty<K4AdotNet.Record.Playback> _playback = new();
     ReactiveProperty<bool> _isReading = new(false);
@@ -37,11 +35,11 @@ internal class PlaybackReader : IPlaybackReader
 
 
     public PlaybackReader(
-        FrameManager frameManager,
+        FrameCaptureBroker frameCaptureBroker,
         ImageWriter imageWriter,
         LandmarkHandler landmarkHandler)
     {
-        _frameManager = frameManager ?? throw new ArgumentNullException(nameof(frameManager));
+        _frameCaptureBroker = frameCaptureBroker ?? throw new ArgumentNullException(nameof(frameCaptureBroker));
         _imageWriter = imageWriter ?? throw new ArgumentNullException(nameof(imageWriter));
         _landmarkHandler = landmarkHandler ?? throw new ArgumentNullException(nameof(landmarkHandler));
     }
@@ -210,12 +208,10 @@ internal class PlaybackReader : IPlaybackReader
         _tracker.EnqueueCapture(capture);
 
         using var frame = _tracker.PopResult();
-        OnNewFrame?.Invoke(frame.DuplicateReference(), capture.DuplicateReference());
+        _frameCaptureBroker.ProcessNewFrame(capture.DuplicateReference(), frame.DuplicateReference());
 
         if (frame is not null)
         {
-            _frameManager.Frame = frame.DuplicateReference();
-
             // Write ColorImage to Shared Memory
             {
                 var colorImage = frame.Capture.ColorImage;
@@ -263,5 +259,6 @@ internal class PlaybackReader : IPlaybackReader
         _tracker?.Dispose();
         _cts?.Dispose();
         _currentPositionUs?.Dispose();
+        _frameCaptureBroker?.Dispose();
     }
 }

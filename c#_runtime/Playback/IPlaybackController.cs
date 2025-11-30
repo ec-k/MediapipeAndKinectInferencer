@@ -7,6 +7,7 @@ namespace KinectPoseInferencer.Playback;
 public interface IPlaybackController: IDisposable
 {
     IPlaybackReader Reader { get; }
+    FrameCaptureBroker Broker { get; }
     PlaybackDescriptor Descriptor { get; set; }
 
     Task Prepare(CancellationToken token);

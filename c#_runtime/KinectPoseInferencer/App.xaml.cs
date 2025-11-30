@@ -26,11 +26,11 @@ public partial class App : Application
 
         using var scope = _host.Services.CreateScope();
         var services = scope.ServiceProvider;
-        var renderer = services.GetRequiredService<Renderer>();
 
         var mainWindow = services.GetRequiredService<MainWindow>();
         mainWindow.Show();
 
+        //var renderer = services.GetRequiredService<Renderer>();
         //renderer.StartVisualizationThread();
     }
 
@@ -59,7 +59,7 @@ public partial class App : Application
                 services.AddSingleton<PoseInference.SkeletonToPoseLandmarksConverter>();
                 services.AddSingleton<Renderer>();
                 services.AddSingleton(provider => new ImageWriter(mmfFilePath));
-                services.AddSingleton<FrameManager>();
+                services.AddSingleton<FrameCaptureBroker>();
                 services.AddSingleton<MainWindow>();
                 services.AddSingleton<MainWindowViewModel>();
 

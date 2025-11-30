@@ -57,7 +57,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     UpdatePlaybackLengthDisplay(playback);
                     playback.GetCalibration(out var calibration);
                     _visualizer = new PlayerVisualizer(calibration);
-                    TotalDurationSeconds = playback.RecordLength.TotalSeconds; // Set TotalDurationSeconds
+                    TotalDurationSeconds = playback.RecordLength.TotalSeconds;
             })
             .AddTo(ref _disposables);
         _controller.Reader.IsReading
@@ -68,10 +68,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .Subscribe(position => CurrentPositionSeconds = position.TotalSeconds)
             .AddTo(ref _disposables);
 
-        _controller.Reader.OnNewFrame += OnNewFrame;
+        _controller.Broker.OnNewFrameReady += OnNewFrame;
     }
 
-    void DisplayFirstColorFrame(K4AdotNet.Record.Playback playback, CancellationToken token)
+    void DisplayFirstColorFrame(K4AdotNet.Record.Playback playback, FrameCaptureBroker broker, CancellationToken token)
     {
         try
         {
@@ -82,6 +82,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             Capture? captureToDisplay = null;
             bool foundColorImage = false;
 
+            // When displaying the first frame, we still need to iterate to find a color image.
+            // The broker isn't involved in this initial seeking for the *first* display.
             for (int i = 0; i < MaxSeekFramesForColorImage; i++)
             {
                 token.ThrowIfCancellationRequested(); // Check for cancellation within the loop
@@ -137,56 +139,37 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
     }
 
-    void OnNewFrame(BodyFrame frame, Capture capture)
+    void OnNewFrame(Capture capture, BodyFrame frame)
     {
-        // Capture frame and depth image for background processing
-        var bodyFrame = frame;
-        var depthImage = capture.DepthImage;
-        var colorImage = capture.ColorImage; // Get color image
+        if (capture is null || frame is null) return;
 
-        _ = Task.Run(() =>
+        var visualData = _visualizer.ProcessFrame(frame, capture?.DepthImage);
+        _visualizer.UpdateVisuals(visualData, 640, 360);
+        var activeElements = new HashSet<UIElement>(_visualizer.ActiveVisualElements);
+        var elementsToRemove = BodyVisualElements
+                                        .Where(element => !activeElements.Contains(element))
+                                        .ToList();
+
+        WriteableBitmap? colorImage = null;
+        colorImage = capture?.ColorImage?.ToWriteableBitmap(colorImage);
+
+        // Update UI on the main thread
+        Application.Current.Dispatcher.Invoke(() =>
         {
-            try
+            if (colorImage is not null)
+                ColorBitmap = colorImage;
+
+            foreach (var element in elementsToRemove)
             {
-                // Process frame data in a background thread
-                PlayerVisualizer.VisualData visualData = _visualizer.ProcessFrame(bodyFrame, depthImage);
-
-                // Update UI on the main thread
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    // Update ColorBitmap
-                    if (colorImage is not null)
-                    {
-                        ColorBitmap = colorImage.ToWriteableBitmap(ColorBitmap);
-                    }
-
-                    _visualizer.UpdateVisuals(visualData, 640, 360);
-
-                    var activeElements = new HashSet<UIElement>(_visualizer.ActiveVisualElements);
-                    var elementsToRemove = BodyVisualElements
-                                                .Where(element => !activeElements.Contains(element))
-                                                .ToList();
-
-                    foreach (var element in elementsToRemove)
-                    {
-                        BodyVisualElements.Remove(element);
-                    }
-
-                    foreach (var element in activeElements)
-                    {
-                        if (!BodyVisualElements.Contains(element))
-                        {
-                            BodyVisualElements.Add(element);
-                        }
-                    }
-                });
+                BodyVisualElements.Remove(element);
             }
-            finally
+
+            foreach (var element in activeElements)
             {
-                // Ensure disposal of unmanaged resources after processing
-                bodyFrame.Dispose();
-                depthImage?.Dispose(); // depthImage can be null
-                capture.Dispose();
+                if (!BodyVisualElements.Contains(element))
+                {
+                    BodyVisualElements.Add(element);
+                }
             }
         });
     }
@@ -216,7 +199,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             // Display the first frame after successful loading
             if (_controller.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
             {
-                await Task.Run(() => DisplayFirstColorFrame(playback, token), token);
+                await Task.Run(() => DisplayFirstColorFrame(playback, _controller.Broker, token), token);
             }
         }
         catch (OperationCanceledException)
@@ -242,7 +225,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         // Display the first frame
         if (_controller.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
         {
-            await Task.Run(() => DisplayFirstColorFrame(playback, token), token);
+            await Task.Run(() => DisplayFirstColorFrame(playback, _controller.Broker, token), token);
         }
     }
 
@@ -263,7 +246,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
-        _controller.Reader.OnNewFrame -= OnNewFrame;
+        _controller.Broker.OnNewFrameReady -= OnNewFrame; // Unsubscribe from Broker's event
         _visualizer?.Dispose();
         _disposables.Dispose();
         _cts?.Cancel();
