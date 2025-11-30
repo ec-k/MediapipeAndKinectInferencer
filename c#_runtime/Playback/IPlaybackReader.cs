@@ -2,6 +2,8 @@
 using K4AdotNet.Sensor;
 using R3;
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace KinectPoseInferencer.Playback;
 
@@ -11,7 +13,7 @@ public interface IPlaybackReader: IDisposable
     ReadOnlyReactiveProperty<bool> IsReading { get; }
     event Action<BodyFrame, Capture> OnNewFrame;
 
-    void Configure(PlaybackDescriptor descriptor);
+    Task Configure(PlaybackDescriptor descriptor, CancellationToken token);
     void Play();
     void Pause();
     void Rewind();

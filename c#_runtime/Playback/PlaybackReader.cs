@@ -44,7 +44,7 @@ internal class PlaybackReader : IPlaybackReader
         _landmarkHandler = landmarkHandler ?? throw new ArgumentNullException(nameof(landmarkHandler));
     }
 
-    public void Configure(PlaybackDescriptor descriptor)
+    public async Task Configure(PlaybackDescriptor descriptor, CancellationToken token)
     {
         if (string.IsNullOrEmpty(descriptor.VideoFilePath))
             throw new ArgumentNullException(nameof(descriptor.VideoFilePath));
@@ -52,11 +52,11 @@ internal class PlaybackReader : IPlaybackReader
         // Dispose existing playback and related task
         if (_readingTask is not null)
         {
-            StopReadingLoop().GetAwaiter().GetResult();
+            await StopReadingLoop();
             Playback?.Dispose();
         }
 
-        _playback.Value = new(descriptor.VideoFilePath);
+        await Task.Run(() => _playback.Value = new(descriptor.VideoFilePath), token);
         _playback.Value.GetCalibration(out var calibration);
 
         _tracker?.Dispose();
@@ -67,8 +67,8 @@ internal class PlaybackReader : IPlaybackReader
         };
         _tracker = new(calibration, trackerConfig);
 
-        _cts.Dispose();
-        _cts = new();
+        _cts?.Dispose();
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
         _readingTask = FrameReadingLoop(_cts.Token);
 
         _currentTimestampUs = new(0);
@@ -240,10 +240,10 @@ internal class PlaybackReader : IPlaybackReader
 
     public void Dispose()
     {
-        StopReadingLoop().GetAwaiter().GetResult();
+        StopReadingLoop().Wait();
 
         Playback?.Dispose();
         _tracker?.Dispose();
-        _cts.Dispose();
+        _cts?.Dispose();
     }
 }

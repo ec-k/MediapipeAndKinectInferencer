@@ -1,4 +1,8 @@
-﻿namespace KinectPoseInferencer.Playback;
+﻿using System.Threading;
+using System.Threading.Tasks;
+
+
+namespace KinectPoseInferencer.Playback;
 
 public class PlaybackController : IPlaybackController
 {
@@ -13,9 +17,9 @@ public class PlaybackController : IPlaybackController
         _reader = reader;
     }
 
-    public void Prepare()
+    public async Task Prepare(CancellationToken token)
     {
-        _reader.Configure(Descriptor);
+        await _reader.Configure(Descriptor, token);
     }
 
     public void Play()

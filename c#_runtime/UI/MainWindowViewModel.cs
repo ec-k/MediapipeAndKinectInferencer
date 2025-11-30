@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using K4AdotNet;
 using K4AdotNet.BodyTracking;
@@ -30,6 +30,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] string _videoFilePath;
     [ObservableProperty] WriteableBitmap _colorBitmap;
 
+    [ObservableProperty] bool _isLoading = false; // Initialize IsLoading
+
     const string PlayIconUnicode = "\uE768";
     const string PauseIconUnicode = "\uE769";
 
@@ -54,7 +56,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     playback.GetCalibration(out var calibration);
                     _visualizer = new PlayerVisualizer(calibration);
 
-                    _ = Task.Run(() => DisplayFirstColorFrame(playback), _cts.Token);
+                    // DisplayFirstColorFrame is now called after LoadFiles completes,
+                    // so no need to call it here directly from the subscription.
+                    // Instead, the LoadFiles command will ensure it's called.
             })
             .AddTo(ref _disposables);
         _controller.Reader.IsReading
@@ -64,10 +68,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _controller.Reader.OnNewFrame += OnNewFrame;
     }
 
-    void DisplayFirstColorFrame(K4AdotNet.Record.Playback playback)
+    void DisplayFirstColorFrame(K4AdotNet.Record.Playback playback, CancellationToken token)
     {
         try
         {
+            token.ThrowIfCancellationRequested(); // Check for cancellation at the start
+
             playback.SeekTimestamp(new Microseconds64(0), K4AdotNet.Record.PlaybackSeekOrigin.Begin);
 
             Capture? captureToDisplay = null;
@@ -75,6 +81,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
             for (int i = 0; i < MaxSeekFramesForColorImage; i++)
             {
+                token.ThrowIfCancellationRequested(); // Check for cancellation within the loop
+
                 if (!playback.TryGetNextCapture(out var currentCapture))
                 {
                     break;  // Probably at EOF
@@ -94,7 +102,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     ColorBitmap = captureToDisplay.ColorImage.ToWriteableBitmap(ColorBitmap);
-                });
+                }, System.Windows.Threading.DispatcherPriority.Background, token); // Pass token to Invoke
             }
             else
             {
@@ -107,13 +115,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                         Application.Current.Dispatcher.Invoke(() =>
                         {
                             ColorBitmap = firstCapture.DepthImage.ToWriteableBitmap(ColorBitmap);
-                        });
+                        }, System.Windows.Threading.DispatcherPriority.Background, token); // Pass token to Invoke
                     }
                     firstCapture.Dispose();
                 }
             }
 
             captureToDisplay?.Dispose();
+        }
+        catch (OperationCanceledException)
+        {
+            // Handle cancellation
+            Console.WriteLine("DisplayFirstColorFrame was cancelled.");
         }
         finally
         {
@@ -185,31 +198,47 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         PlaybackLength = $"{minutes}:{seconds}";
     }
 
-    [RelayCommand]
-    void LoadFiles()
+    [RelayCommand(IncludeCancelCommand = true)]
+    async Task LoadFiles(CancellationToken token)
     {
         if (string.IsNullOrEmpty(VideoFilePath)) return;
 
-        _cts?.Cancel();
-        _cts?.Dispose();
-        _cts = new();
+        try
+        {
+            IsLoading = true;
+            var playbackDesc = new PlaybackDescriptor(VideoFilePath);
+            _controller.Descriptor = playbackDesc;
+            await _controller.Prepare(token);
 
-        var playbackDesc = new PlaybackDescriptor(VideoFilePath);
-        _controller.Descriptor = playbackDesc;
-        _controller.Prepare();
+            // Display the first frame after successful loading
+            if (_controller.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
+            {
+                await Task.Run(() => DisplayFirstColorFrame(playback, token), token);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Handle cancellation if needed
+            Console.WriteLine("File loading was cancelled.");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading file: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
-    [RelayCommand]
-    void Rewind()
+    [RelayCommand(IncludeCancelCommand = true)]
+    async Task Rewind(CancellationToken token)
     {
         _controller.Rewind();
         // Display the first frame
         if (_controller.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
         {
-            _cts?.Cancel();
-            _cts?.Dispose();
-            _cts = new CancellationTokenSource();
-            _ = Task.Run(() => DisplayFirstColorFrame(playback), _cts.Token);
+            await Task.Run(() => DisplayFirstColorFrame(playback, token), token);
         }
     }
 
