@@ -195,6 +195,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     void Rewind()
     {
         _controller.Rewind();
+        // Display the first frame
+        if (_controller.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
+        {
+            _cts?.Cancel();
+            _cts?.Dispose();
+            _cts = new CancellationTokenSource();
+            _ = Task.Run(() => DisplayFirstColorFrame(playback), _cts.Token);
+        }
     }
 
     [RelayCommand]
