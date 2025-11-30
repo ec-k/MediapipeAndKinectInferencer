@@ -11,6 +11,7 @@ public interface IPlaybackReader: IDisposable
 {
     ReadOnlyReactiveProperty<K4AdotNet.Record.Playback> Playback { get; }
     ReadOnlyReactiveProperty<bool> IsReading { get; }
+    ReadOnlyReactiveProperty<K4AdotNet.Microseconds64> CurrentPositionUs { get; }
     event Action<BodyFrame, Capture> OnNewFrame;
 
     Task Configure(PlaybackDescriptor descriptor, CancellationToken token);

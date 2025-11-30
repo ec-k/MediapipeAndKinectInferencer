@@ -19,10 +19,12 @@ internal class PlaybackReader : IPlaybackReader
 
     public ReadOnlyReactiveProperty<K4AdotNet.Record.Playback> Playback => _playback;
     public ReadOnlyReactiveProperty<bool> IsReading => _isReading;
+    public ReadOnlyReactiveProperty<Microseconds64> CurrentPositionUs => _currentPositionUs;
     public event Action<BodyFrame, Capture> OnNewFrame;
 
     ReactiveProperty<K4AdotNet.Record.Playback> _playback = new();
     ReactiveProperty<bool> _isReading = new(false);
+    ReactiveProperty<Microseconds64> _currentPositionUs = new(new Microseconds64(0));
 
     Tracker _tracker;
 

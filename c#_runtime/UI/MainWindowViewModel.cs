@@ -30,7 +30,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] string _videoFilePath;
     [ObservableProperty] WriteableBitmap _colorBitmap;
 
-    [ObservableProperty] bool _isLoading = false; // Initialize IsLoading
+    [ObservableProperty] bool _isLoading = false;
+    [ObservableProperty] double _totalDurationSeconds;
+    [ObservableProperty] double _currentPositionSeconds;
 
     const string PlayIconUnicode = "\uE768";
     const string PauseIconUnicode = "\uE769";
@@ -55,14 +57,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     UpdatePlaybackLengthDisplay(playback);
                     playback.GetCalibration(out var calibration);
                     _visualizer = new PlayerVisualizer(calibration);
-
-                    // DisplayFirstColorFrame is now called after LoadFiles completes,
-                    // so no need to call it here directly from the subscription.
-                    // Instead, the LoadFiles command will ensure it's called.
+                    TotalDurationSeconds = playback.RecordLength.TotalSeconds; // Set TotalDurationSeconds
             })
             .AddTo(ref _disposables);
         _controller.Reader.IsReading
             .Subscribe(isPlaying => PlayPauseIconUnicode = isPlaying ? PauseIconUnicode : PlayIconUnicode)
+            .AddTo(ref _disposables);
+
+        _controller.Reader.CurrentPositionUs
+            .Subscribe(position => CurrentPositionSeconds = position.TotalSeconds)
             .AddTo(ref _disposables);
 
         _controller.Reader.OnNewFrame += OnNewFrame;
@@ -235,6 +238,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     async Task Rewind(CancellationToken token)
     {
         _controller.Rewind();
+        CurrentPositionSeconds = 0; // Reset CurrentPositionSeconds
         // Display the first frame
         if (_controller.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
         {
