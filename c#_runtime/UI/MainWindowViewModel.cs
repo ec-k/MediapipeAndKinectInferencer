@@ -57,6 +57,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     UpdatePlaybackLengthDisplay(playback);
                     playback.GetCalibration(out var calibration);
                     _visualizer = new PlayerVisualizer(calibration);
+                    PointCloud.ComputePointCloudCache(calibration);
                     TotalDurationSeconds = playback.RecordLength.TotalSeconds;
             })
             .AddTo(ref _disposables);
@@ -143,12 +144,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (capture is null || frame is null) return;
 
-        var visualData = _visualizer.ProcessFrame(frame, capture?.DepthImage);
-        _visualizer.UpdateVisuals(visualData, 640, 360);
-        var activeElements = new HashSet<UIElement>(_visualizer.ActiveVisualElements);
-        var elementsToRemove = BodyVisualElements
-                                        .Where(element => !activeElements.Contains(element))
-                                        .ToList();
+        //var visualData = _visualizer.ProcessFrame(frame, capture?.DepthImage);
+        //_visualizer.UpdateVisuals(visualData, 640, 360);
+        //var activeElements = new HashSet<UIElement>(_visualizer.ActiveVisualElements);
+        //var elementsToRemove = BodyVisualElements
+        //                                .Where(element => !activeElements.Contains(element))
+        //                                .ToList();
 
         WriteableBitmap? colorImage = null;
         colorImage = capture?.ColorImage?.ToWriteableBitmap(colorImage);
@@ -159,18 +160,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             if (colorImage is not null)
                 ColorBitmap = colorImage;
 
-            foreach (var element in elementsToRemove)
-            {
-                BodyVisualElements.Remove(element);
-            }
+            //foreach (var element in elementsToRemove)
+            //{
+            //    BodyVisualElements.Remove(element);
+            //}
 
-            foreach (var element in activeElements)
-            {
-                if (!BodyVisualElements.Contains(element))
-                {
-                    BodyVisualElements.Add(element);
-                }
-            }
+            //foreach (var element in activeElements)
+            //{
+            //    if (!BodyVisualElements.Contains(element))
+            //    {
+            //        BodyVisualElements.Add(element);
+            //    }
+            //}
         });
     }
 

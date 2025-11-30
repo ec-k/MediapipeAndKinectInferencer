@@ -30,8 +30,8 @@ public partial class App : Application
         var mainWindow = services.GetRequiredService<MainWindow>();
         mainWindow.Show();
 
-        //var renderer = services.GetRequiredService<Renderer>();
-        //renderer.StartVisualizationThread();
+        var renderer = services.GetRequiredService<Renderer>();
+        renderer.StartVisualizationThread();
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -59,6 +59,7 @@ public partial class App : Application
                 services.AddSingleton<PoseInference.SkeletonToPoseLandmarksConverter>();
                 services.AddSingleton<Renderer>();
                 services.AddSingleton(provider => new ImageWriter(mmfFilePath));
+                services.AddSingleton<FrameManager>();
                 services.AddSingleton<FrameCaptureBroker>();
                 services.AddSingleton<MainWindow>();
                 services.AddSingleton<MainWindowViewModel>();

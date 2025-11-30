@@ -13,6 +13,7 @@ namespace KinectPoseInferencer.Playback;
 internal class PlaybackReader : IPlaybackReader
 {
     readonly FrameCaptureBroker _frameCaptureBroker;
+    readonly FrameManager _frameManager;
     readonly ImageWriter _imageWriter;
     readonly LandmarkHandler _landmarkHandler;
 
@@ -36,10 +37,12 @@ internal class PlaybackReader : IPlaybackReader
 
     public PlaybackReader(
         FrameCaptureBroker frameCaptureBroker,
+        FrameManager frameManager,
         ImageWriter imageWriter,
         LandmarkHandler landmarkHandler)
     {
         _frameCaptureBroker = frameCaptureBroker ?? throw new ArgumentNullException(nameof(frameCaptureBroker));
+        _frameManager = frameManager ?? throw new ArgumentNullException(nameof(frameManager));
         _imageWriter = imageWriter ?? throw new ArgumentNullException(nameof(imageWriter));
         _landmarkHandler = landmarkHandler ?? throw new ArgumentNullException(nameof(landmarkHandler));
     }
@@ -209,6 +212,7 @@ internal class PlaybackReader : IPlaybackReader
 
         using var frame = _tracker.PopResult();
         _frameCaptureBroker.ProcessNewFrame(capture.DuplicateReference(), frame.DuplicateReference());
+        _frameManager.Frame = frame.DuplicateReference();
 
         if (frame is not null)
         {
