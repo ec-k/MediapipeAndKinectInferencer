@@ -1,6 +1,6 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
-
 
 namespace KinectPoseInferencer.Playback;
 
@@ -35,6 +35,11 @@ public class PlaybackController : IPlaybackController
     public void Rewind()
     {
         _reader.Rewind();
+    }
+
+    public void Seek(TimeSpan position)
+    {
+        _reader.Seek(position);
     }
 
     public void Dispose()

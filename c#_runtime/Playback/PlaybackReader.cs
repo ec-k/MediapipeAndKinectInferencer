@@ -75,6 +75,7 @@ internal class PlaybackReader : IPlaybackReader
 
         _currentTimestampUs = new(0);
         _lastTimestampUs = new(0);
+        _currentPositionUs.Value = new(0); // Reset current position
     }
 
     public void Play()
@@ -97,6 +98,19 @@ internal class PlaybackReader : IPlaybackReader
         _isReading.Value = false;
         _currentTimestampUs = new(0);
         _lastTimestampUs = new(0);
+        _currentPositionUs.Value = new(0); // Reset current position
+    }
+
+    public void Seek(TimeSpan position)
+    {
+        if (Playback.CurrentValue is null) return;
+        _isReading.Value = false; // Pause reading before seeking
+        
+        var targetUs = new Microseconds64((long)position.TotalMicroseconds);
+        Playback.CurrentValue.SeekTimestamp(targetUs, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
+        _currentTimestampUs = targetUs;
+        _lastTimestampUs = targetUs;
+        _currentPositionUs.Value = targetUs;
     }
 
     async Task FrameReadingLoop(CancellationToken token)
@@ -183,6 +197,7 @@ internal class PlaybackReader : IPlaybackReader
             return TimeSpan.Zero;
 
         _currentTimestampUs = capture.DepthImage.DeviceTimestamp;
+        _currentPositionUs.Value = _currentTimestampUs; // Update the observable property
         var frameTimeDiffTick = TimeSpan.Zero;
         
         if (_lastTimestampUs.ValueUsec > 0) // Calculate if this process is NOT the first reading.
@@ -247,5 +262,6 @@ internal class PlaybackReader : IPlaybackReader
         Playback?.Dispose();
         _tracker?.Dispose();
         _cts?.Dispose();
+        _currentPositionUs?.Dispose();
     }
 }

@@ -13,4 +13,5 @@ public interface IPlaybackController: IDisposable
     void Play();
     void Pause();
     void Rewind();
+    void Seek(TimeSpan position);
 }

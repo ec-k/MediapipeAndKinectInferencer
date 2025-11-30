@@ -18,4 +18,5 @@ public interface IPlaybackReader: IDisposable
     void Play();
     void Pause();
     void Rewind();
+    void Seek(TimeSpan position);
 }
