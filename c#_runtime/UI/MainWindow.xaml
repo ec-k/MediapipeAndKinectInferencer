@@ -69,7 +69,13 @@
             <Viewbox x:Name="VideoWindowViewBox" Stretch="Uniform">
                 <Grid Width="640" Height="360" ClipToBounds="True">
                     <Image Source="{Binding ColorBitmap}" Stretch="Fill"/>
-                    <Canvas x:Name="DrawingCanvas"/>
+                    <ItemsControl ItemsSource="{Binding BodyVisualElements}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Canvas/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
                 </Grid>
             </Viewbox>
         </Border>

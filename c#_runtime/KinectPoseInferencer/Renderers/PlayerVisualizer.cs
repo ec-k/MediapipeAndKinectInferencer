@@ -5,23 +5,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
-using System.Windows.Controls; // For UIElement
-using System.Windows.Shapes; // For Ellipse, Line
+using System.Windows.Controls;
+using System.Windows.Shapes;
 
 using KinectPoseInferencer.Helpers;
-using K4AdotNet;
 
 namespace KinectPoseInferencer.Renderers;
 
 public class PlayerVisualizer : IDisposable
 {
-    const double JointRadius = 0.024; // This might still be useful for 2D visualization (e.g., circle size)
-    const int MaxBodies = 6;
+    readonly double JointRadius = 0.024;
+    readonly int MaxBodies = 6;
 
     readonly List<(JointType Parent, JointType Child)> _boneConnection = BodyTrackingHelper.GetBoneConnections();
     readonly List<JointType> _jointTypes = Enum.GetValues(typeof(JointType)).Cast<JointType>().ToList();
 
-    // 中間データ構造の定義
     public class VisualData
     {
         public List<BodyVisualData> BodyData { get; set; } = new List<BodyVisualData>();
@@ -36,95 +34,145 @@ public class PlayerVisualizer : IDisposable
 
     public class JointVisualData
     {
-        public Point Position { get; set; } // Changed to 2D Point
+        public Point Position { get; set; }
     }
 
     public class BoneVisualData
     {
-        public Point ParentPosition { get; set; } // Changed to 2D Point
-        public Point ChildPosition { get; set; } // Changed to 2D Point
+        public Point ParentPosition { get; set; }
+        public Point ChildPosition { get; set; }
     }
 
-    // Kinect のキャリブレーション情報を保存するためのフィールドを追加
+
+    readonly List<Ellipse> _jointEllipses = new();
+    readonly List<Line> _boneLines = new();
+    readonly List<UIElement> _currentActiveVisualElements = new();
+
+    public IEnumerable<UIElement> ActiveVisualElements => _currentActiveVisualElements;
+    
     readonly Calibration _calibration;
 
     public PlayerVisualizer(Calibration calibration)
     {
-        _calibration = calibration; // Store calibration for 3D to 2D transformation
+        _calibration = calibration;
     }
 
-    // 3D関連のメソッドは削除
-    // ModelVisual3D CreateInitialSphereVisual() { ... }
-    // ModelVisual3D CreateInitialCylinderVisual() { ... }
-    // void UpdateSphereModel(ModelVisual3D visual, Vector3 position, Material material) { ... }
-    // void UpdateCylinderModel(ModelVisual3D visual, Vector3 start, Vector3 end, Material material) { ... }
-    // void HideAllVisuals() { ... }
-
-    public List<UIElement> UpdateVisuals(VisualData data, double canvasWidth, double canvasHeight) // imageWidth/Height を canvasWidth/Height に変更
+    public void UpdateVisuals(VisualData data, double canvasWidth, double canvasHeight)
     {
-        var elements = new List<UIElement>();
+        _currentActiveVisualElements.Clear();
 
-        // Kinect のカラー画像解像度を取得
         var kinectColorImageWidth = _calibration.ColorCameraCalibration.ResolutionWidth;
         var kinectColorImageHeight = _calibration.ColorCameraCalibration.ResolutionHeight;
 
-        // 各Bodyのジョイントとボーンを描画
         foreach (var bodyData in data.BodyData)
         {
             var brush = new SolidColorBrush(bodyData.BodyColor);
 
-            // ジョイントの描画
+            // Render joints
             foreach (var jointData in bodyData.JointData)
             {
-                if (jointData.Position.X >= 0 && jointData.Position.Y >= 0) // 有効な点のみ描画
+                if (jointData.Position.X >= 0 && jointData.Position.Y >= 0)
                 {
-                    // スケール調整: Kinect 解像度 -> Canvas 解像度
+                    Ellipse ellipse = GetOrCreateEllipse();
+
                     var scaledX = (jointData.Position.X / kinectColorImageWidth) * canvasWidth;
                     var scaledY = (jointData.Position.Y / kinectColorImageHeight) * canvasHeight;
 
-                    var ellipse = new Ellipse
-                    {
-                        Width = JointRadius * 200 * (canvasWidth / kinectColorImageWidth), // スケール調整
-                        Height = JointRadius * 200 * (canvasHeight / kinectColorImageHeight), // スケール調整
-                        Fill = brush,
-                        Stroke = brush,
-                        StrokeThickness = 1
-                    };
+                    ellipse.Width = JointRadius * 200 * (canvasWidth / kinectColorImageWidth);
+                    ellipse.Height = JointRadius * 200 * (canvasHeight / kinectColorImageHeight);
+                    ellipse.Fill = brush;
+                    ellipse.Stroke = brush;
+                    ellipse.StrokeThickness = 1;
+
                     Canvas.SetLeft(ellipse, scaledX - ellipse.Width / 2);
                     Canvas.SetTop(ellipse, scaledY - ellipse.Height / 2);
-                    elements.Add(ellipse);
+                    ellipse.Visibility = Visibility.Visible;
+
+                    _currentActiveVisualElements.Add(ellipse);
                 }
             }
 
-            // ボーンの描画
+            // Render bones
             foreach (var boneData in bodyData.BoneData)
             {
                 if (boneData.ParentPosition.X >= 0 && boneData.ParentPosition.Y >= 0 &&
-                    boneData.ChildPosition.X >= 0 && boneData.ChildPosition.Y >= 0) // 有効な点のみ描画
+                    boneData.ChildPosition.X >= 0 && boneData.ChildPosition.Y >= 0)
                 {
-                    // スケール調整: Kinect 解像度 -> Canvas 解像度
+                    var line = GetOrCreateLine();
+
                     var scaledParentX = (boneData.ParentPosition.X / kinectColorImageWidth) * canvasWidth;
                     var scaledParentY = (boneData.ParentPosition.Y / kinectColorImageHeight) * canvasHeight;
                     var scaledChildX = (boneData.ChildPosition.X / kinectColorImageWidth) * canvasWidth;
                     var scaledChildY = (boneData.ChildPosition.Y / kinectColorImageHeight) * canvasHeight;
 
-                    var line = new Line
-                    {
-                        X1 = scaledParentX,
-                        Y1 = scaledParentY,
-                        X2 = scaledChildX,
-                        Y2 = scaledChildY,
-                        Stroke = brush,
-                        StrokeThickness = 3 * (canvasWidth / kinectColorImageWidth), // 太さもスケール調整
-                    };
-                    elements.Add(line);
+                    line.X1 = scaledParentX;
+                    line.Y1 = scaledParentY;
+                    line.X2 = scaledChildX;
+                    line.Y2 = scaledChildY;
+                    line.Stroke = brush;
+                    line.StrokeThickness = 3 * (canvasWidth / kinectColorImageWidth);
+                    line.Visibility = Visibility.Visible;
+
+                    _currentActiveVisualElements.Add(line);
                 }
             }
         }
-        return elements;
+
+        // Make invisible objects that are not utilized.
+        foreach (var ellipse in _jointEllipses)
+        {
+            if (!_currentActiveVisualElements.Contains(ellipse))
+            {
+                ellipse.Visibility = Visibility.Collapsed;
+            }
+        }
+        foreach (var line in _boneLines)
+        {
+            if (!_currentActiveVisualElements.Contains(line))
+            {
+                line.Visibility = Visibility.Collapsed;
+            }
+        }
     }
 
-    public IEnumerable<UIElement> GetAllVisuals() => new List<UIElement>(); // No longer returns 3D visuals
+    private Ellipse GetOrCreateEllipse()
+    {
+        // Use invisible elipses when it is existed.
+        foreach (var ellipse in _jointEllipses)
+        {
+            if (ellipse.Visibility == Visibility.Collapsed)
+            {
+                return ellipse;
+            }
+        }
+
+        // Create new when no lines existed
+        var newEllipse = new Ellipse();
+        _jointEllipses.Add(newEllipse);
+        return newEllipse;
+    }
+
+    Line GetOrCreateLine()
+    {
+        // Use invisible lines when it is existed.
+        foreach (var line in _boneLines)
+        {
+            if (line.Visibility == Visibility.Collapsed)
+            {
+                return line;
+            }
+        }
+
+        // Create new when no lines existed
+        var newLine = new Line();
+        _boneLines.Add(newLine);
+        return newLine;
+    }
+    
+    public void Dispose()
+    {
+        // leave cleanup to GC.
+    }
 
     public VisualData ProcessFrame(BodyFrame bodyFrame, K4AdotNet.Sensor.Image depthImage)
     {
@@ -139,7 +187,7 @@ public class PlayerVisualizer : IDisposable
         // --- Start 3D to 2D Transformation Logic ---
         using (var transformation = _calibration.CreateTransformation())
         {
-            var colorImageResolution = _calibration.ColorResolution;
+            var colorImageResolution = _calibration.ColorCameraCalibration.ResolutionWidth;
             var depthWidth = _calibration.DepthCameraCalibration.ResolutionWidth;
             var depthHeight = _calibration.DepthCameraCalibration.ResolutionHeight;
 
@@ -204,10 +252,5 @@ public class PlayerVisualizer : IDisposable
         // --- End 3D to 2D Transformation Logic ---
 
         return visualData;
-    }
-
-    public void Dispose()
-    {
-        // No _pointCloudProcessor to dispose anymore
     }
 }
