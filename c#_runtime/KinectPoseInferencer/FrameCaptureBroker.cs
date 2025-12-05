@@ -1,12 +1,14 @@
 using K4AdotNet.BodyTracking;
 using K4AdotNet.Sensor;
 using System;
+using KinectPoseInferencer.Playback;
 
 namespace KinectPoseInferencer;
 
 public class FrameCaptureBroker : IDisposable
 {
     public event Action<Capture, BodyFrame> OnNewFrameReady;
+    public event Action<IInputLogEvent>? OnNewInputLogEvent;
 
     Capture _currentCapture;
     BodyFrame _currentBodyFrame;
@@ -25,6 +27,11 @@ public class FrameCaptureBroker : IDisposable
 
         // Notify subscribers that a new frame pair is ready
         OnNewFrameReady?.Invoke(_currentCapture, _currentBodyFrame);
+    }
+
+    public void ProcessNewInputLogEvent(IInputLogEvent inputLogEvent) // Add InputLogEvent processing
+    {
+        OnNewInputLogEvent?.Invoke(inputLogEvent);
     }
 
     /// <summary>

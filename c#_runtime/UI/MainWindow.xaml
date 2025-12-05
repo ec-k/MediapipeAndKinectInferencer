@@ -16,7 +16,7 @@
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -26,44 +26,53 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Grid Grid.Row="0" Grid.Column="0" Margin="0,0,20,20" VerticalAlignment="Top">
-            <Grid.Resources>
+       
+        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,20,20">
+            <StackPanel.Resources>
                 <sys:Double x:Key="RowHeight">30.0</sys:Double>
-
                 <Style TargetType="{x:Type TextBox}">
                     <Setter Property="Height" Value="{StaticResource RowHeight}"/>
                 </Style>
                 <Style TargetType="{x:Type Button}">
                     <Setter Property="Height" Value="{StaticResource RowHeight}"/>
                 </Style>
-            </Grid.Resources>
+            </StackPanel.Resources>
 
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="video" VerticalAlignment="Center" Margin="0,0,10,5"/>
+                <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding VideoFilePath}" Margin="0,0,0,5"/>
 
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-            
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="video" VerticalAlignment="Center" Margin="0,0,10,30"/>
-            <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding VideoFilePath}" Margin="0,0,0,30"/>
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="input log" VerticalAlignment="Center" Margin="0,0,10,5"/>
+                <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding InputLogFilePath}" Margin="0,0,0,5"/>
 
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="log"   VerticalAlignment="Center" Margin="0,0,10,30"/>
-            <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding LogFilePath}" Margin="0,0,0,30"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="meta"  VerticalAlignment="Center" Margin="0,0,10,30"/>
+                <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding MetaFilePath}" Margin="0,0,0,30"/>
+                
+                <Button Grid.Row="3" Grid.Column="0" Command="{Binding LoadFilesCommand}" Grid.ColumnSpan="2" HorizontalAlignment="Left" Width="80">
+                    <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xED25;"/>
+                </Button>
+            </Grid>
+        </StackPanel>
 
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="meta"  VerticalAlignment="Center" Margin="0,0,10,30"/>
-            <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding MetaFilePath}" Margin="0,0,0,30"/>
-
-            <Button Grid.Row="3" Grid.Column="0" Command="{Binding LoadFilesCommand}">
-                <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xED25;"/>
-            </Button>
-            
-        </Grid>
+        <!-- Input Log Display -->
+        <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding InputLogEvents}" Margin="0,0,20,0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
 
         <!-- Video View -->
         <Border x:Name="VideoWindowBorder"

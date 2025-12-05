@@ -8,7 +8,6 @@ using KinectPoseInferencer.Playback;
 using KinectPoseInferencer.Renderers;
 using R3;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
@@ -28,6 +27,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] string _playbackLength;
     [ObservableProperty] string _playPauseIconUnicode;
     [ObservableProperty] string _videoFilePath;
+    [ObservableProperty] string _inputLogFilePath;
+    [ObservableProperty] string _metaFilePath;
     [ObservableProperty] WriteableBitmap _colorBitmap;
 
     [ObservableProperty] bool _isLoading = false;
@@ -40,6 +41,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     readonly int MaxSeekFramesForColorImage = 100;
 
     public ObservableCollection<UIElement> BodyVisualElements { get; } = new();
+    public ObservableCollection<string> InputLogEvents { get; } = new();
 
     DisposableBag _disposables = new();
     CancellationTokenSource _cts = new();
@@ -70,6 +72,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .AddTo(ref _disposables);
 
         _controller.Broker.OnNewFrameReady += OnNewFrame;
+        _controller.Broker.OnNewInputLogEvent += OnNewInputLogEvent; // Subscribe to new input log event
     }
 
     void DisplayFirstColorFrame(K4AdotNet.Record.Playback playback, FrameCaptureBroker broker, CancellationToken token)
@@ -175,6 +178,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         });
     }
 
+    void OnNewInputLogEvent(IInputLogEvent inputLogEvent)
+    {
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            InputLogEvents.Add($"[{CurrentPositionSeconds:F3}s] {inputLogEvent.GetType().Name}: {inputLogEvent.RawStopwatchTimestamp}");
+            if (InputLogEvents.Count > 20)
+            {
+                InputLogEvents.RemoveAt(0);
+            }
+        });
+    }
+
     void UpdatePlaybackLengthDisplay(K4AdotNet.Record.Playback playback)
     {
         if (playback is null) return;
@@ -193,7 +208,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         try
         {
             IsLoading = true;
-            var playbackDesc = new PlaybackDescriptor(VideoFilePath);
+            var playbackDesc = new PlaybackDescriptor(VideoFilePath, InputLogFilePath, MetaFilePath);
             _controller.Descriptor = playbackDesc;
             await _controller.Prepare(token);
 
@@ -223,6 +238,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         _controller.Rewind();
         CurrentPositionSeconds = 0; // Reset CurrentPositionSeconds
+        
         // Display the first frame
         if (_controller.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
         {
@@ -247,7 +263,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
-        _controller.Broker.OnNewFrameReady -= OnNewFrame; // Unsubscribe from Broker's event
+        _controller.Broker.OnNewFrameReady -= OnNewFrame;
+        _controller.Broker.OnNewInputLogEvent -= OnNewInputLogEvent;
         _visualizer?.Dispose();
         _disposables.Dispose();
         _cts?.Cancel();
