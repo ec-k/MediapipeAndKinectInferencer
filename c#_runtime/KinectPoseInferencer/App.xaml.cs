@@ -63,6 +63,7 @@ public partial class App : Application
                 services.AddSingleton<FrameCaptureBroker>();
                 services.AddSingleton<MainWindow>();
                 services.AddSingleton<MainWindowViewModel>();
+                services.AddSingleton<InputLogReader>();
 
                 // Register filter chain
                 services.AddSingleton<PoseInference.Filters.IPositionFilter, PoseInference.Filters.MilimeterToMeter>();

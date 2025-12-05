@@ -16,6 +16,7 @@ internal class PlaybackReader : IPlaybackReader
     readonly FrameManager _frameManager;
     readonly ImageWriter _imageWriter;
     readonly LandmarkHandler _landmarkHandler;
+    readonly InputLogReader _inputLogReader;
 
     public ReadOnlyReactiveProperty<K4AdotNet.Record.Playback> Playback => _playback;
     public ReadOnlyReactiveProperty<bool> IsReading => _isReading;
@@ -26,6 +27,8 @@ internal class PlaybackReader : IPlaybackReader
     ReactiveProperty<Microseconds64> _currentPositionUs = new(new Microseconds64(0));
 
     Tracker _tracker;
+    bool _isFirstFrameAfterPlay = true;
+    long _systemStopwatchTimestampAtLoopStart = 0;
 
     Task? _readingTask;
     CancellationTokenSource _cts = new();
@@ -34,17 +37,18 @@ internal class PlaybackReader : IPlaybackReader
     Microseconds64 _currentTimestampUs = new(0);
     Microseconds64 _lastTimestampUs = new(0);
 
-
     public PlaybackReader(
         FrameCaptureBroker frameCaptureBroker,
         FrameManager frameManager,
         ImageWriter imageWriter,
-        LandmarkHandler landmarkHandler)
+        LandmarkHandler landmarkHandler,
+        InputLogReader inputLogReader) // Add InputLogReader
     {
         _frameCaptureBroker = frameCaptureBroker ?? throw new ArgumentNullException(nameof(frameCaptureBroker));
         _frameManager = frameManager ?? throw new ArgumentNullException(nameof(frameManager));
         _imageWriter = imageWriter ?? throw new ArgumentNullException(nameof(imageWriter));
         _landmarkHandler = landmarkHandler ?? throw new ArgumentNullException(nameof(landmarkHandler));
+        _inputLogReader = inputLogReader ?? throw new ArgumentNullException(nameof(inputLogReader));
     }
 
     public async Task Configure(PlaybackDescriptor descriptor, CancellationToken token)
@@ -60,6 +64,13 @@ internal class PlaybackReader : IPlaybackReader
         }
 
         await Task.Run(() => _playback.Value = new(descriptor.VideoFilePath), token);
+
+        // Load input log file if path is provided
+        if (!string.IsNullOrEmpty(descriptor.InputLogFilePath))
+        {
+            _inputLogReader.LoadLogFile(descriptor.InputLogFilePath);
+        }
+
         _playback.Value.GetCalibration(out var calibration);
 
         _tracker?.Dispose();
@@ -76,6 +87,8 @@ internal class PlaybackReader : IPlaybackReader
 
         _currentTimestampUs = new(0);
         _lastTimestampUs = new(0);
+        _systemStopwatchTimestampAtLoopStart = 0;
+        _isFirstFrameAfterPlay = true;
         _currentPositionUs.Value = new(0); // Reset current position
     }
 
@@ -86,6 +99,8 @@ internal class PlaybackReader : IPlaybackReader
         _isReading.Value = true;
         Playback.CurrentValue.SeekTimestamp(_currentTimestampUs, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
         _lastTimestampUs = _currentTimestampUs;
+        _systemStopwatchTimestampAtLoopStart = Stopwatch.GetTimestamp(); // Capture system time when playback starts
+        _isFirstFrameAfterPlay = true;
     }
 
     public void Pause()
@@ -100,6 +115,8 @@ internal class PlaybackReader : IPlaybackReader
         _currentTimestampUs = new(0);
         _lastTimestampUs = new(0);
         _currentPositionUs.Value = new(0); // Reset current position
+        _systemStopwatchTimestampAtLoopStart = 0;
+        _isFirstFrameAfterPlay = true;
     }
 
     public void Seek(TimeSpan position)
@@ -112,6 +129,8 @@ internal class PlaybackReader : IPlaybackReader
         _currentTimestampUs = targetUs;
         _lastTimestampUs = targetUs;
         _currentPositionUs.Value = targetUs;
+        _systemStopwatchTimestampAtLoopStart = Stopwatch.GetTimestamp(); // Reset system start time for sync
+        _isFirstFrameAfterPlay = true;
     }
 
     async Task FrameReadingLoop(CancellationToken token)
@@ -126,11 +145,20 @@ internal class PlaybackReader : IPlaybackReader
                     var frameTimeDiff = ReadAndProcessFrame();
                     var endSystemTime = Stopwatch.GetTimestamp();
                     var processingTime = TimeSpan.FromTicks(endSystemTime - startSystemTime);
+
                     var waitTime = frameTimeDiff - processingTime;
 
-                    // Wait to recreate video scene in real time.
-                    if (waitTime.TotalMilliseconds > 0)
-                        await Task.Delay(waitTime, token);
+                    if (_isFirstFrameAfterPlay)
+                    {
+                        // Skip initial wait for the first frame after play/seek
+                        _isFirstFrameAfterPlay = false;
+                    }
+                    else
+                    {
+                        // Wait to recreate video scene in real time.
+                        if (waitTime.TotalMilliseconds > 0)
+                            await Task.Delay(waitTime, token);
+                    }
                 }
                 else
                     await Task.Delay(50, token);    // Suppress polling rate in no-reading state
@@ -198,7 +226,14 @@ internal class PlaybackReader : IPlaybackReader
             return TimeSpan.Zero;
 
         _currentTimestampUs = capture.DepthImage.DeviceTimestamp;
-        _currentPositionUs.Value = _currentTimestampUs; // Update the observable property
+        _currentPositionUs.Value = _currentTimestampUs;
+
+        // Process input log events for the current timestamp
+        foreach (var inputEvent in _inputLogReader.GetEventsUpToKinectTimestamp(_currentTimestampUs.ValueUsec))
+        {
+            _frameCaptureBroker.ProcessNewInputLogEvent(inputEvent);
+        }
+
         var frameTimeDiffTick = TimeSpan.Zero;
         
         if (_lastTimestampUs.ValueUsec > 0) // Calculate if this process is NOT the first reading.
@@ -264,5 +299,6 @@ internal class PlaybackReader : IPlaybackReader
         _cts?.Dispose();
         _currentPositionUs?.Dispose();
         _frameCaptureBroker?.Dispose();
+        _inputLogReader?.Dispose();
     }
 }
