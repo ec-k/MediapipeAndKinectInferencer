@@ -1,6 +1,4 @@
 ﻿using K4AdotNet;
-using K4AdotNet.BodyTracking;
-using KinectPoseInferencer.PoseInference;
 using R3;
 using System;
 using System.Diagnostics;
@@ -13,9 +11,7 @@ namespace KinectPoseInferencer.Playback;
 internal class PlaybackReader : IPlaybackReader
 {
     readonly FrameCaptureBroker _frameCaptureBroker;
-    readonly FrameManager _frameManager;
     readonly ImageWriter _imageWriter;
-    readonly LandmarkHandler _landmarkHandler;
     readonly InputLogReader _inputLogReader;
 
     public ReadOnlyReactiveProperty<K4AdotNet.Record.Playback> Playback => _playback;
@@ -26,7 +22,6 @@ internal class PlaybackReader : IPlaybackReader
     ReactiveProperty<bool> _isReading = new(false);
     ReactiveProperty<Microseconds64> _currentPositionUs = new(new Microseconds64(0));
 
-    Tracker _tracker;
     bool _isFirstFrameAfterPlay = true;
     long _systemStopwatchTimestampAtLoopStart = 0;
 
@@ -39,15 +34,11 @@ internal class PlaybackReader : IPlaybackReader
 
     public PlaybackReader(
         FrameCaptureBroker frameCaptureBroker,
-        FrameManager frameManager,
         ImageWriter imageWriter,
-        LandmarkHandler landmarkHandler,
-        InputLogReader inputLogReader) // Add InputLogReader
+        InputLogReader inputLogReader)
     {
         _frameCaptureBroker = frameCaptureBroker ?? throw new ArgumentNullException(nameof(frameCaptureBroker));
-        _frameManager = frameManager ?? throw new ArgumentNullException(nameof(frameManager));
         _imageWriter = imageWriter ?? throw new ArgumentNullException(nameof(imageWriter));
-        _landmarkHandler = landmarkHandler ?? throw new ArgumentNullException(nameof(landmarkHandler));
         _inputLogReader = inputLogReader ?? throw new ArgumentNullException(nameof(inputLogReader));
     }
 
@@ -72,14 +63,6 @@ internal class PlaybackReader : IPlaybackReader
         }
 
         _playback.Value.GetCalibration(out var calibration);
-
-        _tracker?.Dispose();
-        var trackerConfig = new TrackerConfiguration()
-        {
-            SensorOrientation = SensorOrientation.Default,
-            ProcessingMode = TrackerProcessingMode.Gpu,
-        };
-        _tracker = new(calibration, trackerConfig);
 
         _cts?.Dispose();
         _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -243,51 +226,19 @@ internal class PlaybackReader : IPlaybackReader
                 frameTimeDiffTick = TimeSpan.FromMicroseconds(diffUs);
         }
 
-        _tracker.EnqueueCapture(capture);
-
-        using var frame = _tracker.PopResult();
-        _frameCaptureBroker.ProcessNewFrame(capture.DuplicateReference(), frame.DuplicateReference());
-        _frameManager.Frame = frame.DuplicateReference();
-
-        if (frame is not null)
+        // Write ColorImage to Shared Memory
+        var colorImage = capture.ColorImage;
+        try
         {
-            // Write ColorImage to Shared Memory
-            {
-                var colorImage = frame.Capture.ColorImage;
-                try
-                {
-                    _imageWriter.WriteImage(colorImage);
-                }
-                catch { }
-            }
-
-            var nullableSkeleton = Inference(frame);
-            if (nullableSkeleton is Skeleton skeleton)
-                SendLandmarks(skeleton);
+            _imageWriter.WriteImage(colorImage);
         }
+        catch { }
 
+        _frameCaptureBroker.UpdateCapture(capture);
         _lastTimestampUs = _currentTimestampUs;
         capture.Dispose();
 
         return frameTimeDiffTick;
-    }
-
-    Skeleton? Inference(BodyFrame frame)
-    {
-        if (frame.BodyCount > 0)
-        {
-            Skeleton skeleton;
-            frame.GetBodySkeleton(0, out skeleton);
-
-            return skeleton;
-        }
-        return null;
-    }
-
-    void SendLandmarks(Skeleton skeleton)
-    {
-        _landmarkHandler.Update(skeleton);
-        _landmarkHandler.SendResults();
     }
 
     public void Dispose()
@@ -295,7 +246,6 @@ internal class PlaybackReader : IPlaybackReader
         StopReadingLoop().Wait();
 
         Playback?.Dispose();
-        _tracker?.Dispose();
         _cts?.Dispose();
         _currentPositionUs?.Dispose();
         _frameCaptureBroker?.Dispose();

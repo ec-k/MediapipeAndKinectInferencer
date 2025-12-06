@@ -1,0 +1,104 @@
+﻿using K4AdotNet.BodyTracking;
+using R3;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+using HumanLandmarks;
+using KinectPoseInferencer.Playback;
+using KinectPoseInferencer.PoseInference.Filters;
+using KinectPoseInferencer.PoseInference.Utils;
+
+
+namespace KinectPoseInferencer.PoseInference;
+
+public class LandmarkPresenter: IDisposable
+{
+    readonly KinectInferencer _inferencer;
+    readonly ResultManager _composer;
+    readonly SkeletonToPoseLandmarksConverter _converter;
+    readonly FrameCaptureBroker _recordDataBroker;
+    readonly FrameManager _frameManager;
+    readonly IPlaybackReader _playbackReader;
+
+    readonly IEnumerable<ILandmarkUser> _resultUser;
+    readonly IEnumerable<ILandmarkFilter> _positionFilterChain;
+
+    DisposableBag _disposables = new();
+
+    public LandmarkPresenter(
+        KinectInferencer inferencer,
+        ResultManager composer,
+        SkeletonToPoseLandmarksConverter converter,
+        IEnumerable<ILandmarkFilter> positionFilterChain,
+        IEnumerable<ILandmarkUser> resultUser,
+        IPlaybackReader playbackReader,
+        FrameCaptureBroker recordDataBroker,
+        FrameManager frameManager
+    )
+    {
+        _inferencer = inferencer ?? throw new ArgumentNullException(nameof(inferencer));
+        _composer = composer ?? throw new ArgumentNullException(nameof(composer));
+        _converter = converter ?? throw new ArgumentNullException(nameof(converter));
+        _resultUser = resultUser ?? throw new ArgumentNullException(nameof(resultUser));
+        _positionFilterChain = positionFilterChain;
+        _recordDataBroker = recordDataBroker ?? throw new ArgumentNullException(nameof(recordDataBroker));
+        _frameManager = frameManager ?? throw new ArgumentNullException(nameof(frameManager));
+        _playbackReader = playbackReader ?? throw new ArgumentNullException(nameof(playbackReader));
+
+        // Initailize
+        _playbackReader.Playback
+            .Where(playback => playback is not null)
+            .Subscribe(playback => Configure(playback))
+            .AddTo(ref _disposables);
+
+        // Process frames
+        _recordDataBroker.Capture
+            .Where(capture => capture is not null)
+            .Subscribe(capture => {
+                _inferencer.EnqueueData(capture);
+                using var frame = _inferencer.ProcessFrame();
+                _frameManager.Frame = frame.DuplicateReference();
+                _recordDataBroker.UpdateBodyFrame(frame);
+            })
+            .AddTo(ref _disposables);
+
+        _inferencer.Result
+            .Subscribe(skeleton => {
+                ProcessResult(skeleton);
+
+                foreach(var user in _resultUser)
+                    user.Process(_composer.Result);
+            })
+            .AddTo(ref _disposables);
+    }
+
+    void ProcessResult(Skeleton skeleton)
+    {
+        var kinectLandmarks = _converter.Convert(skeleton);
+        var resultLandmark = kinectLandmarks.Landmarks
+            .Where(nullableLandmark => nullableLandmark is Landmark)
+            .Select(landmark =>
+            {
+                // Apply filters to landmark
+                return _positionFilterChain
+                            .Aggregate(landmark,
+                                (current, filter) => filter.Apply(current)
+                            );
+            })
+            .ToList();
+
+        _composer?.Result?.PoseLandmarks?.Landmarks?.AddRange(resultLandmark);
+    }
+
+    void Configure(K4AdotNet.Record.Playback playback)
+    {
+        playback.GetCalibration(out var calibration);
+        _inferencer.Configure(calibration);
+    }
+
+    public void Dispose()
+    {
+        _disposables.Dispose();
+    }
+}

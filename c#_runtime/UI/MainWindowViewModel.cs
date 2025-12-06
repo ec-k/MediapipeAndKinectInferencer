@@ -43,12 +43,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public ObservableCollection<UIElement> BodyVisualElements { get; } = new();
     public ObservableCollection<string> InputLogEvents { get; } = new();
 
+    FrameCaptureBroker _broker;
+
     DisposableBag _disposables = new();
     CancellationTokenSource _cts = new();
     
-    public MainWindowViewModel(IPlaybackController controller)
+    public MainWindowViewModel(
+        IPlaybackController controller,
+        FrameCaptureBroker broker)
     {
         _controller = controller ?? throw new ArgumentNullException(nameof(controller));
+        _broker = broker ?? throw new ArgumentNullException(nameof(broker));
 
         // _bodyVisualElements = new ObservableCollection<UIElement>(); // No longer needed
 
@@ -71,8 +76,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .Subscribe(position => CurrentPositionSeconds = position.TotalSeconds)
             .AddTo(ref _disposables);
 
-        _controller.Broker.OnNewFrameReady += OnNewFrame;
-        _controller.Broker.OnNewInputLogEvent += OnNewInputLogEvent; // Subscribe to new input log event
+        _broker.Capture
+            .Where(capture => capture is not null)
+            .Subscribe(capture => DisplayCapture(capture))
+            .AddTo(ref _disposables);
+        _broker.OnNewInputLogEvent += OnNewInputLogEvent; // Subscribe to new input log event
     }
 
     void DisplayFirstColorFrame(K4AdotNet.Record.Playback playback, FrameCaptureBroker broker, CancellationToken token)
@@ -141,6 +149,20 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             playback?.SeekTimestamp(new Microseconds64(0), PlaybackSeekOrigin.Begin);
         }
+    }
+
+    void DisplayCapture(Capture capture)
+    {
+        if (capture is null) return;
+
+        WriteableBitmap? colorImage = null;
+        colorImage = capture?.ColorImage?.ToWriteableBitmap(colorImage);
+
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            if (colorImage is not null)
+                ColorBitmap = colorImage;
+        });
     }
 
     void OnNewFrame(Capture capture, BodyFrame frame)
@@ -263,7 +285,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
-        _controller.Broker.OnNewFrameReady -= OnNewFrame;
         _controller.Broker.OnNewInputLogEvent -= OnNewInputLogEvent;
         _visualizer?.Dispose();
         _disposables.Dispose();
