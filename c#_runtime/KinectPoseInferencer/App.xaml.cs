@@ -7,6 +7,7 @@ using System.Windows;
 using KinectPoseInferencer.Playback;
 using KinectPoseInferencer.Renderers;
 using KinectPoseInferencer.UI;
+using KinectPoseInferencer.PoseInference;
 
 namespace KinectPoseInferencer;
 
@@ -32,6 +33,8 @@ public partial class App : Application
 
         var renderer = services.GetRequiredService<Renderer>();
         renderer.StartVisualizationThread();
+
+        services.GetRequiredService<LandmarkPresenter>();
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -41,6 +44,7 @@ public partial class App : Application
         using var scope = _host.Services.CreateScope();
         var services = scope.ServiceProvider;
         services.GetService<IPlaybackController>()?.Dispose();
+        services.GetService<LandmarkPresenter>()?.Dispose();
     }
 
     IHostBuilder CreateHostBuilder(string mmfFilePath) =>
@@ -49,31 +53,50 @@ public partial class App : Application
             {
                 services.AddSingleton<App>();
 
-                // Register all services
+                // user input
                 services.AddSingleton<Input.ActionMap>();
                 services.AddSingleton<Input.KeyInputProvider>();
                 services.AddSingleton<Input.UserActionService>();
                 services.AddSingleton<Input.UserAction>();
-                services.AddSingleton<PoseInference.LandmarkHandler>();
+                // inferencer
+                services.AddSingleton<KinectInferencer>();
+                // result managers
+                services.AddSingleton<ResultManager>();
+                services.AddSingleton(
+                    new UdpResultReceiver(ReceiverEventSettings.Face | ReceiverEventSettings.LeftHand | ReceiverEventSettings.RightHand)
+                    );
+                // result processors
                 services.AddSingleton<PoseInference.Filters.TiltCorrector>();
-                services.AddSingleton<PoseInference.SkeletonToPoseLandmarksConverter>();
+                services.AddSingleton<PoseInference.Utils.SkeletonToPoseLandmarksConverter>();
+                // renderers
                 services.AddSingleton<Renderer>();
                 services.AddSingleton(provider => new ImageWriter(mmfFilePath));
+                // brokers
                 services.AddSingleton<FrameManager>();
                 services.AddSingleton<FrameCaptureBroker>();
                 services.AddSingleton<MainWindow>();
+                // ui
                 services.AddSingleton<MainWindowViewModel>();
-                services.AddSingleton<InputLogReader>();
 
                 // Register filter chain
-                services.AddSingleton<PoseInference.Filters.IPositionFilter, PoseInference.Filters.MilimeterToMeter>();
-                services.AddSingleton<PoseInference.Filters.IPositionFilter, PoseInference.Filters.TiltCorrector>(
+                services.AddSingleton<PoseInference.Filters.ILandmarkFilter, PoseInference.Filters.MilimeterToMeter>();
+                services.AddSingleton<PoseInference.Filters.ILandmarkFilter, PoseInference.Filters.TiltCorrector>(
                     provider => provider.GetRequiredService<PoseInference.Filters.TiltCorrector>()
                     );
-                services.AddSingleton<PoseInference.Filters.IPositionFilter, PoseInference.Filters.TransformCoordinator>();
+                services.AddSingleton<PoseInference.Filters.ILandmarkFilter, PoseInference.Filters.TransformCoordinator>();
 
+                // Register result users
+                services.AddSingleton<ILandmarkUser, LandmarkSender>();
+
+                // readers
                 services.AddSingleton<IPlaybackController, PlaybackController>();
                 services.AddSingleton<IPlaybackReader, PlaybackReader>();
+                services.AddSingleton<InputLogReader>();
+
+                // presenters
+                services.AddSingleton<LandmarkPresenter>();
+                services.AddSingleton<CapturePresenter>();
+
             });
 
     string CreateMMFFile()
