@@ -1,20 +1,24 @@
-﻿using System.Numerics;
+﻿using HumanLandmarks;
 
-namespace KinectPoseInferencer.PoseInference.Filters
+namespace KinectPoseInferencer.PoseInference.Filters;
+
+internal class MilimeterToMeter: ILandmarkFilter
 {
-    internal class MilimeterToMeter: IPositionFilter
-    {
-        /// <summary>
-        /// // Convert position from millimeters to meters
-        /// </summary>
-        /// <param name="position"></param>
-        /// <returns></returns>
-        public Vector3 Apply(Vector3 position)
+    /// <summary>
+    /// // Convert position from millimeters to meters
+    /// </summary>
+    /// <param name="landmark"></param>
+    /// <returns></returns>
+    public Landmark Apply(Landmark landmark)
+        => new Landmark
         {
-            return new Vector3(
-                position.X / 1000f,
-                position.Y / 1000f,
-                position.Z / 1000f);
-        }
-    }
+            Position = new Position
+            {
+                X = landmark.Position.X / 1000f,
+                Y = landmark.Position.Y / 1000f,
+                Z = landmark.Position.Z / 1000f,
+            },
+            Rotation = landmark.Rotation,
+            Confidence = landmark.Confidence
+        };
 }

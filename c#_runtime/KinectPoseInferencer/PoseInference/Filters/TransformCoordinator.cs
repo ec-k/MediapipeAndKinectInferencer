@@ -1,10 +1,19 @@
-﻿using System.Numerics;
+﻿using HumanLandmarks;
 
-namespace KinectPoseInferencer.PoseInference.Filters
+namespace KinectPoseInferencer.PoseInference.Filters;
+
+public class TransformCoordinator: ILandmarkFilter
 {
-    internal class TransformCoordinator: IPositionFilter
-    {
-        public Vector3 Apply(Vector3 position)
-            => -position;
-    }
+    public Landmark Apply(Landmark landmark)
+        => new Landmark
+        {
+            Position = new Position
+            {
+                X = -landmark.Position.X,
+                Y = -landmark.Position.Y,
+                Z = -landmark.Position.Z
+            },
+            Rotation = landmark.Rotation,
+            Confidence = landmark.Confidence,
+        };
 }
