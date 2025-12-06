@@ -1,25 +1,15 @@
 ﻿using HumanLandmarks;
 using K4AdotNet.BodyTracking;
 using System;
-using System.Numerics;
 using System.Collections.Generic;
 using System.Linq;
 
 
-using KinectPoseInferencer.PoseInference.Filters;
-
 namespace KinectPoseInferencer.PoseInference.Utils;
 
-internal class SkeletonToPoseLandmarksConverter
+public class SkeletonToPoseLandmarksConverter
 {
-    readonly IEnumerable<IPositionFilter> _positionFilters;
-
-    public SkeletonToPoseLandmarksConverter(IEnumerable<IPositionFilter> positionFilters)
-    {
-        _positionFilters = positionFilters ?? throw new ArgumentNullException(nameof(positionFilters));
-    }
-
-    internal KinectPoseLandmarks Convert(Skeleton skeleton)
+    public KinectPoseLandmarks Convert(Skeleton skeleton)
     {
         var kinectBodyLandmarks = new KinectPoseLandmarks();
         var packedLandmarks = Enum.GetValues(typeof(JointType))
@@ -40,22 +30,32 @@ internal class SkeletonToPoseLandmarksConverter
         return kinectBodyLandmarks;
     }
 
-    // TODO: SkeletonToPoseLandmarksConverter should NOT have this method.
     Landmark PackLandmark(Joint joint)
     {
-        var lm = new Landmark();
-
-        var initialPosition = new Vector3(joint.PositionMm.X, joint.PositionMm.Y, joint.PositionMm.Z);
-        var filteredPosition = _positionFilters.Aggregate(initialPosition, (current, filter) => filter.Apply(current));
-
-        lm.Position = new Position()
+        var lm = new Landmark
         {
-            X = filteredPosition.X,
-            Y = filteredPosition.Y,
-            Z = filteredPosition.Z
+            Position = new Position
+            {
+                X = joint.PositionMm.X,
+                Y = joint.PositionMm.Y,
+                Z = joint.PositionMm.Z
+            },
+            Rotation = new Rotation
+            {
+                W = joint.Orientation.W,
+                X = joint.Orientation.X,
+                Y = joint.Orientation.Y,
+                Z = joint.Orientation.Z
+            },
+            Confidence = ConfidenceLevelToFloat(joint.ConfidenceLevel)
         };
 
-        lm.Confidence = joint.ConfidenceLevel switch
+        return lm;
+    }
+
+    float ConfidenceLevelToFloat(JointConfidenceLevel level)
+    {
+        return level switch
         {
             JointConfidenceLevel.None => 0f,
             JointConfidenceLevel.Low => 0.3f,
@@ -63,9 +63,5 @@ internal class SkeletonToPoseLandmarksConverter
             JointConfidenceLevel.High => 0.9f,
             _ => throw new InvalidOperationException()
         };
-
-        return lm;
     }
-
-    
 }
