@@ -16,33 +16,33 @@ namespace KinectPoseInferencer.PoseInference;
 public class LandmarkPresenter: IDisposable
 {
     readonly KinectInferencer _inferencer;
-    readonly ResultManager _composer;
+    readonly ResultManager _resultManager;
     readonly SkeletonToPoseLandmarksConverter _converter;
     readonly RecordDataBroker _recordDataBroker;
     readonly FrameManager _frameManager;
     readonly IPlaybackReader _playbackReader;
 
-    readonly IEnumerable<ILandmarkUser> _resultUser;
-    readonly IEnumerable<ILandmarkFilter> _positionFilterChain;
+    readonly IEnumerable<ILandmarkUser> _resultUsers;
+    readonly IEnumerable<ILandmarkFilter> _landmarkFilterChain;
 
     DisposableBag _disposables = new();
 
     public LandmarkPresenter(
         KinectInferencer inferencer,
-        ResultManager composer,
+        ResultManager resultManager,
         SkeletonToPoseLandmarksConverter converter,
-        IEnumerable<ILandmarkFilter> positionFilterChain,
-        IEnumerable<ILandmarkUser> resultUser,
+        IEnumerable<ILandmarkFilter> landmarkFilterChain,
+        IEnumerable<ILandmarkUser> resultUsers,
         IPlaybackReader playbackReader,
         RecordDataBroker recordDataBroker,
         FrameManager frameManager
     )
     {
         _inferencer = inferencer ?? throw new ArgumentNullException(nameof(inferencer));
-        _composer = composer ?? throw new ArgumentNullException(nameof(composer));
+        _resultManager = resultManager ?? throw new ArgumentNullException(nameof(resultManager));
         _converter = converter ?? throw new ArgumentNullException(nameof(converter));
-        _resultUser = resultUser ?? throw new ArgumentNullException(nameof(resultUser));
-        _positionFilterChain = positionFilterChain;
+        _resultUsers = resultUsers ?? throw new ArgumentNullException(nameof(resultUsers));
+        _landmarkFilterChain = landmarkFilterChain;
         _recordDataBroker = recordDataBroker ?? throw new ArgumentNullException(nameof(recordDataBroker));
         _frameManager = frameManager ?? throw new ArgumentNullException(nameof(frameManager));
         _playbackReader = playbackReader ?? throw new ArgumentNullException(nameof(playbackReader));
@@ -68,8 +68,8 @@ public class LandmarkPresenter: IDisposable
             .Subscribe(skeleton => {
                 ProcessResult(skeleton);
 
-                foreach(var user in _resultUser)
-                    user.Process(_composer.Result);
+                foreach(var user in _resultUsers)
+                    user.Process(_resultManager.Result);
             })
             .AddTo(ref _disposables);
     }
@@ -83,7 +83,7 @@ public class LandmarkPresenter: IDisposable
             .Select(landmark =>
             {
                 // Apply filters to landmark
-                return _positionFilterChain
+                return _landmarkFilterChain
                             .AsValueEnumerable()
                             .Aggregate(landmark,
                                 (current, filter) => filter.Apply(current)
@@ -91,7 +91,7 @@ public class LandmarkPresenter: IDisposable
             })
             .ToList();
 
-        _composer?.Result?.PoseLandmarks?.Landmarks?.AddRange(resultLandmark);
+        _resultManager?.Result?.PoseLandmarks?.Landmarks?.AddRange(resultLandmark);
     }
 
     void Configure(K4AdotNet.Record.Playback playback)
