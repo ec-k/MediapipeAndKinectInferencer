@@ -204,14 +204,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     void OnNewInputLogEvent(InputLogEvent inputLogEvent)
     {
-        Application.Current.Dispatcher.Invoke(() =>
+        Application.Current.Dispatcher.InvokeAsync(() =>
         {
             InputLogEvents.Add($"[{CurrentPositionSeconds:F3}s] {inputLogEvent.GetType().Name}: {inputLogEvent.Timestamp}");
             if (InputLogEvents.Count > 20)
             {
                 InputLogEvents.RemoveAt(0);
             }
-        });
+        }, System.Windows.Threading.DispatcherPriority.Render);
     }
 
     void UpdatePlaybackLengthDisplay(K4AdotNet.Record.Playback playback)
