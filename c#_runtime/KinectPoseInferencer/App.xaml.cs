@@ -35,6 +35,7 @@ public partial class App : Application
         renderer.StartVisualizationThread();
 
         services.GetRequiredService<LandmarkPresenter>();
+        services.GetRequiredService<InputLogPresender>();
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -88,6 +89,11 @@ public partial class App : Application
                 // Register result users
                 services.AddSingleton<ILandmarkUser, LandmarkSender>();
 
+                // Register input event users
+                services.AddSingleton(
+                    new InputEventSender("127.0.0.1", 9002)
+                    );
+
                 // readers
                 services.AddSingleton<IPlaybackController, PlaybackController>();
                 services.AddSingleton<IPlaybackReader, PlaybackReader>();
@@ -96,7 +102,7 @@ public partial class App : Application
                 // presenters
                 services.AddSingleton<LandmarkPresenter>();
                 services.AddSingleton<CapturePresenter>();
-
+                services.AddSingleton<InputLogPresender>();
             });
 
     string CreateMMFFile()
