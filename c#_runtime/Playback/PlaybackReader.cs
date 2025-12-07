@@ -1,6 +1,7 @@
 ﻿using K4AdotNet;
 using R3;
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -10,6 +11,16 @@ namespace KinectPoseInferencer.Playback;
 
 internal class PlaybackReader : IPlaybackReader
 {
+    internal enum Command
+    {
+        None,
+        Play,
+        Rewind,
+        Pause
+    }
+
+    ConcurrentQueue<Command> _commandQueue = new();
+
     readonly RecordDataBroker _frameCaptureBroker;
     readonly ImageWriter _imageWriter;
     readonly InputLogReader _inputLogReader;
@@ -75,28 +86,17 @@ internal class PlaybackReader : IPlaybackReader
 
     public void Play()
     {
-        if (_isReading.Value) return;
-
-        _isReading.Value = true;
-        Playback.CurrentValue.SeekTimestamp(_currentTimestampUs, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
-        _lastTimestampUs = _currentTimestampUs;
-        _isFirstFrameAfterPlay = true;
+        _commandQueue.Enqueue(Command.Play);
     }
 
     public void Pause()
     {
-        if (!_isReading.Value) return;
-        _isReading.Value = false;
+        _commandQueue.Enqueue(Command.Pause);
     }
 
     public void Rewind()
     {
-        _isReading.Value = false;
-        _currentTimestampUs = new(0);
-        _lastTimestampUs = new(0);
-        _currentPositionUs.Value = new(0); // Reset current position
-        _isFirstFrameAfterPlay = true;
-        _inputLogReader.Rewind();
+        _commandQueue.Enqueue(Command.Rewind);
     }
 
     public void Seek(TimeSpan position)
@@ -112,12 +112,63 @@ internal class PlaybackReader : IPlaybackReader
         _isFirstFrameAfterPlay = true;
     }
 
+    void ProcessCommand()
+    {
+        if(_commandQueue.TryDequeue(out var command))
+        {
+            switch (command)
+            {
+                case Command.Play:
+                    ProcessPlayAction();
+                    break;
+                case Command.Pause:
+                    ProcessPauseAction();
+                    break;
+                case Command.Rewind:
+                    ProcessRewindAction();
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    void ProcessPlayAction()
+    {
+        if (_isReading.Value) return;
+
+        _isReading.Value = true;
+        Playback.CurrentValue.SeekTimestamp(_currentTimestampUs, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
+        _lastTimestampUs = _currentTimestampUs;
+        _isFirstFrameAfterPlay = true;
+    }
+
+    void ProcessPauseAction()
+    {
+        _isReading.Value = false;
+    }
+
+    void ProcessRewindAction()
+    {
+        _isReading.Value = false;
+        _currentTimestampUs = new(0);
+        _lastTimestampUs = new(0);
+        _currentPositionUs.Value = new(0); // Reset current position
+        _isFirstFrameAfterPlay = true;
+        _inputLogReader.Rewind();
+
+        if (Playback.CurrentValue is not null)
+            Playback.CurrentValue.SeekTimestamp(Microseconds64.Zero, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
+    }
+
     async Task FrameReadingLoop(CancellationToken token)
     {
         try
         {
             while (!token.IsCancellationRequested)
             {
+                ProcessCommand();
+
                 if (_isReading.Value)
                 {
                     var startSystemTime = Stopwatch.GetTimestamp();
