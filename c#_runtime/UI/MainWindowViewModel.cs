@@ -80,7 +80,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .Where(capture => capture is not null)
             .Subscribe(capture => DisplayCapture(capture))
             .AddTo(ref _disposables);
-        _broker.OnNewInputLogEvent += OnNewInputLogEvent; // Subscribe to new input log event
+        _broker.InputEvents
+            .Where(input => input is not null)
+            .Subscribe(input =>  OnNewInputLogEvent(input))
+            .AddTo(ref _disposables);
     }
 
     void DisplayFirstColorFrame(K4AdotNet.Record.Playback playback, RecordDataBroker broker, CancellationToken token)
@@ -285,7 +288,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
-        _controller.Broker.OnNewInputLogEvent -= OnNewInputLogEvent;
         _visualizer?.Dispose();
         _disposables.Dispose();
         _cts?.Cancel();

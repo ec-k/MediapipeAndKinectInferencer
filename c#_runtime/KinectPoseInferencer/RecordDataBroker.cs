@@ -8,11 +8,11 @@ namespace KinectPoseInferencer;
 
 public class RecordDataBroker : IDisposable
 {
-    public event Action<IInputLogEvent>? OnNewInputLogEvent;
-
+    public ReadOnlyReactiveProperty<IInputLogEvent> InputEvents => _inputEvents;
     public ReadOnlyReactiveProperty<Capture> Capture => _capture;
     public ReadOnlyReactiveProperty<BodyFrame> Frame => _frame;
 
+    ReactiveProperty<IInputLogEvent> _inputEvents = new();
     ReactiveProperty<Capture> _capture = new();
     ReactiveProperty<BodyFrame> _frame = new();
 
@@ -38,9 +38,9 @@ public class RecordDataBroker : IDisposable
         _frame.Value = bodyFrame.DuplicateReference();
     }
 
-    public void ProcessNewInputLogEvent(IInputLogEvent inputLogEvent)
+    public void PushInputLogEvent(IInputLogEvent inputLogEvent)
     {
-        OnNewInputLogEvent?.Invoke(inputLogEvent);
+        _inputEvents.Value = inputLogEvent;
     }
 
     public void Dispose()

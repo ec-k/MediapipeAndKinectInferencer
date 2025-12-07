@@ -214,7 +214,7 @@ internal class PlaybackReader : IPlaybackReader
         // Process input log events for the current timestamp
         foreach (var inputEvent in _inputLogReader.GetEventsUpToKinectTimestamp(_currentTimestampUs.ValueUsec))
         {
-            _frameCaptureBroker.ProcessNewInputLogEvent(inputEvent);
+            _frameCaptureBroker.PushInputLogEvent(inputEvent);
         }
 
         var frameTimeDiffTick = TimeSpan.Zero;
