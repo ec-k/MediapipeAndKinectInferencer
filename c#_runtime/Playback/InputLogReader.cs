@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -10,10 +9,9 @@ namespace KinectPoseInferencer.Playback;
 
 public class InputLogReader : IDisposable
 {
-    readonly List<InputLogEvent> _inputEvents = new();
-    long _kinectToSystemStopwatchOffsetUs = 0; // Offset = KinectTimestamp - SystemStopwatchTimestamp
+    long _stopwatchToKinectTimeOffset = 0;
 
-    public IReadOnlyList<InputLogEvent> Events => _inputEvents;
+    public Queue<InputLogEvent> InputEvents = new();
     public LogMetadata? Metadata { get; private set; }
 
     public async Task<bool> LoadMetaFileAsync(string filePath)
@@ -61,8 +59,6 @@ public class InputLogReader : IDisposable
             return false;
         }
 
-        _inputEvents.Clear();
-
         try
         {
             foreach (string line in File.ReadLines(filePath))
@@ -75,7 +71,12 @@ public class InputLogReader : IDisposable
                     if (rawLogEvent is not null)
                     {
                         var logEvent = ParseRawLogEvent(rawLogEvent);
-                        _inputEvents.Add(logEvent);
+
+                        // Ignore events that occurred before Kinect started
+                        if ((long)logEvent.Data.RawStopwatchTimestamp < Metadata.SystemStopwatchTimestampAtKinectStart)
+                            continue;
+
+                        InputEvents.Enqueue(logEvent);
                     }
                     else
                     {
@@ -92,7 +93,6 @@ public class InputLogReader : IDisposable
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Error reading input log file: {ex.Message}");
-            _inputEvents.Clear();
             return false;
         }
     }
@@ -106,7 +106,7 @@ public class InputLogReader : IDisposable
             _ => InputEventType.Unknown
         };
 
-        IDeviceInputEvent data = eventType switch
+        DeviceInputEvent data = eventType switch
         {
             InputEventType.Keyboard => rawLogEvent.Data.Deserialize<KeyboardEventData>(),
             InputEventType.Mouse => rawLogEvent.Data.Deserialize<MouseEventData>(),
@@ -125,13 +125,13 @@ public class InputLogReader : IDisposable
     {
         if (Metadata is null || Metadata.SystemStopwatchTimestampAtKinectStart == 0 || Metadata.FirstKinectDeviceTimestampUs == 0)
         {
-            _kinectToSystemStopwatchOffsetUs = 0;
+            _stopwatchToKinectTimeOffset = 0;
             return;
         }
 
         // Offset = KinectTimestamp - SystemStopwatchTimestamp
         // This offset is added to a system stopwatch timestamp to get an equivalent Kinect timestamp.
-        _kinectToSystemStopwatchOffsetUs = Metadata.FirstKinectDeviceTimestampUs - Metadata.SystemStopwatchTimestampAtKinectStart;
+        _stopwatchToKinectTimeOffset = Metadata.SystemStopwatchTimestampAtKinectStart - Metadata.FirstKinectDeviceTimestampUs * TimeSpan.TicksPerMicrosecond;
     }
 
     /// <summary>
@@ -142,25 +142,35 @@ public class InputLogReader : IDisposable
     public IEnumerable<InputLogEvent> GetEventsUpToKinectTimestamp(long kinectDeviceTimestampUs)
     {
         // Convert Kinect timestamp to equivalent system stopwatch timestamp
-        var targetSystemStopwatchTimestamp = kinectDeviceTimestampUs - _kinectToSystemStopwatchOffsetUs;
+        var targetSystemStopwatchTimestamp = (ulong)(kinectDeviceTimestampUs * TimeSpan.TicksPerMicrosecond + _stopwatchToKinectTimeOffset);
 
-        // Binary search to find the first event whose stopwatch timestamp is greater than targetSystemStopwatchTimestamp
-        int index = _inputEvents.BinarySearch(
-            new InputLogEvent { Data = new MouseEventData { RawStopwatchTimestamp = (ulong)targetSystemStopwatchTimestamp} },
-            Comparer<InputLogEvent>.Create((a, b) => a.Data.RawStopwatchTimestamp.CompareTo(b.Data.RawStopwatchTimestamp)));
+        var returnQueue = new Queue<InputLogEvent>();
 
-        if (index < 0)
+        var nextEvent = InputEvents.Peek();
+        while (nextEvent.Data.RawStopwatchTimestamp <= targetSystemStopwatchTimestamp
+            && InputEvents.Count > 0)
         {
-            index = ~index; // If not found, BinarySearch returns the bitwise complement of the next element's index
+            returnQueue.Enqueue(InputEvents.Dequeue());
+            nextEvent = InputEvents.Peek();
         }
+        return returnQueue;
+        // Binary search to find the first event whose stopwatch timestamp is greater than targetSystemStopwatchTimestamp
+        //int index = InputEvents.BinarySearch(
+        //    new InputLogEvent { Data = new DeviceInputEvent { RawStopwatchTimestamp = (ulong)targetSystemStopwatchTimestamp} },
+        //    Comparer<InputLogEvent>.Create((a, b) => a.Data.RawStopwatchTimestamp.CompareTo(b.Data.RawStopwatchTimestamp)));
+
+        //if (index < 0)
+        //{
+        //    index = ~index; // If not found, BinarySearch returns the bitwise complement of the next element's index
+        //}
         
-        // Return all events from the beginning up to this index
-        return _inputEvents.Take(index);
+        //// Return all events from the beginning up to this index
+        //return InputEvents.Take(index);
     }
 
     public void Dispose()
     {
-        _inputEvents.Clear();
+        InputEvents.Clear();
         Metadata = null;
     }
 }
