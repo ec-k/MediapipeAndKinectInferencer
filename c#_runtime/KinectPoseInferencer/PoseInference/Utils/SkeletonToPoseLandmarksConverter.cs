@@ -3,6 +3,7 @@ using K4AdotNet.BodyTracking;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ZLinq;
 
 
 namespace KinectPoseInferencer.PoseInference.Utils;
@@ -13,6 +14,7 @@ public class SkeletonToPoseLandmarksConverter
     {
         var kinectBodyLandmarks = new KinectPoseLandmarks();
         var packedLandmarks = Enum.GetValues(typeof(JointType))
+            .AsValueEnumerable()
             .Cast<JointType>()
             .Select(jointType => skeleton[jointType])
             .Select(joint => PackLandmark(joint))

@@ -3,6 +3,7 @@ using R3;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ZLinq;
 
 using HumanLandmarks;
 using KinectPoseInferencer.Playback;
@@ -77,11 +78,13 @@ public class LandmarkPresenter: IDisposable
     {
         var kinectLandmarks = _converter.Convert(skeleton);
         var resultLandmark = kinectLandmarks.Landmarks
-            .Where(nullableLandmark => nullableLandmark is Landmark)
+            .AsValueEnumerable()
+            .Where(nullableLandmark => nullableLandmark is Landmark landmark)
             .Select(landmark =>
             {
                 // Apply filters to landmark
                 return _positionFilterChain
+                            .AsValueEnumerable()
                             .Aggregate(landmark,
                                 (current, filter) => filter.Apply(current)
                             );

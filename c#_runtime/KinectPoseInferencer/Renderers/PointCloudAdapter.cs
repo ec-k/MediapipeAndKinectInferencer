@@ -10,6 +10,7 @@ using System.Linq;
 using System.Numerics;
 using System.Windows.Media.Media3D;
 using System.Windows.Media;
+using ZLinq;
 
 namespace KinectPoseInferencer.Renderers
 {
@@ -32,7 +33,9 @@ namespace KinectPoseInferencer.Renderers
             };
 
             var point3DCollection = new Point3DCollection(
-                    points.Select(v => new Point3D(v.X, v.Y, v.Z)).ToList() // convert points: Vector3 -> Point3D
+                    points
+                    .AsValueEnumerable()
+                    .Select(v => new Point3D(v.X, v.Y, v.Z)).ToList() // convert points: Vector3 -> Point3D
                 );
 
             pointsVisual.Points = point3DCollection;
