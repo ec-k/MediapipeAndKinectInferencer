@@ -35,6 +35,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] double _totalDurationSeconds;
     [ObservableProperty] double _currentPositionSeconds;
 
+    WriteableBitmap _imageCache;
+
     const string PlayIconUnicode = "\uE768";
     const string PauseIconUnicode = "\uE769";
 
@@ -156,16 +158,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     void DisplayCapture(Capture capture)
     {
-        if (capture is null) return;
+        if (capture?.ColorImage is null) return;
 
-        WriteableBitmap? colorImage = null;
-        colorImage = capture?.ColorImage?.ToWriteableBitmap(colorImage);
-
-        Application.Current.Dispatcher.Invoke(() =>
+        _imageCache = capture?.ColorImage?.ToWriteableBitmap(_imageCache);
+        Application.Current.Dispatcher.InvokeAsync(() =>
         {
-            if (colorImage is not null)
-                ColorBitmap = colorImage;
-        });
+            ColorBitmap = _imageCache;
+        }, System.Windows.Threading.DispatcherPriority.Render);
     }
 
     void OnNewFrame(Capture capture, BodyFrame frame)
