@@ -73,7 +73,7 @@ public partial class App : Application
                 services.AddSingleton(provider => new ImageWriter(mmfFilePath));
                 // brokers
                 services.AddSingleton<FrameManager>();
-                services.AddSingleton<FrameCaptureBroker>();
+                services.AddSingleton<RecordDataBroker>();
                 services.AddSingleton<MainWindow>();
                 // ui
                 services.AddSingleton<MainWindowViewModel>();

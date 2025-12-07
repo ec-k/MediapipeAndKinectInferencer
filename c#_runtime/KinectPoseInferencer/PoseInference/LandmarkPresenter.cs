@@ -17,7 +17,7 @@ public class LandmarkPresenter: IDisposable
     readonly KinectInferencer _inferencer;
     readonly ResultManager _composer;
     readonly SkeletonToPoseLandmarksConverter _converter;
-    readonly FrameCaptureBroker _recordDataBroker;
+    readonly RecordDataBroker _recordDataBroker;
     readonly FrameManager _frameManager;
     readonly IPlaybackReader _playbackReader;
 
@@ -33,7 +33,7 @@ public class LandmarkPresenter: IDisposable
         IEnumerable<ILandmarkFilter> positionFilterChain,
         IEnumerable<ILandmarkUser> resultUser,
         IPlaybackReader playbackReader,
-        FrameCaptureBroker recordDataBroker,
+        RecordDataBroker recordDataBroker,
         FrameManager frameManager
     )
     {

@@ -10,7 +10,7 @@ namespace KinectPoseInferencer.Playback;
 
 internal class PlaybackReader : IPlaybackReader
 {
-    readonly FrameCaptureBroker _frameCaptureBroker;
+    readonly RecordDataBroker _frameCaptureBroker;
     readonly ImageWriter _imageWriter;
     readonly InputLogReader _inputLogReader;
 
@@ -33,7 +33,7 @@ internal class PlaybackReader : IPlaybackReader
     Microseconds64 _lastTimestampUs = new(0);
 
     public PlaybackReader(
-        FrameCaptureBroker frameCaptureBroker,
+        RecordDataBroker frameCaptureBroker,
         ImageWriter imageWriter,
         InputLogReader inputLogReader)
     {

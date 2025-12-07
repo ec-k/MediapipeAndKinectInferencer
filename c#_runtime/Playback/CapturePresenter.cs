@@ -6,10 +6,10 @@ namespace KinectPoseInferencer.Playback;
 
 public class CapturePresenter
 {
-    readonly FrameCaptureBroker _broker;
+    readonly RecordDataBroker _broker;
 
     public CapturePresenter(
-        FrameCaptureBroker broker,
+        RecordDataBroker broker,
         ImageWriter imageWriter)
     {
         _broker = broker ?? throw new ArgumentNullException(nameof(broker));

@@ -10,14 +10,14 @@ public class PlaybackController : IPlaybackController
     readonly InputLogReader _logReader;
 
     public IPlaybackReader Reader => _playbackReader;
-    public FrameCaptureBroker Broker { get; }
+    public RecordDataBroker Broker { get; }
     public PlaybackDescriptor Descriptor { get; set; }
 
 
     public PlaybackController(
         IPlaybackReader playbackReader,
         InputLogReader logReader,
-        FrameCaptureBroker broker)
+        RecordDataBroker broker)
     {
         _playbackReader = playbackReader ?? throw new ArgumentNullException(nameof(playbackReader));
         _logReader = logReader ?? throw new ArgumentNullException(nameof(logReader));

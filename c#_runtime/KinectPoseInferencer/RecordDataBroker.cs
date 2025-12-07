@@ -6,7 +6,7 @@ using R3;
 
 namespace KinectPoseInferencer;
 
-public class FrameCaptureBroker : IDisposable
+public class RecordDataBroker : IDisposable
 {
     public event Action<IInputLogEvent>? OnNewInputLogEvent;
 

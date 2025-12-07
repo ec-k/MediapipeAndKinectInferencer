@@ -43,14 +43,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public ObservableCollection<UIElement> BodyVisualElements { get; } = new();
     public ObservableCollection<string> InputLogEvents { get; } = new();
 
-    FrameCaptureBroker _broker;
+    RecordDataBroker _broker;
 
     DisposableBag _disposables = new();
     CancellationTokenSource _cts = new();
     
     public MainWindowViewModel(
         IPlaybackController controller,
-        FrameCaptureBroker broker)
+        RecordDataBroker broker)
     {
         _controller = controller ?? throw new ArgumentNullException(nameof(controller));
         _broker = broker ?? throw new ArgumentNullException(nameof(broker));
@@ -83,7 +83,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _broker.OnNewInputLogEvent += OnNewInputLogEvent; // Subscribe to new input log event
     }
 
-    void DisplayFirstColorFrame(K4AdotNet.Record.Playback playback, FrameCaptureBroker broker, CancellationToken token)
+    void DisplayFirstColorFrame(K4AdotNet.Record.Playback playback, RecordDataBroker broker, CancellationToken token)
     {
         try
         {
