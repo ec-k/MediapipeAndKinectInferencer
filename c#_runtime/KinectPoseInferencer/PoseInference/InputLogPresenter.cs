@@ -5,14 +5,14 @@ using System;
 
 namespace KinectPoseInferencer.PoseInference;
 
-public class InputLogPresender
+public class InputLogPresenter
 {
     readonly InputEventSender _sender;
     readonly RecordDataBroker _recordDataBroker;
 
     DisposableBag _disposables = new();
 
-    public InputLogPresender(
+    public InputLogPresenter(
         InputEventSender sender,
         RecordDataBroker recordDataBroker)
     {

@@ -35,7 +35,7 @@ public partial class App : Application
         renderer.StartVisualizationThread();
 
         services.GetRequiredService<LandmarkPresenter>();
-        services.GetRequiredService<InputLogPresender>();
+        services.GetRequiredService<InputLogPresenter>();
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -102,7 +102,7 @@ public partial class App : Application
                 // presenters
                 services.AddSingleton<LandmarkPresenter>();
                 services.AddSingleton<CapturePresenter>();
-                services.AddSingleton<InputLogPresender>();
+                services.AddSingleton<InputLogPresenter>();
             });
 
     string CreateMMFFile()
