@@ -203,11 +203,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         });
     }
 
-    void OnNewInputLogEvent(IInputLogEvent inputLogEvent)
+    void OnNewInputLogEvent(InputLogEvent inputLogEvent)
     {
         Application.Current.Dispatcher.Invoke(() =>
         {
-            InputLogEvents.Add($"[{CurrentPositionSeconds:F3}s] {inputLogEvent.GetType().Name}: {inputLogEvent.RawStopwatchTimestamp}");
+            InputLogEvents.Add($"[{CurrentPositionSeconds:F3}s] {inputLogEvent.GetType().Name}: {inputLogEvent.Timestamp}");
             if (InputLogEvents.Count > 20)
             {
                 InputLogEvents.RemoveAt(0);
