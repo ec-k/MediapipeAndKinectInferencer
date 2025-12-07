@@ -13,22 +13,20 @@ public class LogMetadata
     public long FirstKinectDeviceTimestampUs { get; set; }
 }
 
-public interface IDeviceInputEvent
-{
-    ulong RawStopwatchTimestamp { get; }
-}
-
-public class KeyboardEventData: IDeviceInputEvent
+public class DeviceInputEvent
 {
     [JsonPropertyName("RawStopwatchTimestamp")] public ulong RawStopwatchTimestamp { get; set; }
+}
+
+public class KeyboardEventData: DeviceInputEvent
+{
     [JsonPropertyName("VirtualKeyCode")] public int? VirtualKeyCode { get; set; }
     [JsonPropertyName("ModifiersFlags")] public int? ModifiersFlags { get; set; }
     [JsonPropertyName("IsKeyDown")] public bool? IsKeyDown { get; set; }
 }
 
-public class MouseEventData: IDeviceInputEvent
+public class MouseEventData: DeviceInputEvent
 {
-    [JsonPropertyName("RawStopwatchTimestamp")] public ulong RawStopwatchTimestamp { get; set; }
     [JsonPropertyName("X")] public int? X { get; set; }
     [JsonPropertyName("Y")] public int? Y { get; set; }
     [JsonPropertyName("DeltaX")] public int? DeltaX { get; set; }
@@ -54,7 +52,7 @@ public class InputLogEvent
 
     [JsonPropertyName("EventType")] public InputEventType EventType { get; set; }
 
-    [JsonPropertyName("Data")] public IDeviceInputEvent Data { get; set; }
+    [JsonPropertyName("Data")] public DeviceInputEvent Data { get; set; }
 }
 
 public enum InputEventType
