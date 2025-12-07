@@ -4,7 +4,7 @@
     <TargetFramework>net9.0-windows</TargetFramework>
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <LangVersion>10.0</LangVersion>
+    <LangVersion>13.0</LangVersion>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <UseWPF>true</UseWPF>
   </PropertyGroup>
@@ -31,6 +31,7 @@
     <PackageReference Include="OpenTK.GLWpfControl" Version="4.3.3" />
     <PackageReference Include="R3" Version="1.3.0" />
     <PackageReference Include="R3Extensions.WPF" Version="1.3.0" />
+    <PackageReference Include="ZLinq" Version="1.5.4" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="KinectPoseInferencer\Proto\" />
