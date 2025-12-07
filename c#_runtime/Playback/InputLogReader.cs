@@ -157,12 +157,17 @@ public class InputLogReader : IDisposable
 
         var returnQueue = new Queue<InputLogEvent>();
 
-        var nextEvent = InputEvents[_currentIndex];
-        while (nextEvent.Data.RawStopwatchTimestamp <= targetSystemStopwatchTimestamp
-            && _currentIndex < InputEvents.Count)
+        if (InputEvents.Count == 0 || _currentIndex >= InputEvents.Count)
+            return returnQueue;
+
+        while (_currentIndex < InputEvents.Count)
         {
+            var currentEvent = InputEvents[_currentIndex];
+            if (currentEvent.Data.RawStopwatchTimestamp > targetSystemStopwatchTimestamp)
+                break;
+
             returnQueue.Enqueue(InputEvents[_currentIndex]);
-            nextEvent = InputEvents[++_currentIndex];
+            _currentIndex++;
         }
         return returnQueue;
         // Binary search to find the first event whose stopwatch timestamp is greater than targetSystemStopwatchTimestamp
