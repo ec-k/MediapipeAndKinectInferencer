@@ -10,10 +10,10 @@ namespace KinectPoseInferencer.Playback;
 
 public class InputLogReader : IDisposable
 {
-    readonly List<IInputLogEvent> _events = new();
+    readonly List<InputLogEvent> _inputEvents = new();
     long _kinectToSystemStopwatchOffsetUs = 0; // Offset = KinectTimestamp - SystemStopwatchTimestamp
 
-    public IReadOnlyList<IInputLogEvent> Events => _events;
+    public IReadOnlyList<InputLogEvent> Events => _inputEvents;
     public LogMetadata? Metadata { get; private set; }
 
     public async Task<bool> LoadMetaFileAsync(string filePath)
@@ -61,7 +61,7 @@ public class InputLogReader : IDisposable
             return false;
         }
 
-        _events.Clear();
+        _inputEvents.Clear();
 
         try
         {
@@ -71,10 +71,11 @@ public class InputLogReader : IDisposable
 
                 try
                 {
-                    var logEvent = JsonSerializer.Deserialize<InputLogEvent>(line);
-                    if (logEvent != null)
+                    var rawLogEvent = JsonSerializer.Deserialize<RawInputLogEvent>(line);
+                    if (rawLogEvent is not null)
                     {
-                        _events.Add(logEvent);
+                        var logEvent = ParseRawLogEvent(rawLogEvent);
+                        _inputEvents.Add(logEvent);
                     }
                     else
                     {
@@ -91,9 +92,33 @@ public class InputLogReader : IDisposable
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Error reading input log file: {ex.Message}");
-            _events.Clear();
+            _inputEvents.Clear();
             return false;
         }
+    }
+
+    InputLogEvent ParseRawLogEvent(RawInputLogEvent rawLogEvent)
+    {
+        var eventType = rawLogEvent.EventType switch
+        {
+            "Keyboard" => InputEventType.Keyboard,
+            "Mouse" => InputEventType.Mouse,
+            _ => InputEventType.Unknown
+        };
+
+        IDeviceInputEvent data = eventType switch
+        {
+            InputEventType.Keyboard => rawLogEvent.Data.Deserialize<KeyboardEventData>(),
+            InputEventType.Mouse => rawLogEvent.Data.Deserialize<MouseEventData>(),
+            _ => null
+        };
+
+        return new()
+        {
+            Timestamp = rawLogEvent.Timestamp,
+            EventType = eventType,
+            Data = data,
+        };
     }
 
     private void CalculateKinectOffset()
@@ -114,15 +139,15 @@ public class InputLogReader : IDisposable
     /// </summary>
     /// <param name="kinectDeviceTimestampUs">The Kinect device timestamp in microseconds.</param>
     /// <returns>A list of input events that occurred up to the given timestamp.</returns>
-    public IEnumerable<IInputLogEvent> GetEventsUpToKinectTimestamp(long kinectDeviceTimestampUs)
+    public IEnumerable<InputLogEvent> GetEventsUpToKinectTimestamp(long kinectDeviceTimestampUs)
     {
         // Convert Kinect timestamp to equivalent system stopwatch timestamp
         var targetSystemStopwatchTimestamp = kinectDeviceTimestampUs - _kinectToSystemStopwatchOffsetUs;
 
         // Binary search to find the first event whose stopwatch timestamp is greater than targetSystemStopwatchTimestamp
-        int index = _events.BinarySearch(
-            new InputLogEvent { Data = new InputEventData { RawStopwatchTimestamp = (ulong)targetSystemStopwatchTimestamp } },
-            Comparer<IInputLogEvent>.Create((a, b) => a.RawStopwatchTimestamp.CompareTo(b.RawStopwatchTimestamp)));
+        int index = _inputEvents.BinarySearch(
+            new InputLogEvent { Data = new MouseEventData { RawStopwatchTimestamp = (ulong)targetSystemStopwatchTimestamp} },
+            Comparer<InputLogEvent>.Create((a, b) => a.Data.RawStopwatchTimestamp.CompareTo(b.Data.RawStopwatchTimestamp)));
 
         if (index < 0)
         {
@@ -130,12 +155,12 @@ public class InputLogReader : IDisposable
         }
         
         // Return all events from the beginning up to this index
-        return _events.Take(index);
+        return _inputEvents.Take(index);
     }
 
     public void Dispose()
     {
-        _events.Clear();
+        _inputEvents.Clear();
         Metadata = null;
     }
 }
