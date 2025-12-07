@@ -18,9 +18,6 @@ public class InputEventSender: IDisposable
 
     public void Connect(string host, int port)
     {
-        if(_sender.Client.Connected)
-            _sender.Close();
-
         _sender.Connect(host, port);
     }
 
