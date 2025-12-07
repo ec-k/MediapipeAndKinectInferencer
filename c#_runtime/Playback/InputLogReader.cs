@@ -11,8 +11,10 @@ public class InputLogReader : IDisposable
 {
     long _stopwatchToKinectTimeOffset = 0;
 
-    public Queue<InputLogEvent> InputEvents = new();
+    public List<InputLogEvent> InputEvents = new();
     public LogMetadata? Metadata { get; private set; }
+
+    int _currentIndex = 0;
 
     public async Task<bool> LoadMetaFileAsync(string filePath)
     {
@@ -59,6 +61,8 @@ public class InputLogReader : IDisposable
             return false;
         }
 
+        InputEvents.Clear();
+
         try
         {
             foreach (string line in File.ReadLines(filePath))
@@ -73,10 +77,12 @@ public class InputLogReader : IDisposable
                         var logEvent = ParseRawLogEvent(rawLogEvent);
 
                         // Ignore events that occurred before Kinect started
-                        if ((long)logEvent.Data.RawStopwatchTimestamp < Metadata.SystemStopwatchTimestampAtKinectStart)
+                        if ((long)logEvent.Data.RawStopwatchTimestamp < _stopwatchToKinectTimeOffset)
+                        {
                             continue;
+                        }
 
-                        InputEvents.Enqueue(logEvent);
+                        InputEvents.Add(logEvent);
                     }
                     else
                     {
@@ -95,6 +101,11 @@ public class InputLogReader : IDisposable
             Console.Error.WriteLine($"Error reading input log file: {ex.Message}");
             return false;
         }
+    }
+
+    public void Rewind()
+    {
+        _currentIndex = 0;
     }
 
     InputLogEvent ParseRawLogEvent(RawInputLogEvent rawLogEvent)
@@ -146,12 +157,12 @@ public class InputLogReader : IDisposable
 
         var returnQueue = new Queue<InputLogEvent>();
 
-        var nextEvent = InputEvents.Peek();
+        var nextEvent = InputEvents[_currentIndex];
         while (nextEvent.Data.RawStopwatchTimestamp <= targetSystemStopwatchTimestamp
-            && InputEvents.Count > 0)
+            && _currentIndex < InputEvents.Count)
         {
-            returnQueue.Enqueue(InputEvents.Dequeue());
-            nextEvent = InputEvents.Peek();
+            returnQueue.Enqueue(InputEvents[_currentIndex]);
+            nextEvent = InputEvents[++_currentIndex];
         }
         return returnQueue;
         // Binary search to find the first event whose stopwatch timestamp is greater than targetSystemStopwatchTimestamp

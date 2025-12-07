@@ -23,7 +23,6 @@ internal class PlaybackReader : IPlaybackReader
     ReactiveProperty<Microseconds64> _currentPositionUs = new(new Microseconds64(0));
 
     bool _isFirstFrameAfterPlay = true;
-    long _systemStopwatchTimestampAtLoopStart = 0;
 
     Task? _readingTask;
     CancellationTokenSource _cts = new();
@@ -70,7 +69,6 @@ internal class PlaybackReader : IPlaybackReader
 
         _currentTimestampUs = new(0);
         _lastTimestampUs = new(0);
-        _systemStopwatchTimestampAtLoopStart = 0;
         _isFirstFrameAfterPlay = true;
         _currentPositionUs.Value = new(0); // Reset current position
     }
@@ -82,7 +80,6 @@ internal class PlaybackReader : IPlaybackReader
         _isReading.Value = true;
         Playback.CurrentValue.SeekTimestamp(_currentTimestampUs, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
         _lastTimestampUs = _currentTimestampUs;
-        _systemStopwatchTimestampAtLoopStart = Stopwatch.GetTimestamp(); // Capture system time when playback starts
         _isFirstFrameAfterPlay = true;
     }
 
@@ -98,8 +95,8 @@ internal class PlaybackReader : IPlaybackReader
         _currentTimestampUs = new(0);
         _lastTimestampUs = new(0);
         _currentPositionUs.Value = new(0); // Reset current position
-        _systemStopwatchTimestampAtLoopStart = 0;
         _isFirstFrameAfterPlay = true;
+        _inputLogReader.Rewind();
     }
 
     public void Seek(TimeSpan position)
@@ -112,7 +109,6 @@ internal class PlaybackReader : IPlaybackReader
         _currentTimestampUs = targetUs;
         _lastTimestampUs = targetUs;
         _currentPositionUs.Value = targetUs;
-        _systemStopwatchTimestampAtLoopStart = Stopwatch.GetTimestamp(); // Reset system start time for sync
         _isFirstFrameAfterPlay = true;
     }
 
