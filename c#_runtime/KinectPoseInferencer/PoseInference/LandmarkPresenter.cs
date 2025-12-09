@@ -41,17 +41,19 @@ public class LandmarkPresenter: IDisposable
         _inferencer = inferencer ?? throw new ArgumentNullException(nameof(inferencer));
         _resultManager = resultManager ?? throw new ArgumentNullException(nameof(resultManager));
         _converter = converter ?? throw new ArgumentNullException(nameof(converter));
-        _resultUsers = resultUsers ?? throw new ArgumentNullException(nameof(resultUsers));
-        _landmarkFilterChain = landmarkFilterChain;
         _recordDataBroker = recordDataBroker ?? throw new ArgumentNullException(nameof(recordDataBroker));
         _frameManager = frameManager ?? throw new ArgumentNullException(nameof(frameManager));
         _playbackReader = playbackReader ?? throw new ArgumentNullException(nameof(playbackReader));
+        _resultUsers = resultUsers;
+        _landmarkFilterChain = landmarkFilterChain;
 
         // Initailize
         _playbackReader.Playback
             .Where(playback => playback is not null)
             .Subscribe(playback => Configure(playback))
             .AddTo(ref _disposables);
+        if (_resultManager.Result.PoseLandmarks is null)
+            _resultManager.Result.PoseLandmarks = new();
 
         // Process frames
         _recordDataBroker.Capture
@@ -91,6 +93,7 @@ public class LandmarkPresenter: IDisposable
             })
             .ToList();
 
+        _resultManager?.Result?.PoseLandmarks?.Landmarks?.Clear();
         _resultManager?.Result?.PoseLandmarks?.Landmarks?.AddRange(resultLandmark);
     }
 
