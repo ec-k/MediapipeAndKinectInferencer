@@ -11,10 +11,12 @@ public class RecordDataBroker : IDisposable
     public ReadOnlyReactiveProperty<InputLogEvent> InputEvents => _inputEvents;
     public ReadOnlyReactiveProperty<Capture> Capture => _capture;
     public ReadOnlyReactiveProperty<BodyFrame> Frame => _frame;
+    public ReadOnlyReactiveProperty<ImuSample> Imu => _imu;
 
     ReactiveProperty<InputLogEvent> _inputEvents = new();
     ReactiveProperty<Capture> _capture = new();
     ReactiveProperty<BodyFrame> _frame = new();
+    ReactiveProperty<ImuSample> _imu = new();
 
     /// <summary>
     /// Assign duplicated reference of the given capture to the broker.
@@ -36,6 +38,11 @@ public class RecordDataBroker : IDisposable
         // Dispose existing body frame if any
         _frame?.CurrentValue?.Dispose();
         _frame.Value = bodyFrame.DuplicateReference();
+    }
+
+    public void UpdateImu(ImuSample imuSample)
+    {
+        _imu.Value = imuSample;
     }
 
     public void PushInputLogEvent(InputLogEvent inputLogEvent)

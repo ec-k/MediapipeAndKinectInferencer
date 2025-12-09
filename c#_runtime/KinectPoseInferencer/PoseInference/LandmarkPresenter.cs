@@ -9,6 +9,7 @@ using HumanLandmarks;
 using KinectPoseInferencer.Playback;
 using KinectPoseInferencer.PoseInference.Filters;
 using KinectPoseInferencer.PoseInference.Utils;
+using K4AdotNet.Sensor;
 
 
 namespace KinectPoseInferencer.PoseInference;
@@ -21,9 +22,12 @@ public class LandmarkPresenter: IDisposable
     readonly RecordDataBroker _recordDataBroker;
     readonly FrameManager _frameManager;
     readonly IPlaybackReader _playbackReader;
+    readonly TiltCorrector _tiltCorrector = new();
 
     readonly IEnumerable<ILandmarkUser> _resultUsers;
     readonly IEnumerable<ILandmarkFilter> _landmarkFilterChain;
+
+    Calibration? _currentCalibration = null;
 
     DisposableBag _disposables = new();
 
@@ -35,7 +39,8 @@ public class LandmarkPresenter: IDisposable
         IEnumerable<ILandmarkUser> resultUsers,
         IPlaybackReader playbackReader,
         RecordDataBroker recordDataBroker,
-        FrameManager frameManager
+        FrameManager frameManager,
+        TiltCorrector tiltCorrector
     )
     {
         _inferencer = inferencer ?? throw new ArgumentNullException(nameof(inferencer));
@@ -44,13 +49,18 @@ public class LandmarkPresenter: IDisposable
         _recordDataBroker = recordDataBroker ?? throw new ArgumentNullException(nameof(recordDataBroker));
         _frameManager = frameManager ?? throw new ArgumentNullException(nameof(frameManager));
         _playbackReader = playbackReader ?? throw new ArgumentNullException(nameof(playbackReader));
+        _tiltCorrector = tiltCorrector ?? throw new ArgumentNullException(nameof(tiltCorrector));
         _resultUsers = resultUsers;
         _landmarkFilterChain = landmarkFilterChain;
 
         // Initailize
         _playbackReader.Playback
             .Where(playback => playback is not null)
-            .Subscribe(playback => Configure(playback))
+            .Subscribe(playback => {
+                playback.GetCalibration(out var calibration);
+                _currentCalibration = calibration;
+                Configure(playback);
+                })
             .AddTo(ref _disposables);
         if (_resultManager.Result.PoseLandmarks is null)
             _resultManager.Result.PoseLandmarks = new();
@@ -64,6 +74,12 @@ public class LandmarkPresenter: IDisposable
                 _frameManager.Frame = frame.DuplicateReference();
                 _recordDataBroker.UpdateBodyFrame(frame);
             })
+            .AddTo(ref _disposables);
+        _recordDataBroker.Imu
+            .Subscribe(imu => {
+                if (_currentCalibration is Calibration calibration)
+                    _tiltCorrector.UpdateTiltRotation(imu, calibration);
+                })
             .AddTo(ref _disposables);
 
         _inferencer.Result

@@ -282,6 +282,11 @@ internal class PlaybackReader : IPlaybackReader
         catch { }
 
         _frameCaptureBroker.UpdateCapture(capture);
+
+        var success = Playback.CurrentValue.TryGetNextImuSample(out var imuSample);
+        if(success)
+            _frameCaptureBroker.UpdateImu(imuSample);
+
         _lastTimestampUs = _currentTimestampUs;
         capture.Dispose();
 
