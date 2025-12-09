@@ -63,8 +63,8 @@ public partial class App : Application
                 services.AddSingleton<KinectInferencer>();
                 // result managers
                 services.AddSingleton<ResultManager>();
-                services.AddSingleton(
-                    new UdpResultReceiver(ReceiverEventSettings.Face | ReceiverEventSettings.LeftHand | ReceiverEventSettings.RightHand)
+                services.AddSingleton(serviceProvider =>
+                    new UdpResultReceiver(ReceiverEventSettings.Face | ReceiverEventSettings.LeftHand | ReceiverEventSettings.RightHand, 9000)
                     );
                 // result processors
                 services.AddSingleton<PoseInference.Filters.TiltCorrector>();
@@ -87,12 +87,10 @@ public partial class App : Application
                 services.AddSingleton<PoseInference.Filters.ILandmarkFilter, PoseInference.Filters.TransformCoordinator>();
 
                 // Register result users
-                services.AddSingleton<ILandmarkUser, LandmarkSender>();
+                services.AddSingleton<ILandmarkUser>(serviceProvider => new LandmarkSender("127.0.0.1", 22000));
 
                 // Register input event users
-                services.AddSingleton(
-                    new InputEventSender("127.0.0.1", 9002)
-                    );
+                services.AddSingleton(serviceProvider => new InputEventSender("127.0.0.1", 9002));
 
                 // readers
                 services.AddSingleton<IPlaybackController, PlaybackController>();
