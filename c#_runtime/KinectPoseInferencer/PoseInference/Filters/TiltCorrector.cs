@@ -7,7 +7,7 @@ namespace KinectPoseInferencer.PoseInference.Filters;
 
 public class TiltCorrector: ILandmarkFilter
 {
-    Quaternion _inversedCameraTiltRotation;
+    Quaternion _inversedCameraTiltRotation = Quaternion.Identity;
 
     public void UpdateTiltRotation(ImuSample imuSample, Calibration sensorCalibration)
     {
