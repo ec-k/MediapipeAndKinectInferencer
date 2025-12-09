@@ -30,7 +30,8 @@ public class UdpResultReceiver: IDisposable
 
     public UdpResultReceiver(
         ReceiverEventSettings settings,
-        int port = 9000)
+        int port
+        )
     {
         _settings = settings;
         _receiver = new UdpClient(port);

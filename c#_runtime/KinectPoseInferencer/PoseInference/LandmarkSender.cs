@@ -12,10 +12,7 @@ public class LandmarkSender: ILandmarkUser, IDisposable
 {
     UdpClient _sender = new();
 
-    public LandmarkSender(
-        string uri = "127.0.0.1",
-        int port = 9000
-        )
+    public LandmarkSender(string uri, int port)
     {
         var senderEndPoint = new IPEndPoint(IPAddress.Parse(uri), port);
         _sender.Connect(senderEndPoint);
