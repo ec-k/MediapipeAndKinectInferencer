@@ -22,20 +22,32 @@ public class ResultManager : IDisposable
 
     public void UpdateLeftHand(HandLandmarks result)
     {
+        if(Result.LeftHandLandmarks is null)
+            Result.LeftHandLandmarks = new();
+
         Result.LeftHandLandmarks = result;
     }
     public void UpdateRightHand(HandLandmarks result)
     {
+        if (Result.RightHandLandmarks is null)
+            Result.RightHandLandmarks = new();
+
         Result.RightHandLandmarks = result;
     }
 
     public void UpdateBody(KinectPoseLandmarks result)
     {
+        if(Result.PoseLandmarks is null)
+            Result.PoseLandmarks = new();
+
         Result.PoseLandmarks = result;
     }
 
     public void UpdateFace(FaceResults result)
     {
+        if(Result.FaceResults is null)
+            Result.FaceResults = new();
+
         Result.FaceResults = result;
     }
 
