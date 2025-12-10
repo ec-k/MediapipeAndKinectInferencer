@@ -1,6 +1,6 @@
-﻿using Google.Protobuf;
-using InputLogging;
+﻿using KinectPoseInferencer.InputLogProto;
 using KinectPoseInferencer.Playback;
+using MessagePack;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -49,14 +49,15 @@ public class InputEventSender: IDisposable
             || inputEvent.EventType is InputEventType.Unknown)
             return;
 
-        var data = inputEvent.Data switch
+        IDeviceInput data = inputEvent.Data switch
         {
-            KeyboardEventData => ComposeKeyboardEventMessage(inputEvent).ToByteArray(),
-            MouseEventData    => ComposeMouseEventMessage(inputEvent).ToByteArray(),
+            KeyboardEventData => ComposeKeyboardEventMessage(inputEvent),
+            MouseEventData    => ComposeMouseEventMessage(inputEvent),
             _                 => null
         };
+        var sendData = MessagePackSerializer.Serialize(data);
 
-        if (data is null || data.Length == 0)
+        if (sendData is null || sendData.Length == 0)
         {
             return;
         }
@@ -65,7 +66,7 @@ public class InputEventSender: IDisposable
         {
             try
             {
-                _sender.Send(data, data.Length, endPoint);
+                _sender.Send(sendData, sendData.Length, endPoint);
             }
             catch (SocketException ex)
             {
@@ -85,7 +86,7 @@ public class InputEventSender: IDisposable
         {
             RawStopwatchTimestamp = inputEvent.Data.RawStopwatchTimestamp,
             VirtualKeyCode        = (uint)data?.VirtualKeyCode,
-            ModifiersFlags        = (uint)data?.ModifiersFlags,
+            ModifiersFlags        = (KeyboardEventDataProto.ModifierKeyState)data?.ModifiersFlags,
             IsKeyDown             = data?.IsKeyDown ?? false
         };
     }
