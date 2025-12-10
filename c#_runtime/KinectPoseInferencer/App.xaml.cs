@@ -8,6 +8,7 @@ using KinectPoseInferencer.Playback;
 using KinectPoseInferencer.Renderers;
 using KinectPoseInferencer.UI;
 using KinectPoseInferencer.PoseInference;
+using System.Net;
 
 namespace KinectPoseInferencer;
 
@@ -90,7 +91,13 @@ public partial class App : Application
                 services.AddSingleton<ILandmarkUser>(serviceProvider => new LandmarkSender("127.0.0.1", 22000));
 
                 // Register input event users
-                services.AddSingleton(serviceProvider => new InputEventSender("127.0.0.1", 9002));
+                services.AddSingleton(serviceProvider => 
+                    new InputEventSender(
+                        new IPEndPoint[] {
+                            new(IPAddress.Parse("127.0.0.1"), 9002 ),
+                            new(IPAddress.Parse("127.0.0.1"), 9002 )
+                        })
+                    );
 
                 // readers
                 services.AddSingleton<IPlaybackController, PlaybackController>();

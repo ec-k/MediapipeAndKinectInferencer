@@ -24,7 +24,7 @@ public class InputLogPresenter
             .Where(inputEvent => inputEvent.EventType is InputEventType.Keyboard)
             .Subscribe(inputEvent => 
             {
-                _sender?.SendKeyboardEvent(inputEvent);
+                _sender?.SendMessage(inputEvent);
             })
             .AddTo(ref _disposables);
     }
