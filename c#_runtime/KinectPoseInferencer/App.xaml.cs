@@ -95,7 +95,7 @@ public partial class App : Application
                     new InputEventSender(
                         new IPEndPoint[] {
                             new(IPAddress.Parse("127.0.0.1"), 9002 ),
-                            new(IPAddress.Parse("127.0.0.1"), 9002 )
+                            new(IPAddress.Parse("127.0.0.1"), 9003 )
                         })
                     );
 
