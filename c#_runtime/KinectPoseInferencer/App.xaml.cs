@@ -65,7 +65,7 @@ public partial class App : Application
                 // result managers
                 services.AddSingleton<ResultManager>();
                 services.AddSingleton(serviceProvider =>
-                    new UdpResultReceiver(ReceiverEventSettings.Face | ReceiverEventSettings.LeftHand | ReceiverEventSettings.RightHand, 9000)
+                    new UdpResultReceiver(ReceiverEventSettings.Face | ReceiverEventSettings.LeftHand | ReceiverEventSettings.RightHand, 9001)
                     );
                 // result processors
                 services.AddSingleton<PoseInference.Filters.TiltCorrector>();
