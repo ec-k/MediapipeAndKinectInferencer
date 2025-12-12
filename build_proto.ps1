@@ -40,6 +40,20 @@ foreach ($file in $protoFiles) {
 # Create an empty __init__.py file
 New-Item -Path "$PYTHON_OUT_DIR\__init__.py" -ItemType File -Force | Out-Null
 
+Write-Host "Patching generated Python imports..."
+
+# Relativize the import statements
+$pattern = '(?m)^import (\w+_pb2) as (\w+__pb2)$'
+$replacement = 'from . import $1 as $2'
+
+Get-ChildItem -Path $PYTHON_OUT_DIR -Filter "*_pb2.py" | ForEach-Object {
+    Write-Host "  Patching $($_.Name)"
+    (Get-Content -Path $_.FullName -Raw) -replace $pattern, $replacement | Set-Content -Path $_.FullName -Encoding UTF8
+}
+
+Write-Host "Python imports patched successfully."
+
+
 Write-Host "Generating C# code..."
 foreach ($file in $protoFiles) {
     Write-Host "  Generating C# for $file"
