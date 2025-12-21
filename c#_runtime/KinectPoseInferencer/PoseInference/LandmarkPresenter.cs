@@ -22,6 +22,7 @@ public class LandmarkPresenter: IDisposable
     readonly RecordDataBroker _recordDataBroker;
     readonly FrameManager _frameManager;
     readonly IPlaybackReader _playbackReader;
+    readonly KinectDeviceController _kinectDeviceController;
     readonly TiltCorrector _tiltCorrector = new();
 
     readonly IEnumerable<ILandmarkUser> _resultUsers;
@@ -38,6 +39,7 @@ public class LandmarkPresenter: IDisposable
         IEnumerable<ILandmarkFilter> landmarkFilterChain,
         IEnumerable<ILandmarkUser> resultUsers,
         IPlaybackReader playbackReader,
+        KinectDeviceController kinectDeviceController,
         RecordDataBroker recordDataBroker,
         FrameManager frameManager,
         TiltCorrector tiltCorrector
@@ -49,6 +51,7 @@ public class LandmarkPresenter: IDisposable
         _recordDataBroker = recordDataBroker ?? throw new ArgumentNullException(nameof(recordDataBroker));
         _frameManager = frameManager ?? throw new ArgumentNullException(nameof(frameManager));
         _playbackReader = playbackReader ?? throw new ArgumentNullException(nameof(playbackReader));
+        _kinectDeviceController = kinectDeviceController ?? throw new ArgumentNullException(nameof(kinectDeviceController));
         _tiltCorrector = tiltCorrector ?? throw new ArgumentNullException(nameof(tiltCorrector));
         _resultUsers = resultUsers;
         _landmarkFilterChain = landmarkFilterChain;
@@ -56,12 +59,22 @@ public class LandmarkPresenter: IDisposable
         // Initailize
         _playbackReader.Playback
             .Where(playback => playback is not null)
-            .Subscribe(playback => {
+            .Subscribe(playback =>
+            {
                 playback.GetCalibration(out var calibration);
                 _currentCalibration = calibration;
-                Configure(playback);
-                })
+                Configure();
+            })
             .AddTo(ref _disposables);
+        _kinectDeviceController.KinectDevice
+            .Where(device => device is not null)
+            .Subscribe(device =>
+            {
+                _currentCalibration = _kinectDeviceController.GetCalibration();
+                Configure();
+            })
+            .AddTo(ref _disposables);
+
         if (_resultManager.Result.PoseLandmarks is null)
             _resultManager.Result.PoseLandmarks = new();
 
@@ -113,10 +126,10 @@ public class LandmarkPresenter: IDisposable
         _resultManager?.Result?.PoseLandmarks?.Landmarks?.AddRange(resultLandmark);
     }
 
-    void Configure(K4AdotNet.Record.Playback playback)
+    void Configure()
     {
-        playback.GetCalibration(out var calibration);
-        _inferencer.Configure(calibration);
+        if(_currentCalibration is K4AdotNet.Sensor.Calibration calibration)
+            _inferencer.Configure(calibration);
     }
 
     public void Dispose()

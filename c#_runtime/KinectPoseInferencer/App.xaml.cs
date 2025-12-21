@@ -100,6 +100,7 @@ public partial class App : Application
                     );
 
                 // readers
+                services.AddSingleton<KinectDeviceController>();
                 services.AddSingleton<IPlaybackController, PlaybackController>();
                 services.AddSingleton<IPlaybackReader, PlaybackReader>();
                 services.AddSingleton<InputLogReader>();
