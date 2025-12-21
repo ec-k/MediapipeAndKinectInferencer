@@ -19,13 +19,15 @@ namespace KinectPoseInferencer.UI;
 
 public partial class MainWindowViewModel : ObservableObject, IDisposable
 {
-    readonly IPlaybackController _controller;
+    readonly IPlaybackController _playbackController;
+    readonly KinectDeviceController _kinectDeviceController;
 
     PlayerVisualizer _visualizer;
 
     [ObservableProperty] double _currentFrameTimestamp;
     [ObservableProperty] string _playbackLength;
     [ObservableProperty] string _playPauseIconUnicode;
+    [ObservableProperty] string _kinectPlayPauseIconUnicode;
     [ObservableProperty] string _videoFilePath;
     [ObservableProperty] string _inputLogFilePath;
     [ObservableProperty] string _metaFilePath;
@@ -51,16 +53,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     CancellationTokenSource _cts = new();
     
     public MainWindowViewModel(
-        IPlaybackController controller,
+        IPlaybackController playbackController,
+        KinectDeviceController kinectDeviceController,
         RecordDataBroker broker)
     {
-        _controller = controller ?? throw new ArgumentNullException(nameof(controller));
-        _broker = broker ?? throw new ArgumentNullException(nameof(broker));
+        _playbackController     = playbackController     ?? throw new ArgumentNullException(nameof(playbackController));
+        _kinectDeviceController = kinectDeviceController ?? throw new ArgumentNullException(nameof(kinectDeviceController));
+        _broker                 = broker                 ?? throw new ArgumentNullException(nameof(broker));
 
         // _bodyVisualElements = new ObservableCollection<UIElement>(); // No longer needed
 
 
-        _controller.Reader.Playback
+        _playbackController.Reader.Playback
             .Where(playback => playback is not null)
             .Subscribe(playback => {
                     UpdatePlaybackLengthDisplay(playback);
@@ -70,11 +74,15 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     TotalDurationSeconds = playback.RecordLength.TotalSeconds;
             })
             .AddTo(ref _disposables);
-        _controller.Reader.IsReading
+        _playbackController.Reader.IsReading
             .Subscribe(isPlaying => PlayPauseIconUnicode = isPlaying ? PauseIconUnicode : PlayIconUnicode)
             .AddTo(ref _disposables);
 
-        _controller.Reader.CurrentPositionUs
+        _kinectDeviceController.IsReading
+            .Subscribe(isReading => KinectPlayPauseIconUnicode = isReading ? PauseIconUnicode: PlayIconUnicode)
+            .AddTo(ref _disposables);
+
+        _playbackController.Reader.CurrentPositionUs
             .Subscribe(position => CurrentPositionSeconds = position.TotalSeconds)
             .AddTo(ref _disposables);
 
@@ -160,10 +168,24 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (capture?.ColorImage is null) return;
 
-        _imageCache = capture?.ColorImage?.ToWriteableBitmap(_imageCache);
+        var captureForUi = capture.DuplicateReference();
+        if (captureForUi is null || captureForUi.ColorImage is null) return;
+
         Application.Current.Dispatcher.InvokeAsync(() =>
         {
-            ColorBitmap = _imageCache;
+            try
+            {
+                if(captureForUi.ColorImage is not null)
+                {
+                    _imageCache = captureForUi.ColorImage.ToWriteableBitmap(_imageCache);
+                    if (_imageCache is not null)
+                        ColorBitmap = _imageCache;
+                }
+            }
+            finally
+            {
+                captureForUi?.Dispose();
+            }
         }, System.Windows.Threading.DispatcherPriority.Render);
     }
 
@@ -233,13 +255,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             IsLoading = true;
             var playbackDesc = new PlaybackDescriptor(VideoFilePath, InputLogFilePath, MetaFilePath);
-            _controller.Descriptor = playbackDesc;
-            await _controller.Prepare(token);
+            _playbackController.Descriptor = playbackDesc;
+            await _playbackController.Prepare(token);
 
             // Display the first frame after successful loading
-            if (_controller.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
+            if (_playbackController.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
             {
-                await Task.Run(() => DisplayFirstColorFrame(playback, _controller.Broker, token), token);
+                await Task.Run(() => DisplayFirstColorFrame(playback, _playbackController.Broker, token), token);
             }
         }
         catch (OperationCanceledException)
@@ -260,23 +282,51 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [RelayCommand(IncludeCancelCommand = true)]
     async Task Rewind(CancellationToken token)
     {
-        _controller.Rewind();
+        _playbackController.Rewind();
         CurrentPositionSeconds = 0; // Reset CurrentPositionSeconds
         
         // Display the first frame
-        if (_controller.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
+        if (_playbackController.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
         {
-            await Task.Run(() => DisplayFirstColorFrame(playback, _controller.Broker, token), token);
+            await Task.Run(() => DisplayFirstColorFrame(playback, _playbackController.Broker, token), token);
+        }
+    }
+
+    [RelayCommand]
+    public void KinectPlayOrPause()
+    {
+        if (_kinectDeviceController.KinectDevice.CurrentValue is null)
+        {
+            _kinectDeviceController.Open();
+
+            // Setup visualization
+            if (_kinectDeviceController is null || _kinectDeviceController.KinectDevice is null) return;
+
+            var calibration = _kinectDeviceController.GetCalibration();
+            if (calibration.HasValue)
+            {
+                _visualizer = new(calibration.Value);
+                PointCloud.ComputePointCloudCache(calibration.Value);
+            }
+
+            _kinectDeviceController.StartCamera();
+        }
+        else
+        {
+            if (_kinectDeviceController.IsReading.CurrentValue)
+                _kinectDeviceController.Pause();
+            else
+                _kinectDeviceController.Play();
         }
     }
 
     [RelayCommand]
     public void PlayOrPause()
     {
-        if (_controller.Reader.IsReading.CurrentValue)
-            _controller.Pause();
+        if (_playbackController.Reader.IsReading.CurrentValue)
+            _playbackController.Pause();
         else
-            _controller.Play();
+            _playbackController.Play();
     }
 
     [RelayCommand]
@@ -287,6 +337,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        _kinectDeviceController?.Dispose();
+        _playbackController?.Dispose();
         _visualizer?.Dispose();
         _disposables.Dispose();
         _cts?.Cancel();

@@ -140,6 +140,13 @@
                     <TextBlock FontFamily="Segoe Fluent Icons" Text="{Binding PlayPauseIconUnicode}"/>
                 </Grid>
             </Button>
+
+            <Button Command="{Binding KinectPlayOrPauseCommand}" Width="80" Height="60">
+
+                <Grid>
+                    <TextBlock FontFamily="Segoe Fluent Icons" Text="{Binding KinectPlayPauseIconUnicode}"/>
+                </Grid>
+            </Button>
         </StackPanel>
     </Grid>
 </Window>
