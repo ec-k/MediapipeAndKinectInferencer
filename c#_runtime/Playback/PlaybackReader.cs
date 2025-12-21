@@ -11,7 +11,7 @@ namespace KinectPoseInferencer.Playback;
 
 internal class PlaybackReader : IPlaybackReader
 {
-    internal enum Command
+    enum Command
     {
         None,
         Play,
@@ -194,7 +194,7 @@ internal class PlaybackReader : IPlaybackReader
                     await Task.Delay(50, token);    // Suppress polling rate in no-reading state
             }
         }
-        catch (TaskCanceledException)
+        catch (OperationCanceledException)
         {
             // Stop successfully on cancel requested
         }
