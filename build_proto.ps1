@@ -2,7 +2,7 @@ Write-Host "Generating Protobuf code using custom Docker image..."
 
 $PROTO_PATH = "./proto/Proto"
 $PYTHON_OUT_DIR = ".\mediapipe_inferencer\src\proto_generated"
-$CSHARP_OUT_DIR = ".\c#_runtime\KinectPoseInferencer\Proto"
+$CSHARP_OUT_DIR = ".\c#_runtime\Proto"
 
 # Docker image settings for proto compiler
 $DOCKERFILE_PATH = ".\tools\protobuf-codegen\Dockerfile"
