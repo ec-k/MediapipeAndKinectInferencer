@@ -17,16 +17,16 @@ public enum ReceiverEventSettings
 
 public class UdpResultReceiver: IDisposable
 {
-    public Action<KinectPoseLandmarks> PoseReceived;
-    public Action<HandLandmarks>       ReceiveLeftHand;
-    public Action<HandLandmarks>       ReceiveRightHand;
-    public Action<FaceResults>         ReceiveFace;
+    public Action<KinectPoseLandmarks>? PoseReceived;
+    public Action<HandLandmarks>?       ReceiveLeftHand;
+    public Action<HandLandmarks>?       ReceiveRightHand;
+    public Action<FaceResults>?         ReceiveFace;
 
     UdpClient _receiver;
     ReceiverEventSettings _settings;
 
-    readonly Action<SocketException> _socketExceptionCallback;
-    readonly Action<ObjectDisposedException> _objectDisposedExceptionCallback;
+    readonly Action<SocketException>?         _socketExceptionCallback;
+    readonly Action<ObjectDisposedException>? _objectDisposedExceptionCallback;
 
     public UdpResultReceiver(
         ReceiverEventSettings settings,
@@ -40,8 +40,8 @@ public class UdpResultReceiver: IDisposable
 
     void OnReceived(IAsyncResult result)
     {
-        var getUdp = (UdpClient)result.AsyncState;
-        IPEndPoint ipEnd = null;
+        var getUdp = result.AsyncState as UdpClient;
+        IPEndPoint? ipEnd = null;
 
         try
         {
@@ -57,12 +57,14 @@ public class UdpResultReceiver: IDisposable
         }
         catch (SocketException e)
         {
-            _socketExceptionCallback(e);
+            if(_socketExceptionCallback is not null)
+                _socketExceptionCallback(e);
             return;
         }
         catch (ObjectDisposedException e)
         {
-            _objectDisposedExceptionCallback(e);
+            if(_objectDisposedExceptionCallback is not null)
+                _objectDisposedExceptionCallback(e);
             return;
         }
 

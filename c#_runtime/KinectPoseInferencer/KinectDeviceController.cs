@@ -52,6 +52,7 @@ public class KinectDeviceController: IDisposable
     public K4AdotNet.Sensor.Calibration? GetCalibration()
     {
         if (DeviceConfig is not DeviceConfiguration config) return null;
+        if (KinectDevice is null || KinectDevice.CurrentValue is null) return null;
 
         var depthMode = config.DepthMode;
         var colorResolution = config.ColorResolution;

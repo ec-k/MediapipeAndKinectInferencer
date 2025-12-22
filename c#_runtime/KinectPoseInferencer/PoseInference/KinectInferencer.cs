@@ -25,7 +25,8 @@ public class KinectInferencer
 
     public void EnqueueData(Capture capture)
     {
-        _tracker.EnqueueCapture(capture);
+        if(capture.DepthImage is not null)
+            _tracker.EnqueueCapture(capture);
     }
 
     public BodyFrame ProcessFrame()
