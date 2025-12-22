@@ -64,7 +64,11 @@ public partial class App : Application
                 // inferencer
                 services.AddSingleton<KinectInferencer>();
                 // result managers
-                services.AddSingleton<ResultManager>();
+                services.AddSingleton(sp =>
+                    new ResultManager(
+                        sp.GetRequiredService<UdpResultReceiver>(),
+                        ReceiverEventSettings.Face | ReceiverEventSettings.LeftHand | ReceiverEventSettings.RightHand)
+                    );
                 services.AddSingleton(serviceProvider =>
                     new UdpResultReceiver(ReceiverEventSettings.Face | ReceiverEventSettings.LeftHand | ReceiverEventSettings.RightHand, 9001)
                     );
