@@ -6,18 +6,23 @@ namespace KinectPoseInferencer.PoseInference;
 
 public class ResultManager : IDisposable
 {
-    readonly UdpResultReceiver _receiver;
+    readonly UdpResultReceiver     _receiver;
+    readonly ReceiverEventSettings _receiverSetting;
 
     public HolisticLandmarks Result { get; private set; } = new();
 
-    public ResultManager(UdpResultReceiver receiver)
+    public ResultManager(
+        UdpResultReceiver     receiver,
+        ReceiverEventSettings receiverSetting
+        )
     {
-        _receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));
+        _receiver        = receiver ?? throw new ArgumentNullException(nameof(receiver));
+        _receiverSetting = receiverSetting;
 
-        _receiver.PoseReceived += UpdateBody;
-        _receiver.ReceiveLeftHand += UpdateLeftHand;
-        _receiver.ReceiveRightHand += UpdateRightHand;
-        _receiver.ReceiveFace += UpdateFace;
+        if (_receiverSetting.HasFlag(ReceiverEventSettings.Body))      _receiver.PoseReceived     += UpdateBody;
+        if (_receiverSetting.HasFlag(ReceiverEventSettings.LeftHand))  _receiver.ReceiveLeftHand  += UpdateLeftHand;
+        if (_receiverSetting.HasFlag(ReceiverEventSettings.RightHand)) _receiver.ReceiveRightHand += UpdateRightHand;
+        if (_receiverSetting.HasFlag(ReceiverEventSettings.Face))      _receiver.ReceiveFace      += UpdateFace;
     }
 
     public void UpdateLeftHand(HandLandmarks result)
@@ -53,9 +58,9 @@ public class ResultManager : IDisposable
 
     public void Dispose()
     {
-        _receiver.PoseReceived -= UpdateBody;
-        _receiver.ReceiveLeftHand -= UpdateLeftHand;
-        _receiver.ReceiveRightHand -= UpdateRightHand;
-        _receiver.ReceiveFace -= UpdateFace;
+        if (_receiverSetting.HasFlag(ReceiverEventSettings.Body))      _receiver.PoseReceived     -= UpdateBody;
+        if (_receiverSetting.HasFlag(ReceiverEventSettings.LeftHand))  _receiver.ReceiveLeftHand  -= UpdateLeftHand;
+        if (_receiverSetting.HasFlag(ReceiverEventSettings.RightHand)) _receiver.ReceiveRightHand -= UpdateRightHand;
+        if (_receiverSetting.HasFlag(ReceiverEventSettings.Face))      _receiver.ReceiveFace      -= UpdateFace;
     }
 }

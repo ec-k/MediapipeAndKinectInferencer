@@ -9,10 +9,10 @@ namespace KinectPoseInferencer.PoseInference;
 [Flags]
 public enum ReceiverEventSettings
 {
-    Body,
-    LeftHand,
-    RightHand,
-    Face,
+    Body      = 1 << 0,
+    LeftHand  = 1 << 1,
+    RightHand = 1 << 2,
+    Face      = 1 << 3,
 }
 
 public class UdpResultReceiver: IDisposable
