@@ -6,6 +6,7 @@ using K4AdotNet.Record;
 using K4AdotNet.Sensor;
 using KinectPoseInferencer.Playback;
 using KinectPoseInferencer.Renderers;
+using KinectPoseInferencer.Renderers.Unused;
 using R3;
 using System;
 using System.Collections.ObjectModel;

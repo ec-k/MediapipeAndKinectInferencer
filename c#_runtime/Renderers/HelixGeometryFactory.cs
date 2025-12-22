@@ -4,6 +4,7 @@
 
 // The original code has been modified and adapted for the MediapipeAndKinectInferencer project.
 
+using KinectPoseInferencer.Renderers.Unused;
 using System.Collections.Generic;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;

@@ -4,7 +4,7 @@
 
 using System.Linq;
 
-namespace KinectPoseInferencer.Renderers
+namespace KinectPoseInferencer.Renderers.Unused
 {
     public static class Shaders
     {

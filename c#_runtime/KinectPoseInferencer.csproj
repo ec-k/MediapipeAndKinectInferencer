@@ -10,15 +10,6 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="KinectPoseInferencer\Program.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Page Remove="KinectPoseInferencer\App.xaml" />
-  </ItemGroup>
-  <ItemGroup>
-    <ApplicationDefinition Include="KinectPoseInferencer\App.xaml" />
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Google.Protobuf" Version="3.33.1" />
     <PackageReference Include="HelixToolkit.Wpf" Version="3.1.1" />
@@ -36,9 +27,9 @@
     <PackageReference Include="ZLinq" Version="1.5.4" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="KinectPoseInferencer\Proto\" />
+    <Folder Include="Proto\" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="KinectPoseInferencer\Program.cs" />
+    <None Include="Program.cs" />
   </ItemGroup>
 </Project>

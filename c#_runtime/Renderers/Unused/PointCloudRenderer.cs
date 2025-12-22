@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
-namespace KinectPoseInferencer.Renderers
+namespace KinectPoseInferencer.Renderers.Unused
 {
     public class PointCloudRenderer : VertexRenderer
     {

@@ -12,7 +12,7 @@ using System.Linq;
 using System.Numerics;
 using System.Windows.Media;
 
-namespace KinectPoseInferencer.Helpers;
+namespace KinectPoseInferencer.Renderers;
 
 public static class BodyTrackingHelper
 {
@@ -68,6 +68,6 @@ public static class BodyTrackingHelper
     /// </summary>
     public static Color GetBodyColor(int bodyId)
     {
-        return colorSet[(bodyId % colorSet.Length)];
+        return colorSet[bodyId % colorSet.Length];
     }
 }

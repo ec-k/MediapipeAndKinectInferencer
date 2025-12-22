@@ -5,6 +5,7 @@
 // The original code has been modified and adapted for the MediapipeAndKinectInferencer project.
 
 using K4AdotNet.Sensor;
+using KinectPoseInferencer.Renderers.Unused;
 using System;
 using System.Collections.Generic;
 using System.Numerics;

@@ -5,7 +5,7 @@
 using System.Drawing;
 using System.Numerics;
 
-namespace KinectPoseInferencer.Renderers
+namespace KinectPoseInferencer.Renderers.Unused
 {
     static class BodyColors
     {

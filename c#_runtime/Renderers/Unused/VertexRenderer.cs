@@ -8,7 +8,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace KinectPoseInferencer.Renderers
+namespace KinectPoseInferencer.Renderers.Unused
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct Vertex
@@ -69,9 +69,9 @@ namespace KinectPoseInferencer.Renderers
 
             // Set the vertex attribute pointers.
             Gl.EnableVertexAttribArray(0);
-            Gl.VertexAttribPointer(0, 3, VertexAttribType.Float, false, vertexSize, IntPtr.Zero);
+            Gl.VertexAttribPointer(0, 3, VertexAttribType.Float, false, vertexSize, nint.Zero);
             Gl.EnableVertexAttribArray(1);
-            Gl.VertexAttribPointer(1, 3, VertexAttribType.Float, false, vertexSize, new IntPtr(vertexSize / 2));
+            Gl.VertexAttribPointer(1, 3, VertexAttribType.Float, false, vertexSize, new nint(vertexSize / 2));
         }
 
         protected abstract void DrawElements();

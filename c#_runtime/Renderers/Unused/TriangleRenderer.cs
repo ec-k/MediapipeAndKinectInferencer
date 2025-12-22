@@ -6,7 +6,7 @@ using OpenGL;
 using System;
 using System.Linq;
 
-namespace KinectPoseInferencer.Renderers
+namespace KinectPoseInferencer.Renderers.Unused
 {
     public class TriangleRenderer : VertexRenderer
     {
@@ -40,7 +40,7 @@ namespace KinectPoseInferencer.Renderers
         protected override void DrawElements()
         {
             Gl.BindVertexArray(vertexArrayObject);
-            Gl.DrawElements(PrimitiveType.Triangles, indices.Length, DrawElementsType.UnsignedInt, IntPtr.Zero);
+            Gl.DrawElements(PrimitiveType.Triangles, indices.Length, DrawElementsType.UnsignedInt, nint.Zero);
         }
     }
 }

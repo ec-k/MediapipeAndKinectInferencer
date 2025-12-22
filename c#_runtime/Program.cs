@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using KinectPoseInferencer.Renderers.Unused;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace KinectPoseInferencer
@@ -169,7 +170,7 @@ namespace KinectPoseInferencer
             services.AddSingleton<PoseInference.LandmarkHandler>();
             services.AddSingleton<PoseInference.Filters.TiltCorrector>();
             services.AddSingleton<PoseInference.SkeletonToPoseLandmarksConverter>();
-            services.AddSingleton<Renderers.Renderer>();
+            services.AddSingleton<Renderer>();
             services.AddSingleton(provider => new ImageWriter(mmfFilePath));
             services.AddSingleton<FrameCaptureBroker>();
             services.AddSingleton<KinectOnlineProcessor>();

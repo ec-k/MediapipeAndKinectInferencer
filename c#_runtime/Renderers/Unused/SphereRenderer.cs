@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace KinectPoseInferencer.Renderers
+namespace KinectPoseInferencer.Renderers.Unused
 {
     public class SphereRenderer : TriangleRenderer
     {

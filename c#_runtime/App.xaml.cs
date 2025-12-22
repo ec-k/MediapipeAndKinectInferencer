@@ -5,10 +5,10 @@ using System.IO;
 using System.Windows;
 
 using KinectPoseInferencer.Playback;
-using KinectPoseInferencer.Renderers;
 using KinectPoseInferencer.UI;
 using KinectPoseInferencer.PoseInference;
 using System.Net;
+using KinectPoseInferencer.Renderers.Unused;
 
 namespace KinectPoseInferencer;
 

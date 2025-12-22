@@ -8,8 +8,6 @@ using System.Windows.Media;
 using System.Windows.Controls;
 using System.Windows.Shapes;
 
-using KinectPoseInferencer.Helpers;
-
 namespace KinectPoseInferencer.Renderers;
 
 public class PlayerVisualizer : IDisposable
