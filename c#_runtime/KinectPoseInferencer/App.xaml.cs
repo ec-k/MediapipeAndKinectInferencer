@@ -56,11 +56,6 @@ public partial class App : Application
             {
                 services.AddSingleton<App>();
 
-                // user input
-                services.AddSingleton<Input.ActionMap>();
-                services.AddSingleton<Input.KeyInputProvider>();
-                services.AddSingleton<Input.UserActionService>();
-                services.AddSingleton<Input.UserAction>();
                 // inferencer
                 services.AddSingleton<KinectInferencer>();
                 // result managers
