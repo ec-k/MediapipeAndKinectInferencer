@@ -37,6 +37,7 @@ public partial class App : Application
 
         services.GetRequiredService<LandmarkPresenter>();
         services.GetRequiredService<InputLogPresenter>();
+        services.GetRequiredService<CapturePresenter>();
     }
 
     protected override void OnExit(ExitEventArgs e)

@@ -22,7 +22,6 @@ internal class PlaybackReader : IPlaybackReader
     ConcurrentQueue<Command> _commandQueue = new();
 
     readonly RecordDataBroker _frameCaptureBroker;
-    readonly ImageWriter _imageWriter;
     readonly InputLogReader _inputLogReader;
 
     public ReadOnlyReactiveProperty<K4AdotNet.Record.Playback> Playback => _playback;
@@ -44,11 +43,9 @@ internal class PlaybackReader : IPlaybackReader
 
     public PlaybackReader(
         RecordDataBroker frameCaptureBroker,
-        ImageWriter imageWriter,
         InputLogReader inputLogReader)
     {
         _frameCaptureBroker = frameCaptureBroker ?? throw new ArgumentNullException(nameof(frameCaptureBroker));
-        _imageWriter = imageWriter ?? throw new ArgumentNullException(nameof(imageWriter));
         _inputLogReader = inputLogReader ?? throw new ArgumentNullException(nameof(inputLogReader));
     }
 
@@ -272,14 +269,6 @@ internal class PlaybackReader : IPlaybackReader
             if(diffUs > 0)
                 frameTimeDiffTick = TimeSpan.FromMicroseconds(diffUs);
         }
-
-        // Write ColorImage to Shared Memory
-        var colorImage = capture.ColorImage;
-        try
-        {
-            _imageWriter.WriteImage(colorImage);
-        }
-        catch { }
 
         _frameCaptureBroker.UpdateCapture(capture);
 
