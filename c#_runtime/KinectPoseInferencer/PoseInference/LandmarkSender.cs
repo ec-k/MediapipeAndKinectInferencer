@@ -27,7 +27,7 @@ public class LandmarkSender: ILandmarkUser, IDisposable
         _sender.Connect(senderEndPoint);
     }
 
-    public void Process(HolisticLandmarks landmark)
+    public void Process(in HolisticLandmarks landmark)
     {
         if (!_sender.Client.Connected)
             return;
