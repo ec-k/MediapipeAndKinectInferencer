@@ -48,6 +48,7 @@ public partial class App : Application
 
         using var scope = _host.Services.CreateScope();
         var services = scope.ServiceProvider;
+        services.GetService<KinectDeviceController>()?.Dispose();
         services.GetService<IPlaybackController>()?.Dispose();
         services.GetService<LandmarkPresenter>()?.Dispose();
     }
