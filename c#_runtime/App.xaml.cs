@@ -9,6 +9,7 @@ using KinectPoseInferencer.UI;
 using KinectPoseInferencer.PoseInference;
 using System.Net;
 using KinectPoseInferencer.Renderers.Unused;
+using KinectPoseInferencer.Settings;
 
 namespace KinectPoseInferencer;
 
@@ -110,6 +111,8 @@ public partial class App : Application
                 services.AddSingleton<LandmarkPresenter>();
                 services.AddSingleton<CapturePresenter>();
                 services.AddSingleton<InputLogPresenter>();
+
+                services.AddSingleton<SettingsManager>();
             });
 
     string CreateMMFFile()

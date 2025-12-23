@@ -7,6 +7,7 @@ using K4AdotNet.Sensor;
 using KinectPoseInferencer.Playback;
 using KinectPoseInferencer.Renderers;
 using KinectPoseInferencer.Renderers.Unused;
+using KinectPoseInferencer.Settings;
 using R3;
 using System;
 using System.Collections.ObjectModel;
@@ -22,6 +23,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 {
     readonly IPlaybackController _playbackController;
     readonly KinectDeviceController _kinectDeviceController;
+    readonly SettingsManager _settingsManager;
 
     PlayerVisualizer? _visualizer;
 
@@ -56,14 +58,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public MainWindowViewModel(
         IPlaybackController playbackController,
         KinectDeviceController kinectDeviceController,
-        RecordDataBroker broker)
+        RecordDataBroker broker,
+        SettingsManager settingManager)
     {
         _playbackController     = playbackController     ?? throw new ArgumentNullException(nameof(playbackController));
         _kinectDeviceController = kinectDeviceController ?? throw new ArgumentNullException(nameof(kinectDeviceController));
         _broker                 = broker                 ?? throw new ArgumentNullException(nameof(broker));
-
+        _settingsManager        = settingManager         ?? throw new ArgumentNullException(nameof(settingManager));
         // _bodyVisualElements = new ObservableCollection<UIElement>(); // No longer needed
 
+        var latestSetting = _settingsManager.Load();
+        _videoFilePath    = latestSetting.VideoFilePath;
+        _inputLogFilePath = latestSetting.InputLogFilePath;
+        _metaFilePath     = latestSetting.MetaFilePath;
 
         _playbackController.Reader.Playback
             .Where(playback => playback is not null)
@@ -252,6 +259,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     async Task LoadFiles(CancellationToken token)
     {
         if (string.IsNullOrEmpty(VideoFilePath)) return;
+
+        _settingsManager.Save(new()
+        {
+            VideoFilePath    = VideoFilePath,
+            InputLogFilePath = InputLogFilePath,
+            MetaFilePath     = MetaFilePath,
+        });
 
         try
         {
