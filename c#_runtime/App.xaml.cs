@@ -114,22 +114,21 @@ public partial class App : Application
 
     string CreateMMFFile()
     {
-        var appTempDirectory = Path.Combine(Path.GetTempPath(), ProjectNameConstants.StudioName, ProjectNameConstants.AppName);
-        var mmfFilePath = Path.Combine(appTempDirectory, "kinect_color_image.dat");
-        if (!string.IsNullOrEmpty(appTempDirectory) && !Directory.Exists(appTempDirectory))
+        var appTmpDirectory = ProjectConstants.AppTmpDirecotry;
+        if (!string.IsNullOrEmpty(appTmpDirectory) && !Directory.Exists(appTmpDirectory))
         {
             try
             {
-                Directory.CreateDirectory(appTempDirectory);
-                Console.WriteLine($"Created directory for ImageWriter: {appTempDirectory}");
+                Directory.CreateDirectory(appTmpDirectory);
+                Console.WriteLine($"Created directory for ImageWriter: {appTmpDirectory}");
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"Error creating directory '{appTempDirectory}': {ex.Message}");
+                Console.Error.WriteLine($"Error creating directory '{appTmpDirectory}': {ex.Message}");
                 Environment.Exit(1);
             }
         }
 
-        return mmfFilePath;
+        return Path.Combine(appTmpDirectory, "kinect_color_image.dat");
     }
 }
