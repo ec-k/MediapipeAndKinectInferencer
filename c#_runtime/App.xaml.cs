@@ -19,7 +19,8 @@ namespace KinectPoseInferencer;
 public partial class App : Application
 {
     IHost _host;
-    CancellationTokenSource _cts = new();
+    CancellationTokenSource _forcefulCts = new();
+    CancellationTokenSource _gracefulCts = new();
 
     public App()
     {
@@ -44,7 +45,7 @@ public partial class App : Application
         services.GetRequiredService<CapturePresenter>();
 
         // Start MediaPipe process
-        Task.Run(StartMediapipeProcess, _cts.Token);
+        var _ = StartMediapipeProcess();
     }
 
     async Task StartMediapipeProcess()
@@ -68,18 +69,19 @@ public partial class App : Application
             }
 
                 await Cli.Wrap(fullPath)
-                         .ExecuteAsync(_cts.Token);
+                         .ExecuteAsync(_forcefulCts.Token, _gracefulCts.Token);
         }
         catch (OperationCanceledException) { }
     }
 
-    protected override async void OnExit(ExitEventArgs e)
+    protected override void OnExit(ExitEventArgs e)
     {
-        _cts.Cancel();
+        _gracefulCts.Cancel();
+        _forcefulCts.CancelAfter(TimeSpan.FromSeconds(3));
 
         if(_host is not null)
         {
-            await _host.StopAsync();
+            _host.StopAsync().GetAwaiter().GetResult();
             _host.Dispose();
         }
 
