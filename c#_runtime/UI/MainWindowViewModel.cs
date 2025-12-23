@@ -53,7 +53,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     RecordDataBroker _broker;
 
     DisposableBag _disposables = new();
-    CancellationTokenSource _cts = new();
     
     public MainWindowViewModel(
         IPlaybackController playbackController,
@@ -357,7 +356,5 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _playbackController?.Dispose();
         _visualizer?.Dispose();
         _disposables.Dispose();
-        _cts?.Cancel();
-        _cts?.Dispose();
     }
 }
