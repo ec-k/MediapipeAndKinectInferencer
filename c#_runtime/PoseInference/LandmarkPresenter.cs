@@ -10,7 +10,6 @@ using KinectPoseInferencer.Playback;
 using KinectPoseInferencer.PoseInference.Filters;
 using KinectPoseInferencer.PoseInference.Utils;
 using K4AdotNet.Sensor;
-using System.Net.Http.Headers;
 
 
 namespace KinectPoseInferencer.PoseInference;

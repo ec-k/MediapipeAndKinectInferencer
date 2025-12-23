@@ -1,6 +1,4 @@
-﻿using K4AdotNet.Record;
-
-namespace KinectPoseInferencer.Playback;
+﻿namespace KinectPoseInferencer.Playback;
 
 public class PlaybackDescriptor
 {
