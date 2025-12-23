@@ -7,6 +7,8 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Controls;
 using System.Windows.Shapes;
+using HumanLandmarks;
+using K4AdotNet;
 
 namespace KinectPoseInferencer.Renderers;
 
@@ -69,7 +71,7 @@ public class PlayerVisualizer : IDisposable
             // Render joints
             foreach (var jointData in bodyData.JointData)
             {
-                if (jointData.Position.X >= 0 && jointData.Position.Y >= 0)
+                if (jointData.Position is { X: >= 0, Y: >= 0 })
                 {
                     Ellipse ellipse = GetOrCreateEllipse();
 
@@ -93,8 +95,8 @@ public class PlayerVisualizer : IDisposable
             // Render bones
             foreach (var boneData in bodyData.BoneData)
             {
-                if (boneData.ParentPosition.X >= 0 && boneData.ParentPosition.Y >= 0 &&
-                    boneData.ChildPosition.X >= 0 && boneData.ChildPosition.Y >= 0)
+                if (boneData is {ParentPosition: {X: >= 0, Y: >= 0 },
+                                 ChildPosition: {X: >= 0, Y: >= 0 } })
                 {
                     var line = GetOrCreateLine();
 
@@ -210,11 +212,11 @@ public class PlayerVisualizer : IDisposable
                         var point2D = _calibration.Convert3DTo2D(joint.PositionMm, CalibrationGeometry.Depth, CalibrationGeometry.Color);
 
                         // K4AdotNet TransformTo2D returns 0,0 for invalid points, check for that
-                        if (point2D is not null && point2D?.X != 0 && point2D?.Y != 0)
+                        if (point2D is Float2 {X: not 0, Y: not 0 } point)
                         {
                             // Map to actual image size (if different from calibration resolution)
                             // Assuming the target image (e.g., in UI) will be scaled to match original color image resolution
-                            bodyVisualData.JointData.Add(new JointVisualData { Position = new Point((double)point2D?.X, (double)point2D?.Y) });
+                            bodyVisualData.JointData.Add(new JointVisualData { Position = new Point((double)point.X, (double)point.Y) });
                         }
                         else
                         {
@@ -232,14 +234,13 @@ public class PlayerVisualizer : IDisposable
                         var parentPoint2D = _calibration.Convert3DTo2D(parentJoint.PositionMm, CalibrationGeometry.Depth, CalibrationGeometry.Color);
                         var childPoint2D = _calibration.Convert3DTo2D(childJoint.PositionMm, CalibrationGeometry.Depth, CalibrationGeometry.Color);
 
-                        if (parentPoint2D is not null && childPoint2D is not null
-                            && parentPoint2D?.X != 0 && parentPoint2D?.Y != 0 
-                            && childPoint2D?.X != 0 && childPoint2D?.Y != 0)
+                        if(parentPoint2D is Float2 { X: not 0, Y: not 0 } parentPoint
+                        && childPoint2D is Float2 { X: not 0, Y: not 0 } childPoint)
                         {
                             bodyVisualData.BoneData.Add(new BoneVisualData
                             {
-                                ParentPosition = new Point((double)parentPoint2D?.X, (double)parentPoint2D?.Y),
-                                ChildPosition = new Point((double)childPoint2D?.X, (double)childPoint2D?.Y)
+                                ParentPosition = new Point((double)parentPoint.X, (double)parentPoint.Y),
+                                ChildPosition =  new Point((double)childPoint.X, (double)childPoint.Y)
                             });
                         }
                     }

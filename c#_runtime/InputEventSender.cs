@@ -57,7 +57,7 @@ public class InputEventSender: IDisposable
         };
         var sendData = MessagePackSerializer.Serialize(data);
 
-        if (sendData is null || sendData.Length == 0)
+        if (sendData is null or [])
         {
             return;
         }
@@ -76,44 +76,33 @@ public class InputEventSender: IDisposable
     }
 
     public KeyboardEventDataProto ComposeKeyboardEventMessage(InputLogEvent inputEvent)
-    {
-        if (inputEvent is null)
-            return new();
-
-        var data = inputEvent.Data as KeyboardEventData;
-        if (data is not KeyboardEventData)
-            return new();
-        if (data.VirtualKeyCode is not int
-            || data.ModifiersFlags is not int)
-            return new();
-
-        return new()
+        => inputEvent switch
         {
-            RawStopwatchTimestamp = data.RawStopwatchTimestamp,
-            VirtualKeyCode        = (uint)data.VirtualKeyCode,
-            ModifiersFlags        = (KeyboardEventDataProto.ModifierKeyState)data.ModifiersFlags,
-            IsKeyDown             = data.IsKeyDown ?? false
+            { Data: KeyboardEventData { VirtualKeyCode: int, ModifiersFlags: int } data } => new()
+            {
+                RawStopwatchTimestamp = data.RawStopwatchTimestamp,
+                VirtualKeyCode        = (uint)data.VirtualKeyCode,
+                ModifiersFlags        = (KeyboardEventDataProto.ModifierKeyState)data.ModifiersFlags,
+                IsKeyDown             = data.IsKeyDown ?? false
+            },
+            _ => new()
         };
-    }
 
     public MouseEventDataProto ComposeMouseEventMessage(InputLogEvent inputEvent)
-    {
-        if (inputEvent is null)
-            return new();
-        if(inputEvent.Data is not MouseEventData data)
-            return new();
-
-        return new()
+        => inputEvent switch
         {
-            RawStopwatchTimestamp = inputEvent.Data.RawStopwatchTimestamp,
-            X                     = data.X ?? 0,
-            Y                     = data.Y ?? 0,
-            WheelDelta            = 0,                                          // HACK: This should be set properly if needed.
-            IsButtonDown          = data.IsMouseButtonDown ?? false,
-            IsMouseMoving         = data.IsMouseMoving ?? false,
-            IsWheelMoving         = data.IsWheelMoving ?? false
+            { Data: MouseEventData data } => new()
+            {
+                RawStopwatchTimestamp = data.RawStopwatchTimestamp,
+                X                     = data.X ?? 0,
+                Y                     = data.Y ?? 0,
+                WheelDelta            = 0,                                  // HACK: This should be set properly if needed.
+                IsButtonDown          = data.IsMouseButtonDown ?? false,
+                IsMouseMoving         = data.IsMouseMoving ?? false,
+                IsWheelMoving         = data.IsWheelMoving ?? false
+            },
+            _ => new()
         };
-    }
 
     public void Dispose()
     {

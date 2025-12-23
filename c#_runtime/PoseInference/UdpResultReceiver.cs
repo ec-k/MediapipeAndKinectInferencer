@@ -40,10 +40,9 @@ public class UdpResultReceiver: IDisposable
 
     void OnReceived(IAsyncResult result)
     {
-        var udp = result.AsyncState as UdpClient;
         IPEndPoint? ipEnd = null;
 
-        if (udp is not UdpClient)
+        if (result.AsyncState is not UdpClient udp)
         {
             Console.Error.WriteLine("UdpResultReceiver: result.AsyncState is null.");
             return;

@@ -2,6 +2,7 @@
 using R3;
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -52,7 +53,7 @@ public class KinectDeviceController: IDisposable
     public K4AdotNet.Sensor.Calibration? GetCalibration()
     {
         if (DeviceConfig is not DeviceConfiguration config) return null;
-        if (KinectDevice is null || KinectDevice.CurrentValue is null) return null;
+        if (KinectDevice?.CurrentValue is null)             return null;
 
         var depthMode = config.DepthMode;
         var colorResolution = config.ColorResolution;
@@ -91,9 +92,8 @@ public class KinectDeviceController: IDisposable
 
     public void StartCamera()
     {
-        var device = KinectDevice.CurrentValue;
-        if (DeviceConfig is not DeviceConfiguration config
-            || device is null
+        if (DeviceConfig is not DeviceConfiguration    config
+            || KinectDevice.CurrentValue is not Device device
             || _readingLoop is not null) 
             return;
 

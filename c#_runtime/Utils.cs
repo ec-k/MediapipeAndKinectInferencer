@@ -75,7 +75,7 @@ namespace KinectPoseInferencer
             var width = image.WidthPixels;
             var height = image.HeightPixels;
 
-            if (writeableBitmap == null || writeableBitmap.PixelWidth != width || writeableBitmap.PixelHeight != height)
+            if (writeableBitmap?.PixelWidth != width || writeableBitmap?.PixelHeight != height)
             {
                 writeableBitmap = new WriteableBitmap(width, height, 96.0, 96.0, PixelFormats.Bgra32, null);
             }

@@ -142,14 +142,14 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 playback.SeekTimestamp(new Microseconds64(0), PlaybackSeekOrigin.Begin);
                 if (playback.TryGetNextCapture(out var firstCapture))
                 {
-                    if (firstCapture.DepthImage is not null)
+                    if (firstCapture?.DepthImage is not null)
                     {
                         Application.Current.Dispatcher.Invoke(() =>
                         {
                             ColorBitmap = firstCapture.DepthImage.ToWriteableBitmap();
                         }, System.Windows.Threading.DispatcherPriority.Background, token); // Pass token to Invoke
                     }
-                    firstCapture.Dispose();
+                    firstCapture?.Dispose();
                 }
             }
 
@@ -171,7 +171,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (capture?.ColorImage is null) return;
 
         var captureForUi = capture.DuplicateReference();
-        if (captureForUi is null || captureForUi.ColorImage is null) return;
+        if (captureForUi?.ColorImage is null) return;
 
         Application.Current.Dispatcher.InvokeAsync(() =>
         {
@@ -302,7 +302,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             _kinectDeviceController.Open();
 
             // Setup visualization
-            if (_kinectDeviceController is null || _kinectDeviceController.KinectDevice is null) return;
+            if (_kinectDeviceController?.KinectDevice is null) return;
 
             var calibration = _kinectDeviceController.GetCalibration();
             if (calibration.HasValue)
