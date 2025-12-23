@@ -1,21 +1,25 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using System;
-using System.IO;
-using System.Windows;
-
+﻿using CliWrap;
 using KinectPoseInferencer.Playback;
-using KinectPoseInferencer.UI;
 using KinectPoseInferencer.PoseInference;
-using System.Net;
 using KinectPoseInferencer.Renderers.Unused;
 using KinectPoseInferencer.Settings;
+using KinectPoseInferencer.UI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using System;
+using System.IO;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
 
 namespace KinectPoseInferencer;
 
 public partial class App : Application
 {
     IHost _host;
+    CancellationTokenSource _cts = new();
 
     public App()
     {
@@ -27,9 +31,7 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-
-        using var scope = _host.Services.CreateScope();
-        var services = scope.ServiceProvider;
+        var services = _host.Services;
 
         var mainWindow = services.GetRequiredService<MainWindow>();
         mainWindow.Show();
@@ -40,17 +42,48 @@ public partial class App : Application
         services.GetRequiredService<LandmarkPresenter>();
         services.GetRequiredService<InputLogPresenter>();
         services.GetRequiredService<CapturePresenter>();
+
+        // Start MediaPipe process
+        Task.Run(StartMediapipeProcess, _cts.Token);
     }
 
-    protected override void OnExit(ExitEventArgs e)
+    async Task StartMediapipeProcess()
     {
-        base.OnExit(e);
+        try
+        {
+            var config = _host.Services.GetRequiredService<IOptions<MediaPipeSettings>>().Value;
+            var exePath = config.ExecutablePath;
+            if(string.IsNullOrWhiteSpace(exePath))
+            {
+                MessageBox.Show("MediaPipe Inferencer .exe path is not specified at MediaPipeSettings:ExecutablePath.");
+                return;
+            }
 
-        using var scope = _host.Services.CreateScope();
-        var services = scope.ServiceProvider;
-        services.GetService<KinectDeviceController>()?.Dispose();
-        services.GetService<IPlaybackController>()?.Dispose();
-        services.GetService<LandmarkPresenter>()?.Dispose();
+            var fullPath = Path.GetFullPath(exePath, AppContext.BaseDirectory);
+
+            if (!File.Exists(fullPath))
+            {
+                MessageBox.Show($"MediaPipe Inferencer .exe is not found: {fullPath}");
+                return;
+            }
+
+                await Cli.Wrap(fullPath)
+                         .ExecuteAsync(_cts.Token);
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    protected override async void OnExit(ExitEventArgs e)
+    {
+        _cts.Cancel();
+
+        if(_host is not null)
+        {
+            await _host.StopAsync();
+            _host.Dispose();
+        }
+
+        base.OnExit(e);
     }
 
     IHostBuilder CreateHostBuilder(string mmfFilePath) =>
@@ -113,7 +146,9 @@ public partial class App : Application
                 services.AddSingleton<CapturePresenter>();
                 services.AddSingleton<InputLogPresenter>();
 
+                // settings
                 services.AddSingleton<SettingsManager>();
+                services.Configure<MediaPipeSettings>(context.Configuration.GetSection("MediaPipeSettings"));
             });
 
     string CreateMMFFile()
