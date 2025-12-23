@@ -8,7 +8,7 @@ public interface IPlaybackController: IDisposable
 {
     IPlaybackReader Reader { get; }
     RecordDataBroker Broker { get; }
-    PlaybackDescriptor Descriptor { get; set; }
+    PlaybackDescriptor? Descriptor { get; set; }
 
     Task Prepare(CancellationToken token);
     void Play();

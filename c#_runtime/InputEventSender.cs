@@ -49,7 +49,7 @@ public class InputEventSender: IDisposable
             || inputEvent.EventType is InputEventType.Unknown)
             return;
 
-        IDeviceInput data = inputEvent.Data switch
+        IDeviceInput? data = inputEvent.Data switch
         {
             KeyboardEventData => ComposeKeyboardEventMessage(inputEvent),
             MouseEventData    => ComposeMouseEventMessage(inputEvent),
@@ -79,15 +79,20 @@ public class InputEventSender: IDisposable
     {
         if (inputEvent is null)
             return new();
-        if (inputEvent.Data is not KeyboardEventData data)
+
+        var data = inputEvent.Data as KeyboardEventData;
+        if (data is not KeyboardEventData)
+            return new();
+        if (data.VirtualKeyCode is not int
+            || data.ModifiersFlags is not int)
             return new();
 
         return new()
         {
-            RawStopwatchTimestamp = inputEvent.Data.RawStopwatchTimestamp,
-            VirtualKeyCode        = (uint)data?.VirtualKeyCode,
-            ModifiersFlags        = (KeyboardEventDataProto.ModifierKeyState)data?.ModifiersFlags,
-            IsKeyDown             = data?.IsKeyDown ?? false
+            RawStopwatchTimestamp = data.RawStopwatchTimestamp,
+            VirtualKeyCode        = (uint)data.VirtualKeyCode,
+            ModifiersFlags        = (KeyboardEventDataProto.ModifierKeyState)data.ModifiersFlags,
+            IsKeyDown             = data.IsKeyDown ?? false
         };
     }
 

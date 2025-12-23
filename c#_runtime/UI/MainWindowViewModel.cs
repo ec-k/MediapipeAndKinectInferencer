@@ -23,22 +23,22 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     readonly IPlaybackController _playbackController;
     readonly KinectDeviceController _kinectDeviceController;
 
-    PlayerVisualizer _visualizer;
+    PlayerVisualizer? _visualizer;
 
-    [ObservableProperty] double _currentFrameTimestamp;
-    [ObservableProperty] string _playbackLength;
-    [ObservableProperty] string _playPauseIconUnicode;
-    [ObservableProperty] string _kinectPlayPauseIconUnicode;
-    [ObservableProperty] string _videoFilePath;
-    [ObservableProperty] string _inputLogFilePath;
-    [ObservableProperty] string _metaFilePath;
-    [ObservableProperty] WriteableBitmap _colorBitmap;
+    [ObservableProperty] double _currentFrameTimestamp      = 0.0;
+    [ObservableProperty] string _playbackLength             = "";
+    [ObservableProperty] string _playPauseIconUnicode       = PlayIconUnicode;
+    [ObservableProperty] string _kinectPlayPauseIconUnicode = PlayIconUnicode;
+    [ObservableProperty] string _videoFilePath              = "";
+    [ObservableProperty] string _inputLogFilePath           = "";
+    [ObservableProperty] string _metaFilePath               = "";
+    [ObservableProperty] WriteableBitmap? _colorBitmap;
 
     [ObservableProperty] bool _isLoading = false;
     [ObservableProperty] double _totalDurationSeconds;
     [ObservableProperty] double _currentPositionSeconds;
 
-    WriteableBitmap _imageCache;
+    WriteableBitmap? _imageCache;
 
     const string PlayIconUnicode = "\uE768";
     const string PauseIconUnicode = "\uE769";
@@ -128,11 +128,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 currentCapture.Dispose();
             }
 
-            if (foundColorImage && captureToDisplay is not null)
+            if (foundColorImage && captureToDisplay is { ColorImage: not null })
             {
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    ColorBitmap = captureToDisplay.ColorImage.ToWriteableBitmap(ColorBitmap);
+                    if(ColorBitmap is not null)
+                        ColorBitmap = captureToDisplay.ColorImage.ToWriteableBitmap();
                 }, System.Windows.Threading.DispatcherPriority.Background, token); // Pass token to Invoke
             }
             else
@@ -145,7 +146,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     {
                         Application.Current.Dispatcher.Invoke(() =>
                         {
-                            ColorBitmap = firstCapture.DepthImage.ToWriteableBitmap(ColorBitmap);
+                            ColorBitmap = firstCapture.DepthImage.ToWriteableBitmap();
                         }, System.Windows.Threading.DispatcherPriority.Background, token); // Pass token to Invoke
                     }
                     firstCapture.Dispose();
@@ -178,7 +179,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             {
                 if(captureForUi.ColorImage is not null)
                 {
-                    _imageCache = captureForUi.ColorImage.ToWriteableBitmap(_imageCache);
+                    _imageCache = captureForUi.ColorImage.ToWriteableBitmap();
                     if (_imageCache is not null)
                         ColorBitmap = _imageCache;
                 }
@@ -202,7 +203,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         //                                .ToList();
 
         WriteableBitmap? colorImage = null;
-        colorImage = capture?.ColorImage?.ToWriteableBitmap(colorImage);
+        colorImage = capture?.ColorImage?.ToWriteableBitmap();
 
         // Update UI on the main thread
         Application.Current.Dispatcher.Invoke(() =>

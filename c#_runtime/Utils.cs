@@ -64,7 +64,7 @@ namespace KinectPoseInferencer
             _ => throw new ArgumentOutOfRangeException(nameof(frameRate), frameRate, null)
         };
 
-        public static WriteableBitmap ToWriteableBitmap(this K4AdotNet.Sensor.Image image, WriteableBitmap? writeableBitmap = null)
+        public static WriteableBitmap? ToWriteableBitmap(this K4AdotNet.Sensor.Image image, WriteableBitmap? writeableBitmap = null)
         {
             if (image == null || image.Format != ImageFormat.ColorBgra32)
             {

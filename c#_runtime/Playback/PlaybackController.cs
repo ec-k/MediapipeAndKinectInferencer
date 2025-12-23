@@ -11,7 +11,7 @@ public class PlaybackController : IPlaybackController
 
     public IPlaybackReader Reader => _playbackReader;
     public RecordDataBroker Broker { get; }
-    public PlaybackDescriptor Descriptor { get; set; }
+    public PlaybackDescriptor? Descriptor { get; set; }
 
 
     public PlaybackController(
@@ -26,6 +26,8 @@ public class PlaybackController : IPlaybackController
 
     public async Task Prepare(CancellationToken token)
     {
+        if (Descriptor is null || String.IsNullOrEmpty(Descriptor.MetadataFilePath)) return;
+
         await Task.WhenAll(
             _logReader.LoadMetaFileAsync(Descriptor.MetadataFilePath),
             _playbackReader.Configure(Descriptor, token)

@@ -14,7 +14,7 @@ namespace KinectPoseInferencer;
 
 public partial class App : Application
 {
-    IHost? _host;
+    IHost _host;
 
     public App()
     {
@@ -25,6 +25,7 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
 
         using var scope = _host.Services.CreateScope();
         var services = scope.ServiceProvider;

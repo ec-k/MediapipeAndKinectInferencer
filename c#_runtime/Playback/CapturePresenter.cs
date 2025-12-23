@@ -19,7 +19,7 @@ public class CapturePresenter
             .Where(capture => capture is not null && capture.ColorImage is not null)
             .Subscribe(capture =>
             {
-                imageWriter.WriteImage(capture.ColorImage);
+                imageWriter.WriteImage(capture.ColorImage!);
             });
     }
 }

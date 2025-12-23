@@ -9,7 +9,7 @@ public class KinectInferencer
     public ReadOnlyReactiveProperty<Skeleton> Result => _result;
     ReactiveProperty<Skeleton> _result = new();
 
-    Tracker _tracker;
+    Tracker? _tracker;
 
     public void Configure(Calibration calibration)
     {
@@ -26,11 +26,13 @@ public class KinectInferencer
     public void EnqueueData(Capture capture)
     {
         if(capture.DepthImage is not null)
-            _tracker.EnqueueCapture(capture);
+            _tracker?.EnqueueCapture(capture);
     }
 
-    public BodyFrame ProcessFrame()
+    public BodyFrame? ProcessFrame()
     {
+        if (_tracker is null) return null;
+
         using var frame = _tracker.PopResult();
         var nullableLandmark = Inference(frame);
         if(nullableLandmark is Skeleton landmark)

@@ -1,219 +1,219 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using KinectPoseInferencer.Renderers.Unused;
-using Microsoft.Extensions.DependencyInjection;
+﻿//using System;
+//using System.Collections.Generic;
+//using System.IO;
+//using System.Linq;
+//using KinectPoseInferencer.Renderers.Unused;
+//using Microsoft.Extensions.DependencyInjection;
 
-namespace KinectPoseInferencer
-{
-    public enum LogOutputFormat
-    {
-        Protobuf,
-        Json
-    }
+//namespace KinectPoseInferencer
+//{
+//    public enum LogOutputFormat
+//    {
+//        Protobuf,
+//        Json
+//    }
 
-    internal static class Program
-    {
-        class AppStartupOptoins
-        {
-            public bool IsOffline { get; set; }
-            public string VideoFilePath { get; set; }
-            public string LogFileDestination { get; set; }
-            public LogOutputFormat LogOutputFormat { get; set; } = LogOutputFormat.Protobuf;
-        }
+//    internal static class Program
+//    {
+//        class AppStartupOptoins
+//        {
+//            public bool IsOffline { get; set; }
+//            public string VideoFilePath { get; set; }
+//            public string LogFileDestination { get; set; }
+//            public LogOutputFormat LogOutputFormat { get; set; } = LogOutputFormat.Protobuf;
+//        }
 
-        internal static void Main(string[] args)
-        {
-            var options = ParseCommandLineArguments(args);
+//        internal static void Main(string[] args)
+//        {
+//            var options = ParseCommandLineArguments(args);
 
-            using var serviceProvider = Build(options);
-            if (options.IsOffline)
-            {
-                Console.WriteLine($"Running in OFFLINE mode (from video file: '{options.VideoFilePath}').");
-                var appManager = serviceProvider.GetRequiredService<KinectOfflineProcessor>();
-                appManager.Run(options.VideoFilePath, options.LogFileDestination);
-            }
-            else
-            {
-                Console.WriteLine("Running in ONLINE mode (from live Kinect stream).");
-                var appManager = serviceProvider.GetRequiredService<KinectOnlineProcessor>();
-                appManager.Run();
-            }
-        }
+//            using var serviceProvider = Build(options);
+//            if (options.IsOffline)
+//            {
+//                Console.WriteLine($"Running in OFFLINE mode (from video file: '{options.VideoFilePath}').");
+//                var appManager = serviceProvider.GetRequiredService<KinectOfflineProcessor>();
+//                appManager.Run(options.VideoFilePath, options.LogFileDestination);
+//            }
+//            else
+//            {
+//                Console.WriteLine("Running in ONLINE mode (from live Kinect stream).");
+//                var appManager = serviceProvider.GetRequiredService<KinectOnlineProcessor>();
+//                appManager.Run();
+//            }
+//        }
 
-        static AppStartupOptoins ParseCommandLineArguments(string[] args)
-        {
-            var options = new AppStartupOptoins();
+//        static AppStartupOptoins ParseCommandLineArguments(string[] args)
+//        {
+//            var options = new AppStartupOptoins();
 
-            options.IsOffline = args.Contains("--offline", StringComparer.OrdinalIgnoreCase);
+//            options.IsOffline = args.Contains("--offline", StringComparer.OrdinalIgnoreCase);
 
-            var argMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            for (var i = 0; i < args.Length; i++)
-            {
-                var arg = args[i];
-                if (arg.StartsWith("--") || arg.StartsWith("-"))
-                {
-                    var key = arg.TrimStart('-');
-                    if (key.Equals("I", StringComparison.OrdinalIgnoreCase)) key = "input-video-path";
-                    if (key.Equals("O", StringComparison.OrdinalIgnoreCase)) key = "output-log-destination";
-                    if (key.Equals("F", StringComparison.OrdinalIgnoreCase)) key = "log-format";
+//            var argMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+//            for (var i = 0; i < args.Length; i++)
+//            {
+//                var arg = args[i];
+//                if (arg.StartsWith("--") || arg.StartsWith("-"))
+//                {
+//                    var key = arg.TrimStart('-');
+//                    if (key.Equals("I", StringComparison.OrdinalIgnoreCase)) key = "input-video-path";
+//                    if (key.Equals("O", StringComparison.OrdinalIgnoreCase)) key = "output-log-destination";
+//                    if (key.Equals("F", StringComparison.OrdinalIgnoreCase)) key = "log-format";
 
-                    // Get the next argument as value if it is a valid value
-                    if (i + 1 < args.Length && !args[i + 1].StartsWith("--") && !args[i + 1].StartsWith("-"))
-                    {
-                        argMap[key] = args[i + 1];
-                        i++; // Skip the next argument as it is the value for the current key
-                    }
-                    else
-                    {
-                        argMap[key] = string.Empty; // No value provided
-                    }
-                }
-            }
+//                    // Get the next argument as value if it is a valid value
+//                    if (i + 1 < args.Length && !args[i + 1].StartsWith("--") && !args[i + 1].StartsWith("-"))
+//                    {
+//                        argMap[key] = args[i + 1];
+//                        i++; // Skip the next argument as it is the value for the current key
+//                    }
+//                    else
+//                    {
+//                        argMap[key] = string.Empty; // No value provided
+//                    }
+//                }
+//            }
 
-            // Parsing logics
+//            // Parsing logics
 
-            // --offline
-            if (argMap.ContainsKey("offline"))
-            {
-                options.IsOffline = true;
-            }
+//            // --offline
+//            if (argMap.ContainsKey("offline"))
+//            {
+//                options.IsOffline = true;
+//            }
 
-            if (!options.IsOffline)
-                return options;
+//            if (!options.IsOffline)
+//                return options;
 
-            // --input-video-path
-            if (argMap.ContainsKey("input-video-path"))
-            {
-                options.VideoFilePath = argMap["input-video-path"];
+//            // --input-video-path
+//            if (argMap.ContainsKey("input-video-path"))
+//            {
+//                options.VideoFilePath = argMap["input-video-path"];
 
-                if (string.IsNullOrWhiteSpace(options.VideoFilePath))
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Error: --input-video-path requires a file path.");
-                    Console.WriteLine("Example: dotnet run -- --input-video-path \"KinectTestRecording.mkv\"");
-                    Console.ResetColor();
-                    Environment.Exit(1);
-                }
-            }
+//                if (string.IsNullOrWhiteSpace(options.VideoFilePath))
+//                {
+//                    Console.ForegroundColor = ConsoleColor.Red;
+//                    Console.WriteLine("Error: --input-video-path requires a file path.");
+//                    Console.WriteLine("Example: dotnet run -- --input-video-path \"KinectTestRecording.mkv\"");
+//                    Console.ResetColor();
+//                    Environment.Exit(1);
+//                }
+//            }
 
-            // --output-log-destination
-            if (argMap.ContainsKey("output-log-destination"))
-            {
-                options.LogFileDestination = argMap["output-log-destination"];
-                if (string.IsNullOrWhiteSpace(options.LogFileDestination))
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Error: --output-log-destination requires a file path.");
-                    Console.WriteLine("Example: dotnet run -- --output-log-destination \"output.log\"");
-                    Console.ResetColor();
-                    Environment.Exit(1);
-                }
-            }
+//            // --output-log-destination
+//            if (argMap.ContainsKey("output-log-destination"))
+//            {
+//                options.LogFileDestination = argMap["output-log-destination"];
+//                if (string.IsNullOrWhiteSpace(options.LogFileDestination))
+//                {
+//                    Console.ForegroundColor = ConsoleColor.Red;
+//                    Console.WriteLine("Error: --output-log-destination requires a file path.");
+//                    Console.WriteLine("Example: dotnet run -- --output-log-destination \"output.log\"");
+//                    Console.ResetColor();
+//                    Environment.Exit(1);
+//                }
+//            }
 
-            // --log-format
-            if (argMap.ContainsKey("log-format"))
-            {
-                var formatString = argMap["log-format"];
-                if (string.IsNullOrWhiteSpace(formatString))
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Error: --log-format requires a format type (protobuf or json).");
-                    Console.WriteLine("Example: dotnet run -- --log-format json");
-                    Console.ResetColor();
-                    Environment.Exit(1);
-                }
+//            // --log-format
+//            if (argMap.ContainsKey("log-format"))
+//            {
+//                var formatString = argMap["log-format"];
+//                if (string.IsNullOrWhiteSpace(formatString))
+//                {
+//                    Console.ForegroundColor = ConsoleColor.Red;
+//                    Console.WriteLine("Error: --log-format requires a format type (protobuf or json).");
+//                    Console.WriteLine("Example: dotnet run -- --log-format json");
+//                    Console.ResetColor();
+//                    Environment.Exit(1);
+//                }
 
-                if (Enum.TryParse(formatString, true, out LogOutputFormat format))
-                {
-                    options.LogOutputFormat = format;
-                }
-                else
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"Error: Unknown log format '{formatString}'. Supported formats are 'protobuf' and 'json'.");
-                    Console.ResetColor();
-                    Environment.Exit(1);
-                }
-            }
+//                if (Enum.TryParse(formatString, true, out LogOutputFormat format))
+//                {
+//                    options.LogOutputFormat = format;
+//                }
+//                else
+//                {
+//                    Console.ForegroundColor = ConsoleColor.Red;
+//                    Console.WriteLine($"Error: Unknown log format '{formatString}'. Supported formats are 'protobuf' and 'json'.");
+//                    Console.ResetColor();
+//                    Environment.Exit(1);
+//                }
+//            }
 
-            return options;
-        }
+//            return options;
+//        }
 
-        static ServiceProvider Build(AppStartupOptoins options)
-        {
-            var services = new ServiceCollection();
+//        static ServiceProvider Build(AppStartupOptoins options)
+//        {
+//            var services = new ServiceCollection();
 
-            // Get memory mapped file path
-            var appTempDirectory = Path.Combine(Path.GetTempPath(), "MediaPipeAndKinectInferencer");
-            var mmfFilePath = Path.Combine(appTempDirectory, "kinect_color_image.dat");
-            if (!string.IsNullOrEmpty(appTempDirectory) && !Directory.Exists(appTempDirectory))
-            {
-                try
-                {
-                    Directory.CreateDirectory(appTempDirectory);
-                    Console.WriteLine($"Created directory for ImageWriter: {appTempDirectory}");
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"Error creating directory '{appTempDirectory}': {ex.Message}");
-                    Environment.Exit(1);
-                }
-            }
+//            // Get memory mapped file path
+//            var appTempDirectory = Path.Combine(Path.GetTempPath(), "MediaPipeAndKinectInferencer");
+//            var mmfFilePath = Path.Combine(appTempDirectory, "kinect_color_image.dat");
+//            if (!string.IsNullOrEmpty(appTempDirectory) && !Directory.Exists(appTempDirectory))
+//            {
+//                try
+//                {
+//                    Directory.CreateDirectory(appTempDirectory);
+//                    Console.WriteLine($"Created directory for ImageWriter: {appTempDirectory}");
+//                }
+//                catch (Exception ex)
+//                {
+//                    Console.Error.WriteLine($"Error creating directory '{appTempDirectory}': {ex.Message}");
+//                    Environment.Exit(1);
+//                }
+//            }
 
-            // Register all services
-            services.AddSingleton<Input.ActionMap>();
-            services.AddSingleton<Input.KeyInputProvider>();
-            services.AddSingleton<Input.UserActionService>();
-            services.AddSingleton<Input.UserAction>();
-            services.AddSingleton<PoseInference.LandmarkHandler>();
-            services.AddSingleton<PoseInference.Filters.TiltCorrector>();
-            services.AddSingleton<PoseInference.SkeletonToPoseLandmarksConverter>();
-            services.AddSingleton<Renderer>();
-            services.AddSingleton(provider => new ImageWriter(mmfFilePath));
-            services.AddSingleton<FrameCaptureBroker>();
-            services.AddSingleton<KinectOnlineProcessor>();
-            services.AddSingleton<KinectOfflineProcessor>();
+//            // Register all services
+//            services.AddSingleton<Input.ActionMap>();
+//            services.AddSingleton<Input.KeyInputProvider>();
+//            services.AddSingleton<Input.UserActionService>();
+//            services.AddSingleton<Input.UserAction>();
+//            services.AddSingleton<PoseInference.LandmarkHandler>();
+//            services.AddSingleton<PoseInference.Filters.TiltCorrector>();
+//            services.AddSingleton<PoseInference.SkeletonToPoseLandmarksConverter>();
+//            services.AddSingleton<Renderer>();
+//            services.AddSingleton(provider => new ImageWriter(mmfFilePath));
+//            services.AddSingleton<FrameCaptureBroker>();
+//            services.AddSingleton<KinectOnlineProcessor>();
+//            services.AddSingleton<KinectOfflineProcessor>();
 
-            switch (options.LogOutputFormat)
-            {
-                case LogOutputFormat.Protobuf:
-                    services.AddSingleton<Logging.IResultLogWriter, Logging.HolisticProtobufLogWriter>();
-                    Console.WriteLine("Log output format set to Protobuf.");
-                    break;
-                case LogOutputFormat.Json:
-                    services.AddSingleton<Logging.IResultLogWriter, Logging.HolisticJsonLogWriter>();
-                    Console.WriteLine("Log output format set to JSON.");
-                    break;
-                default:
-                    services.AddSingleton<Logging.IResultLogWriter, Logging.HolisticProtobufLogWriter>();
-                    Console.WriteLine("Invalid log output format. Defaulting to Protobuf.");
-                    break;
-            }
+//            switch (options.LogOutputFormat)
+//            {
+//                case LogOutputFormat.Protobuf:
+//                    services.AddSingleton<Logging.IResultLogWriter, Logging.HolisticProtobufLogWriter>();
+//                    Console.WriteLine("Log output format set to Protobuf.");
+//                    break;
+//                case LogOutputFormat.Json:
+//                    services.AddSingleton<Logging.IResultLogWriter, Logging.HolisticJsonLogWriter>();
+//                    Console.WriteLine("Log output format set to JSON.");
+//                    break;
+//                default:
+//                    services.AddSingleton<Logging.IResultLogWriter, Logging.HolisticProtobufLogWriter>();
+//                    Console.WriteLine("Invalid log output format. Defaulting to Protobuf.");
+//                    break;
+//            }
 
-            // Register filter chain
-            services.AddSingleton<PoseInference.Filters.IPositionFilter, PoseInference.Filters.MilimeterToMeter>();
-            services.AddSingleton<PoseInference.Filters.IPositionFilter, PoseInference.Filters.TiltCorrector>(
-                provider => provider.GetRequiredService<PoseInference.Filters.TiltCorrector>()
-                );
-            services.AddSingleton<PoseInference.Filters.IPositionFilter, PoseInference.Filters.TransformCoordinator>();
+//            // Register filter chain
+//            services.AddSingleton<PoseInference.Filters.IPositionFilter, PoseInference.Filters.MilimeterToMeter>();
+//            services.AddSingleton<PoseInference.Filters.IPositionFilter, PoseInference.Filters.TiltCorrector>(
+//                provider => provider.GetRequiredService<PoseInference.Filters.TiltCorrector>()
+//                );
+//            services.AddSingleton<PoseInference.Filters.IPositionFilter, PoseInference.Filters.TransformCoordinator>();
 
-            // Register PlaybackController using a factory to provide FrameCaptureBroker
-            services.AddSingleton<Playback.IPlaybackController, Playback.PlaybackController>(provider =>
-                new Playback.PlaybackController(
-                    provider.GetRequiredService<Playback.IPlaybackReader>(),
-                    provider.GetRequiredService<FrameCaptureBroker>()));
-            // Register PlaybackReader using a factory to provide FrameCaptureBroker
-            services.AddSingleton<Playback.IPlaybackReader, Playback.PlaybackReader>(provider =>
-                new Playback.PlaybackReader(
-                    provider.GetRequiredService<FrameCaptureBroker>(),
-                    provider.GetRequiredService<ImageWriter>(),
-                    provider.GetRequiredService<PoseInference.LandmarkHandler>()));
-            services.AddTransient<Playback.States.IdleState>();
-            services.AddTransient<Playback.States.PlayingState>();
+//            // Register PlaybackController using a factory to provide FrameCaptureBroker
+//            services.AddSingleton<Playback.IPlaybackController, Playback.PlaybackController>(provider =>
+//                new Playback.PlaybackController(
+//                    provider.GetRequiredService<Playback.IPlaybackReader>(),
+//                    provider.GetRequiredService<FrameCaptureBroker>()));
+//            // Register PlaybackReader using a factory to provide FrameCaptureBroker
+//            services.AddSingleton<Playback.IPlaybackReader, Playback.PlaybackReader>(provider =>
+//                new Playback.PlaybackReader(
+//                    provider.GetRequiredService<FrameCaptureBroker>(),
+//                    provider.GetRequiredService<ImageWriter>(),
+//                    provider.GetRequiredService<PoseInference.LandmarkHandler>()));
+//            services.AddTransient<Playback.States.IdleState>();
+//            services.AddTransient<Playback.States.PlayingState>();
 
-            return services.BuildServiceProvider();
-        }
-    }
-}
+//            return services.BuildServiceProvider();
+//        }
+//    }
+//}

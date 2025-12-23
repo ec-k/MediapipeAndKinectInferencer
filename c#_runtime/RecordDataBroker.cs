@@ -25,7 +25,7 @@ public class RecordDataBroker : IDisposable
     public void UpdateCapture(Capture capture)
     {
         // Dispose existing capture if any
-        _capture?.CurrentValue?.Dispose();
+        _capture.CurrentValue?.Dispose();
         _capture.Value = capture.DuplicateReference();
     }
 
@@ -36,7 +36,7 @@ public class RecordDataBroker : IDisposable
     public void UpdateBodyFrame(BodyFrame bodyFrame)
     {
         // Dispose existing body frame if any
-        _frame?.CurrentValue?.Dispose();
+        _frame.CurrentValue?.Dispose();
         _frame.Value = bodyFrame.DuplicateReference();
     }
 
@@ -54,7 +54,5 @@ public class RecordDataBroker : IDisposable
     {
         _capture?.Dispose();
         _frame?.Dispose();
-        _capture = null;
-        _frame = null;
     }
 }

@@ -52,7 +52,7 @@ public class InputLogEvent
 
     [JsonPropertyName("EventType")] public InputEventType EventType { get; set; }
 
-    [JsonPropertyName("Data")] public DeviceInputEvent Data { get; set; }
+    [JsonPropertyName("Data")] public DeviceInputEvent? Data { get; set; }
 }
 
 public enum InputEventType

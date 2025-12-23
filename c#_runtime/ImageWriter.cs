@@ -1,5 +1,6 @@
 ﻿using K4AdotNet.Sensor;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 
@@ -20,14 +21,8 @@ namespace KinectPoseInferencer
             _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
             InitMmap();
         }
-        public ImageWriter(int height, int width)
-        {
-            Height = height;
-            Width = width;
 
-            InitMmap();
-        }
-
+        [MemberNotNull(nameof(_mmf), nameof(_accessor))]
         void InitMmap()
         {
             Console.WriteLine($"MMF Target Path: {_filePath}");

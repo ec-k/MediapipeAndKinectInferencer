@@ -76,6 +76,8 @@ public class InputLogReader : IDisposable
                     {
                         var logEvent = ParseRawLogEvent(rawLogEvent);
 
+                        if (logEvent.Data is null) continue;
+
                         // Ignore events that occurred before Kinect started
                         if ((long)logEvent.Data.RawStopwatchTimestamp < _stopwatchToKinectTimeOffset)
                         {
@@ -117,7 +119,7 @@ public class InputLogReader : IDisposable
             _ => InputEventType.Unknown
         };
 
-        DeviceInputEvent data = eventType switch
+        DeviceInputEvent? data = eventType switch
         {
             InputEventType.Keyboard => rawLogEvent.Data.Deserialize<KeyboardEventData>(),
             InputEventType.Mouse => rawLogEvent.Data.Deserialize<MouseEventData>(),
@@ -163,6 +165,8 @@ public class InputLogReader : IDisposable
         while (_currentIndex < InputEvents.Count)
         {
             var currentEvent = InputEvents[_currentIndex];
+
+            if (currentEvent.Data is null) continue;
             if (currentEvent.Data.RawStopwatchTimestamp > targetSystemStopwatchTimestamp)
                 break;
 

@@ -10,6 +10,7 @@ using KinectPoseInferencer.Playback;
 using KinectPoseInferencer.PoseInference.Filters;
 using KinectPoseInferencer.PoseInference.Utils;
 using K4AdotNet.Sensor;
+using System.Net.Http.Headers;
 
 
 namespace KinectPoseInferencer.PoseInference;
@@ -84,6 +85,7 @@ public class LandmarkPresenter: IDisposable
             .Subscribe(capture => {
                 _inferencer.EnqueueData(capture);
                 using var frame = _inferencer.ProcessFrame();
+                if (frame is null) return;
                 _frameManager.Frame = frame.DuplicateReference();
                 _recordDataBroker.UpdateBodyFrame(frame);
             })

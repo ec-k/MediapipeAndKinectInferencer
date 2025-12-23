@@ -40,35 +40,41 @@ public class UdpResultReceiver: IDisposable
 
     void OnReceived(IAsyncResult result)
     {
-        var getUdp = result.AsyncState as UdpClient;
+        var udp = result.AsyncState as UdpClient;
         IPEndPoint? ipEnd = null;
+
+        if (udp is not UdpClient)
+        {
+            Console.Error.WriteLine("UdpResultReceiver: result.AsyncState is null.");
+            return;
+        }
 
         try
         {
-            var getByte = getUdp.EndReceive(result, ref ipEnd);
+            var getByte = udp.EndReceive(result, ref ipEnd);
 
             var receivedBody = HolisticLandmarks.Parser.ParseFrom(getByte);
 
             // Invoke events
-            if (_settings.HasFlag(ReceiverEventSettings.Body))       PoseReceived?.Invoke(receivedBody.PoseLandmarks);
-            if (_settings.HasFlag(ReceiverEventSettings.LeftHand))   ReceiveLeftHand?.Invoke(receivedBody.LeftHandLandmarks);
-            if (_settings.HasFlag(ReceiverEventSettings.RightHand))  ReceiveRightHand?.Invoke(receivedBody.RightHandLandmarks);
-            if (_settings.HasFlag(ReceiverEventSettings.Face))       ReceiveFace?.Invoke(receivedBody.FaceResults);
+            if (_settings.HasFlag(ReceiverEventSettings.Body)) PoseReceived?.Invoke(receivedBody.PoseLandmarks);
+            if (_settings.HasFlag(ReceiverEventSettings.LeftHand)) ReceiveLeftHand?.Invoke(receivedBody.LeftHandLandmarks);
+            if (_settings.HasFlag(ReceiverEventSettings.RightHand)) ReceiveRightHand?.Invoke(receivedBody.RightHandLandmarks);
+            if (_settings.HasFlag(ReceiverEventSettings.Face)) ReceiveFace?.Invoke(receivedBody.FaceResults);
         }
         catch (SocketException e)
         {
-            if(_socketExceptionCallback is not null)
+            if (_socketExceptionCallback is not null)
                 _socketExceptionCallback(e);
             return;
         }
         catch (ObjectDisposedException e)
         {
-            if(_objectDisposedExceptionCallback is not null)
+            if (_objectDisposedExceptionCallback is not null)
                 _objectDisposedExceptionCallback(e);
             return;
         }
 
-        _receiver.BeginReceive(OnReceived, getUdp);
+        _receiver.BeginReceive(OnReceived, udp);
     }
 
     public void Dispose()

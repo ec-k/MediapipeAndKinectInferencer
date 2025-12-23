@@ -248,8 +248,7 @@ internal class PlaybackReader : IPlaybackReader
             return TimeSpan.Zero;
         }
 
-        
-        if(capture.DepthImage is null)
+        if(capture is null || capture.DepthImage is null)
             return TimeSpan.Zero;
 
         _currentTimestampUs = capture.DepthImage.DeviceTimestamp;
