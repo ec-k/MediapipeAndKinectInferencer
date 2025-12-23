@@ -58,7 +58,7 @@ internal class PlaybackReader : IPlaybackReader
         if (_readingTask is not null)
         {
             await StopReadingLoop();
-            Playback?.Dispose();
+            Playback?.CurrentValue?.Dispose();
         }
 
         await Task.Run(() => _playback.Value = new(descriptor.VideoFilePath), token);
