@@ -1,7 +1,6 @@
 using K4AdotNet.BodyTracking;
 using K4AdotNet.Sensor;
 using System;
-using KinectPoseInferencer.Playback;
 using R3;
 
 namespace KinectPoseInferencer;

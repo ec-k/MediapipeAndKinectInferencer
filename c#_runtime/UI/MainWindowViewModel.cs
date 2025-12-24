@@ -4,6 +4,7 @@ using K4AdotNet;
 using K4AdotNet.BodyTracking;
 using K4AdotNet.Record;
 using K4AdotNet.Sensor;
+using KinectPoseInferencer.InputHook;
 using KinectPoseInferencer.Playback;
 using KinectPoseInferencer.Renderers;
 using KinectPoseInferencer.Renderers.Unused;
@@ -325,6 +326,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             }
 
             _kinectDeviceController.StartCamera();
+
+            if (!GlobalInputHook.IsHookActive)
+            {
+                GlobalInputHook.StartHooks();
+                GlobalInputHook.StartProcessingEvents();
+            }
         }
         else
         {
@@ -332,6 +339,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 _kinectDeviceController.Pause();
             else
                 _kinectDeviceController.Play();
+
+
+            if (!GlobalInputHook.IsHookActive)
+            {
+                GlobalInputHook.StartHooks();
+                GlobalInputHook.StartProcessingEvents();
+            }
+            else
+            {
+                GlobalInputHook.StopProcessingEvents();
+                GlobalInputHook.StopHooks();
+            }
         }
     }
 
@@ -356,5 +375,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _playbackController?.Dispose();
         _visualizer?.Dispose();
         _disposables.Dispose();
+
+        if (GlobalInputHook.IsHookActive)
+        {
+            GlobalInputHook.StopProcessingEvents();
+            GlobalInputHook.StopHooks();
+        }
     }
 }
