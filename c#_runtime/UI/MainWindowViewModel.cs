@@ -136,7 +136,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     if(ColorBitmap is not null)
-                        ColorBitmap = captureToDisplay.ColorImage.ToWriteableBitmap();
+                        ColorBitmap = captureToDisplay.ColorImage.ToWritableBitmap();
                 }, System.Windows.Threading.DispatcherPriority.Background, token); // Pass token to Invoke
             }
             else
@@ -149,7 +149,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                     {
                         Application.Current.Dispatcher.Invoke(() =>
                         {
-                            ColorBitmap = firstCapture.DepthImage.ToWriteableBitmap();
+                            ColorBitmap = firstCapture.DepthImage.ToWritableBitmap();
                         }, System.Windows.Threading.DispatcherPriority.Background, token); // Pass token to Invoke
                     }
                     firstCapture?.Dispose();
@@ -189,7 +189,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 if (ColorBitmap is null
                 || ColorBitmap.PixelHeight != height
                 || ColorBitmap.PixelWidth  != width)
-                    ColorBitmap = captureForUi.ColorImage.ToWriteableBitmap();
+                    ColorBitmap = captureForUi.ColorImage.ToWritableBitmap();
                 else
                 {
                     ColorBitmap.WritePixels(
@@ -219,7 +219,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         //                                .ToList();
 
         WriteableBitmap? colorImage = null;
-        colorImage = capture?.ColorImage?.ToWriteableBitmap();
+        colorImage = capture?.ColorImage?.ToWritableBitmap();
 
         // Update UI on the main thread
         Application.Current.Dispatcher.Invoke(() =>
