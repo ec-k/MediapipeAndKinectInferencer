@@ -2,19 +2,26 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace KinectPoseInferencer.Playback;
 
 
-public class InputLogReader : IDisposable
+public class InputLogReader : IAsyncDisposable
 {
-    long _stopwatchToKinectTimeOffset = 0;
+    long                      _kinectToStopwatchOffset = 0;
+    string?                   _logFilePath;
+    StreamReader?             _reader;
+    DeviceInputData?          _peekedEvent;
+                              
+    Channel<DeviceInputData>? _eventChannel;
+    readonly int              _bufferSize = 1000;
+    Task?                     _producerTask;
+    CancellationTokenSource?  _cts;
 
-    public List<DeviceInputData> InputEvents = new();
     public LogMetadata? Metadata { get; private set; }
-
-    int _currentIndex = 0;
 
     public async Task<bool> LoadMetaFileAsync(string filePath)
     {
@@ -34,11 +41,9 @@ public class InputLogReader : IDisposable
                 CalculateKinectOffset();
                 return true;
             }
-            else
-            {
-                Console.Error.WriteLine("Error: Failed to deserialize LogMetadata.");
-                return false;
-            }
+
+            Console.Error.WriteLine("Error: Failed to deserialize LogMetadata.");
+            return false;
         }
         catch (Exception ex)
         {
@@ -48,12 +53,7 @@ public class InputLogReader : IDisposable
         }
     }
 
-    /// <summary>
-    /// Reads input log data from the specified file path.
-    /// </summary>
-    /// <param name="filePath">The path to the input log file.</param>
-    /// <returns>True if the file was read successfully, false otherwise.</returns>
-    public bool LoadLogFile(string filePath)
+    public async Task<bool> LoadLogFile(string filePath)
     {
         if (!File.Exists(filePath))
         {
@@ -61,64 +61,97 @@ public class InputLogReader : IDisposable
             return false;
         }
 
-        InputEvents.Clear();
+        _logFilePath = filePath;
+        var successInitialization = await InitializeProducer();
+        return successInitialization;
+    }
 
+    async Task<bool> InitializeProducer()
+    {
         try
         {
-            foreach (string line in File.ReadLines(filePath))
-            {
-                if (string.IsNullOrWhiteSpace(line)) continue;
+            await StopProducer();
 
-                try
+            if (string.IsNullOrWhiteSpace(_logFilePath)) return false;
+
+            _eventChannel = Channel.CreateBounded<DeviceInputData>(
+                new BoundedChannelOptions(_bufferSize)
                 {
-                    var inputEvent = JsonSerializer.Deserialize<DeviceInputData>(line);
-                    if (inputEvent is not null)
-                    {
-                        if (inputEvent.Data is null) continue;
+                    SingleReader = true,
+                    SingleWriter = true,
+                    FullMode = BoundedChannelFullMode.Wait
+                });
 
-                        // Ignore events that occurred before Kinect started
-                        if ((long)inputEvent.Data.RawStopwatchTimestamp < _stopwatchToKinectTimeOffset)
-                        {
-                            continue;
-                        }
+            _reader = new StreamReader(new FileStream(_logFilePath, FileMode.Open, FileAccess.Read, FileShare.Read));
+            _peekedEvent = null;
 
-                        InputEvents.Add(inputEvent);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Warning: Could not deserialize log event from line: {line}");
-                    }
-                }
-                catch (JsonException ex)
-                {
-                    Console.WriteLine($"Warning: Failed to parse JSON line: {line}. Error: {ex.Message}");
-                }
-            }
+            _cts = new();
+            _producerTask = ProducerLoop(_cts.Token);
+
             return true;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error reading input log file: {ex.Message}");
+            Console.Error.WriteLine($"Error opening input log file: {ex.Message}");
             return false;
         }
     }
 
-    public void Rewind()
+    public async Task Rewind()
     {
-        _currentIndex = 0;
+        await InitializeProducer();
     }
 
     private void CalculateKinectOffset()
     {
         if (Metadata is null || Metadata.SystemStopwatchTimestampAtKinectStart == 0 || Metadata.FirstKinectDeviceTimestampUs == 0)
         {
-            _stopwatchToKinectTimeOffset = 0;
+            _kinectToStopwatchOffset = 0;
             return;
         }
 
         // Offset = KinectTimestamp - SystemStopwatchTimestamp
         // This offset is added to a system stopwatch timestamp to get an equivalent Kinect timestamp.
-        _stopwatchToKinectTimeOffset = Metadata.SystemStopwatchTimestampAtKinectStart - Metadata.FirstKinectDeviceTimestampUs * TimeSpan.TicksPerMicrosecond;
+        _kinectToStopwatchOffset = Metadata.SystemStopwatchTimestampAtKinectStart - Metadata.FirstKinectDeviceTimestampUs * TimeSpan.TicksPerMicrosecond;
+    }
+
+    async Task ProducerLoop(CancellationToken token)
+    {
+        if(_reader is null || _eventChannel is null || Metadata is null) return;
+
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                var line = await _reader.ReadLineAsync();
+                if (line is null) break;
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                DeviceInputData? inputEvent;
+                try
+                {
+                    inputEvent = JsonSerializer.Deserialize<DeviceInputData>(line);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Warning: Failed to parse JSON line. Error: {ex.Message}");
+                    continue;
+                }
+
+                if (inputEvent?.Data is null) continue;
+
+                var eventTimestamp = inputEvent.Data.RawStopwatchTimestamp;
+                if (eventTimestamp < Metadata.SystemStopwatchTimestampAtKinectStart)
+                    continue;
+
+                await _eventChannel.Writer.WriteAsync(inputEvent);
+            }
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            _eventChannel?.Writer.TryComplete();
+        }
     }
 
     /// <summary>
@@ -126,45 +159,64 @@ public class InputLogReader : IDisposable
     /// </summary>
     /// <param name="kinectDeviceTimestampUs">The Kinect device timestamp in microseconds.</param>
     /// <returns>A list of input events that occurred up to the given timestamp.</returns>
-    public IEnumerable<DeviceInputData> GetEventsUpToKinectTimestamp(long kinectDeviceTimestampUs)
+    public IList<DeviceInputData> GetEventsUpToKinectTimestamp(long kinectDeviceTimestampUs)
     {
+        var result = new List<DeviceInputData>();
+        if (_reader is null || Metadata is null || _eventChannel is null) return result;
+
         // Convert Kinect timestamp to equivalent system stopwatch timestamp
-        var targetSystemStopwatchTimestamp = kinectDeviceTimestampUs * TimeSpan.TicksPerMicrosecond + _stopwatchToKinectTimeOffset;
+        var targetSystemStopwatchTimestamp = kinectDeviceTimestampUs * TimeSpan.TicksPerMicrosecond + _kinectToStopwatchOffset;
 
-        var returnQueue = new Queue<DeviceInputData>();
-
-        if (InputEvents.Count == 0 || _currentIndex >= InputEvents.Count)
-            return returnQueue;
-
-        while (_currentIndex < InputEvents.Count)
+        if (_peekedEvent?.Data is not null)
         {
-            var currentEvent = InputEvents[_currentIndex];
-
-            if (currentEvent.Data is null) continue;
-            if (currentEvent.Data.RawStopwatchTimestamp > targetSystemStopwatchTimestamp)
-                break;
-
-            returnQueue.Enqueue(InputEvents[_currentIndex]);
-            _currentIndex++;
+            if(_peekedEvent.Data.RawStopwatchTimestamp <= targetSystemStopwatchTimestamp)
+            {
+                result.Add(_peekedEvent);
+                _peekedEvent = null;
+            }
+            else
+                return result;
         }
-        return returnQueue;
-        // Binary search to find the first event whose stopwatch timestamp is greater than targetSystemStopwatchTimestamp
-        //int index = InputEvents.BinarySearch(
-        //    new InputLogEvent { Data = new DeviceInputEvent { RawStopwatchTimestamp = (ulong)targetSystemStopwatchTimestamp} },
-        //    Comparer<InputLogEvent>.Create((a, b) => a.Data.RawStopwatchTimestamp.CompareTo(b.Data.RawStopwatchTimestamp)));
 
-        //if (index < 0)
-        //{
-        //    index = ~index; // If not found, BinarySearch returns the bitwise complement of the next element's index
-        //}
-        
-        //// Return all events from the beginning up to this index
-        //return InputEvents.Take(index);
+        while (_eventChannel.Reader.TryRead(out var inputEvent))
+        {
+            if (inputEvent.Data is not IDeviceInput deviceInput) continue;
+
+            if(deviceInput.RawStopwatchTimestamp <= targetSystemStopwatchTimestamp)
+                result.Add(inputEvent);
+            else
+            {
+                _peekedEvent = inputEvent;
+                break;
+            }
+        }
+
+        return result;
     }
 
-    public void Dispose()
+    async Task StopProducer()
     {
-        InputEvents.Clear();
+        _cts?.Cancel();
+
+        if(_producerTask is not null)
+        {
+            try
+            {
+                await _producerTask;
+            }
+            catch (OperationCanceledException) { }
+        }
+
+        _cts?.Dispose();
+        _cts = null;
+        _reader?.Dispose();
+        _reader = null;
+        _eventChannel?.Writer.TryComplete();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await StopProducer();
         Metadata = null;
     }
 }
