@@ -6,7 +6,6 @@ using K4AdotNet.Record;
 using K4AdotNet.Sensor;
 using KinectPoseInferencer.InputHook;
 using KinectPoseInferencer.Playback;
-using KinectPoseInferencer.Renderers;
 using KinectPoseInferencer.Renderers.Unused;
 using KinectPoseInferencer.Settings;
 using R3;
@@ -26,8 +25,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     readonly KinectDeviceController _kinectDeviceController;
     readonly SettingsManager _settingsManager;
 
-    PlayerVisualizer? _visualizer;
-
     [ObservableProperty] double _currentFrameTimestamp      = 0.0;
     [ObservableProperty] string _playbackLength             = "";
     [ObservableProperty] string _playPauseIconUnicode       = PlayIconUnicode;
@@ -41,8 +38,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty] double _totalDurationSeconds;
     [ObservableProperty] double _currentPositionSeconds;
 
-    WriteableBitmap? _imageCache;
-
     const string PlayIconUnicode = "\uE768";
     const string PauseIconUnicode = "\uE769";
 
@@ -52,7 +47,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public ObservableCollection<string> InputLogEvents { get; } = new();
 
     RecordDataBroker _broker;
-
     DisposableBag _disposables = new();
     
     public MainWindowViewModel(
@@ -77,7 +71,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .Subscribe(playback => {
                     UpdatePlaybackLengthDisplay(playback);
                     playback.GetCalibration(out var calibration);
-                    _visualizer = new PlayerVisualizer(calibration);
                     PointCloud.ComputePointCloudCache(calibration);
                     TotalDurationSeconds = playback.RecordLength.TotalSeconds;
             })
@@ -91,6 +84,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .AddTo(ref _disposables);
 
         _playbackController.Reader.CurrentPositionUs
+            .ThrottleLast(TimeSpan.FromSeconds(1.0/2.0))
             .Subscribe(position => CurrentPositionSeconds = position.TotalSeconds)
             .AddTo(ref _disposables);
 
@@ -100,7 +94,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .AddTo(ref _disposables);
         _broker.InputEvents
             .Where(input => input is not null)
-            .Subscribe(input =>  OnNewInputLogEvent(input))
+            .Chunk(TimeSpan.FromSeconds(1.0 / 10.0))
+            .Where(inputs => inputs is { Length: > 0 })
+            .Subscribe(inputs => OnNewInputLogEvent(inputs))
             .AddTo(ref _disposables);
     }
 
@@ -178,24 +174,37 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         if (capture?.ColorImage is null) return;
 
         var captureForUi = capture.DuplicateReference();
-        if (captureForUi?.ColorImage is null) return;
+        if (captureForUi?.ColorImage is not Image colorImage) return;
 
+        var width  = colorImage.WidthPixels;
+        var height = colorImage.HeightPixels;
+        var stride = colorImage.StrideBytes;
+        var buffer = colorImage.Buffer;
+        var size   = colorImage.SizeBytes;
         Application.Current.Dispatcher.InvokeAsync(() =>
         {
+
             try
             {
-                if(captureForUi.ColorImage is not null)
+                if (ColorBitmap is null
+                || ColorBitmap.PixelHeight != height
+                || ColorBitmap.PixelWidth  != width)
+                    ColorBitmap = captureForUi.ColorImage.ToWriteableBitmap();
+                else
                 {
-                    _imageCache = captureForUi.ColorImage.ToWriteableBitmap();
-                    if (_imageCache is not null)
-                        ColorBitmap = _imageCache;
+                    ColorBitmap.WritePixels(
+                        new Int32Rect(0, 0, width, height),
+                        buffer,
+                        size,
+                        stride
+                    );
                 }
             }
             finally
             {
                 captureForUi?.Dispose();
             }
-        }, System.Windows.Threading.DispatcherPriority.Render);
+        }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
     void OnNewFrame(Capture capture, BodyFrame frame)
@@ -233,16 +242,17 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         });
     }
 
-    void OnNewInputLogEvent(DeviceInputData inputEvent)
+    void OnNewInputLogEvent(DeviceInputData[] inputEvents)
     {
         Application.Current.Dispatcher.InvokeAsync(() =>
         {
-            InputLogEvents.Add($"[{CurrentPositionSeconds:F3}s] {inputEvent.GetType().Name}: {inputEvent.Timestamp}");
-            if (InputLogEvents.Count > 20)
+            foreach (var input in inputEvents)
             {
-                InputLogEvents.RemoveAt(0);
+                InputLogEvents.Add($"[{CurrentPositionSeconds:F3}s] {input.GetType().Name}: {input.Timestamp}");
+                if (InputLogEvents.Count > 10)
+                    InputLogEvents.RemoveAt(0);
             }
-        }, System.Windows.Threading.DispatcherPriority.Render);
+        }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
     void UpdatePlaybackLengthDisplay(K4AdotNet.Record.Playback playback)
@@ -321,7 +331,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             var calibration = _kinectDeviceController.GetCalibration();
             if (calibration.HasValue)
             {
-                _visualizer = new(calibration.Value);
                 PointCloud.ComputePointCloudCache(calibration.Value);
             }
 
@@ -363,17 +372,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             _playbackController.Play();
     }
 
-    [RelayCommand]
-    public void Play() { }
-
-    [RelayCommand]
-    public void Pause() { }
-
     public void Dispose()
     {
         _kinectDeviceController?.Dispose();
         _playbackController?.Dispose();
-        _visualizer?.Dispose();
         _disposables.Dispose();
 
         if (GlobalInputHook.IsHookActive)
