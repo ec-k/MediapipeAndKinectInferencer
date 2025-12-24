@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Windows.Media.Animation;
 using HumanLandmarks;
 
 
@@ -27,33 +28,31 @@ public class ResultManager : IDisposable
 
     public void UpdateLeftHand(HandLandmarks result)
     {
-        if(Result.LeftHandLandmarks is null)
-            Result.LeftHandLandmarks = new();
-
         Result.LeftHandLandmarks = result;
     }
     public void UpdateRightHand(HandLandmarks result)
     {
-        if (Result.RightHandLandmarks is null)
-            Result.RightHandLandmarks = new();
-
         Result.RightHandLandmarks = result;
     }
-
     public void UpdateBody(KinectPoseLandmarks result)
     {
-        if(Result.PoseLandmarks is null)
-            Result.PoseLandmarks = new();
-
         Result.PoseLandmarks = result;
     }
-
     public void UpdateFace(FaceResults result)
     {
-        if(Result.FaceResults is null)
-            Result.FaceResults = new();
+        if (Result.FaceResults is null)
+        {
+            Result.FaceResults = new()
+            {
+                Blendshapes = new()
+            };
+        }
 
-        Result.FaceResults = result;
+        if (result is FaceResults { Blendshapes.Scores: { Count: > 0 } })
+        {
+            Result.FaceResults.Blendshapes.Scores.Clear();
+            Result.FaceResults.Blendshapes.Scores.AddRange(result.Blendshapes.Scores);
+        }
     }
 
     public void Dispose()
