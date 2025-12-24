@@ -11,7 +11,7 @@ public class InputLogReader : IDisposable
 {
     long _stopwatchToKinectTimeOffset = 0;
 
-    public List<InputLogEvent> InputEvents = new();
+    public List<DeviceInputData> InputEvents = new();
     public LogMetadata? Metadata { get; private set; }
 
     int _currentIndex = 0;
@@ -71,20 +71,18 @@ public class InputLogReader : IDisposable
 
                 try
                 {
-                    var rawLogEvent = JsonSerializer.Deserialize<RawInputLogEvent>(line);
-                    if (rawLogEvent is not null)
+                    var inputEvent = JsonSerializer.Deserialize<DeviceInputData>(line);
+                    if (inputEvent is not null)
                     {
-                        var logEvent = ParseRawLogEvent(rawLogEvent);
-
-                        if (logEvent.Data is null) continue;
+                        if (inputEvent.Data is null) continue;
 
                         // Ignore events that occurred before Kinect started
-                        if ((long)logEvent.Data.RawStopwatchTimestamp < _stopwatchToKinectTimeOffset)
+                        if ((long)inputEvent.Data.RawStopwatchTimestamp < _stopwatchToKinectTimeOffset)
                         {
                             continue;
                         }
 
-                        InputEvents.Add(logEvent);
+                        InputEvents.Add(inputEvent);
                     }
                     else
                     {
@@ -110,30 +108,6 @@ public class InputLogReader : IDisposable
         _currentIndex = 0;
     }
 
-    InputLogEvent ParseRawLogEvent(RawInputLogEvent rawLogEvent)
-    {
-        var eventType = rawLogEvent.EventType switch
-        {
-            "Keyboard" => InputEventType.Keyboard,
-            "Mouse" => InputEventType.Mouse,
-            _ => InputEventType.Unknown
-        };
-
-        DeviceInputEvent? data = eventType switch
-        {
-            InputEventType.Keyboard => rawLogEvent.Data.Deserialize<KeyboardEventData>(),
-            InputEventType.Mouse => rawLogEvent.Data.Deserialize<MouseEventData>(),
-            _ => null
-        };
-
-        return new()
-        {
-            Timestamp = rawLogEvent.Timestamp,
-            EventType = eventType,
-            Data = data,
-        };
-    }
-
     private void CalculateKinectOffset()
     {
         if (Metadata is null || Metadata.SystemStopwatchTimestampAtKinectStart == 0 || Metadata.FirstKinectDeviceTimestampUs == 0)
@@ -152,12 +126,12 @@ public class InputLogReader : IDisposable
     /// </summary>
     /// <param name="kinectDeviceTimestampUs">The Kinect device timestamp in microseconds.</param>
     /// <returns>A list of input events that occurred up to the given timestamp.</returns>
-    public IEnumerable<InputLogEvent> GetEventsUpToKinectTimestamp(long kinectDeviceTimestampUs)
+    public IEnumerable<DeviceInputData> GetEventsUpToKinectTimestamp(long kinectDeviceTimestampUs)
     {
         // Convert Kinect timestamp to equivalent system stopwatch timestamp
-        var targetSystemStopwatchTimestamp = (ulong)(kinectDeviceTimestampUs * TimeSpan.TicksPerMicrosecond + _stopwatchToKinectTimeOffset);
+        var targetSystemStopwatchTimestamp = kinectDeviceTimestampUs * TimeSpan.TicksPerMicrosecond + _stopwatchToKinectTimeOffset;
 
-        var returnQueue = new Queue<InputLogEvent>();
+        var returnQueue = new Queue<DeviceInputData>();
 
         if (InputEvents.Count == 0 || _currentIndex >= InputEvents.Count)
             return returnQueue;

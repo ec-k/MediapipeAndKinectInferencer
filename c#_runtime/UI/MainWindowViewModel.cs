@@ -232,11 +232,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         });
     }
 
-    void OnNewInputLogEvent(InputLogEvent inputLogEvent)
+    void OnNewInputLogEvent(DeviceInputData inputEvent)
     {
         Application.Current.Dispatcher.InvokeAsync(() =>
         {
-            InputLogEvents.Add($"[{CurrentPositionSeconds:F3}s] {inputLogEvent.GetType().Name}: {inputLogEvent.Timestamp}");
+            InputLogEvents.Add($"[{CurrentPositionSeconds:F3}s] {inputEvent.GetType().Name}: {inputEvent.Timestamp}");
             if (InputLogEvents.Count > 20)
             {
                 InputLogEvents.RemoveAt(0);

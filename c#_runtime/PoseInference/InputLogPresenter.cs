@@ -21,7 +21,6 @@ public class InputLogPresenter
 
         _recordDataBroker.InputEvents
             .Where(inputEvent => inputEvent is not null)
-            .Where(inputEvent => inputEvent.EventType is not InputEventType.Unknown)
             .Subscribe(inputEvent => 
             {
                 _sender?.SendMessage(inputEvent);

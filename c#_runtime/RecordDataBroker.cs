@@ -8,12 +8,12 @@ namespace KinectPoseInferencer;
 
 public class RecordDataBroker : IDisposable
 {
-    public ReadOnlyReactiveProperty<InputLogEvent> InputEvents => _inputEvents;
+    public ReadOnlyReactiveProperty<DeviceInputData> InputEvents => _inputEvents;
     public ReadOnlyReactiveProperty<Capture> Capture => _capture;
     public ReadOnlyReactiveProperty<BodyFrame> Frame => _frame;
     public ReadOnlyReactiveProperty<ImuSample> Imu => _imu;
 
-    ReactiveProperty<InputLogEvent> _inputEvents = new();
+    ReactiveProperty<DeviceInputData> _inputEvents = new();
     ReactiveProperty<Capture> _capture = new();
     ReactiveProperty<BodyFrame> _frame = new();
     ReactiveProperty<ImuSample> _imu = new();
@@ -45,9 +45,9 @@ public class RecordDataBroker : IDisposable
         _imu.Value = imuSample;
     }
 
-    public void PushInputLogEvent(InputLogEvent inputLogEvent)
+    public void PushInputLogEvent(DeviceInputData inputEvent)
     {
-        _inputEvents.Value = inputLogEvent;
+        _inputEvents.Value = inputEvent;
     }
 
     public void Dispose()

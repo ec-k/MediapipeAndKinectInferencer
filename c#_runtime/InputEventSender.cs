@@ -1,5 +1,4 @@
-﻿using KinectPoseInferencer.InputLogProto;
-using KinectPoseInferencer.Playback;
+﻿using KinectPoseInferencer.Playback;
 using MessagePack;
 using System;
 using System.Collections.Generic;
@@ -39,28 +38,15 @@ public class InputEventSender: IDisposable
         _endPoints.AddRange(endPoints);
     }
 
-    public void SendMessage(InputLogEvent inputEvent)
+    public void SendMessage(DeviceInputData inputData)
     {
-        if(_endPoints.Count == 0)
+        if(_endPoints.Count == 0
+            || inputData?.Data is null)
             return;
 
-        if (inputEvent is null
-            || inputEvent.Data is null
-            || inputEvent.EventType is InputEventType.Unknown)
-            return;
-
-        IDeviceInput? data = inputEvent.Data switch
-        {
-            KeyboardEventData => ComposeKeyboardEventMessage(inputEvent),
-            MouseEventData    => ComposeMouseEventMessage(inputEvent),
-            _                 => null
-        };
-        var sendData = MessagePackSerializer.Serialize(data);
-
+        var sendData = MessagePackSerializer.Serialize(inputData.Data);
         if (sendData is null or [])
-        {
             return;
-        }
 
         foreach (var endPoint in _endPoints)
         {
@@ -74,35 +60,6 @@ public class InputEventSender: IDisposable
             }
         }
     }
-
-    public KeyboardEventDataProto ComposeKeyboardEventMessage(InputLogEvent inputEvent)
-        => inputEvent switch
-        {
-            { Data: KeyboardEventData { VirtualKeyCode: int, ModifiersFlags: int } data } => new()
-            {
-                RawStopwatchTimestamp = data.RawStopwatchTimestamp,
-                VirtualKeyCode        = (uint)data.VirtualKeyCode,
-                ModifiersFlags        = (KeyboardEventDataProto.ModifierKeyState)data.ModifiersFlags,
-                IsKeyDown             = data.IsKeyDown ?? false
-            },
-            _ => new()
-        };
-
-    public MouseEventDataProto ComposeMouseEventMessage(InputLogEvent inputEvent)
-        => inputEvent switch
-        {
-            { Data: MouseEventData data } => new()
-            {
-                RawStopwatchTimestamp = data.RawStopwatchTimestamp,
-                X                     = data.X ?? 0,
-                Y                     = data.Y ?? 0,
-                WheelDelta            = 0,                                  // HACK: This should be set properly if needed.
-                IsButtonDown          = data.IsMouseButtonDown ?? false,
-                IsMouseMoving         = data.IsMouseMoving ?? false,
-                IsWheelMoving         = data.IsWheelMoving ?? false
-            },
-            _ => new()
-        };
 
     public void Dispose()
     {
