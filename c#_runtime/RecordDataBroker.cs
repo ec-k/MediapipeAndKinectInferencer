@@ -43,7 +43,7 @@ public class RecordDataBroker : IDisposable
     {
         _imu.Value = imuSample;
     }
-
+        
     public void PushInputLogEvent(DeviceInputData inputEvent)
     {
         _inputEvents.Value = inputEvent;
@@ -51,7 +51,10 @@ public class RecordDataBroker : IDisposable
 
     public void Dispose()
     {
-        _capture?.Dispose();
-        _frame?.Dispose();
+        _capture.Value?.Dispose();
+        _frame.Value?.Dispose();
+
+        _capture.Dispose();
+        _frame.Dispose();
     }
 }

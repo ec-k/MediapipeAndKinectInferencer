@@ -100,7 +100,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .AddTo(ref _disposables);
     }
 
-    void DisplayFirstColorFrame(K4AdotNet.Record.Playback playback, RecordDataBroker broker, CancellationToken token)
+    void DisplayFirstColorFrame(K4AdotNet.Record.Playback playback, CancellationToken token)
     {
         try
         {
@@ -124,11 +124,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
                 if (currentCapture.ColorImage is not null)
                 {
-                    captureToDisplay = currentCapture;
+                    captureToDisplay = currentCapture.DuplicateReference();
                     foundColorImage = true;
                     break;
                 }
-                currentCapture.Dispose();
+                currentCapture?.Dispose();
             }
 
             if (foundColorImage && captureToDisplay is { ColorImage: not null })
@@ -287,7 +287,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             // Display the first frame after successful loading
             if (_playbackController.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
             {
-                await Task.Run(() => DisplayFirstColorFrame(playback, _playbackController.Broker, token), token);
+                await Task.Run(() => DisplayFirstColorFrame(playback, token), token);
             }
         }
         catch (OperationCanceledException)
@@ -314,7 +314,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         // Display the first frame
         if (_playbackController.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
         {
-            await Task.Run(() => DisplayFirstColorFrame(playback, _playbackController.Broker, token), token);
+            await Task.Run(() => DisplayFirstColorFrame(playback, token), token);
         }
     }
 

@@ -17,7 +17,7 @@ public class InputLogReader : IAsyncDisposable
     DeviceInputData?          _peekedEvent;
                               
     Channel<DeviceInputData>? _eventChannel;
-    readonly int              _bufferSize = 1000;
+    readonly int              _bufferSize = 100;
     Task?                     _producerTask;
     CancellationTokenSource?  _cts;
 

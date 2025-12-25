@@ -191,6 +191,7 @@ internal class PlaybackReader : IPlaybackReader
     {
         try
         {
+            var lastEmissionTicks = Stopwatch.GetTimestamp();
             while (!token.IsCancellationRequested)
             {
                 await ProcessCommand();
@@ -199,84 +200,100 @@ internal class PlaybackReader : IPlaybackReader
                 {
                     if (await _frameChannel.Reader.WaitToReadAsync(token))
                     {
-                        while (_isReading.Value && _frameChannel.Reader.TryRead(out var frame))
+                        while (_frameChannel.Reader.TryRead(out var frame))
                         {
-
-                            var startSystemTime = Stopwatch.GetTimestamp();
-
-                            if (frame.Capture is not null)
+                            try
                             {
-                                _frameCaptureBroker.UpdateCapture(frame.Capture);
-                                if (frame.Capture.DepthImage is not null)
+                                if (!_isReading.Value) continue;
+
+                                var currentTick = Stopwatch.GetTimestamp();
+                                var elapsedSinceLastFrame = TimeSpan.FromTicks(currentTick - lastEmissionTicks);
+                                if (!_isFirstFrameAfterPlay && elapsedSinceLastFrame < frame.FrameTimeDiff)
                                 {
-                                    _currentTimestampUs = frame.Capture.DepthImage.DeviceTimestamp;
-                                    _currentPositionUs.Value = _currentTimestampUs;
+                                    var waitTime = frame.FrameTimeDiff - elapsedSinceLastFrame;
+                                    await Task.Delay(waitTime, token);
                                 }
+
+                                if (frame.Capture is not null)
+                                {
+                                    _frameCaptureBroker.UpdateCapture(frame.Capture);
+                                    if (frame.Capture.DepthImage is not null)
+                                    {
+                                        _currentTimestampUs = frame.Capture.DepthImage.DeviceTimestamp;
+                                        _currentPositionUs.Value = _currentTimestampUs;
+                                    }
+                                }
+                                if (frame.ImuSample.HasValue)
+                                    _frameCaptureBroker.UpdateImu(frame.ImuSample.Value);
+
+                                foreach (var ev in frame.InputEvents)
+                                    _frameCaptureBroker.PushInputLogEvent(ev);
+
+                                lastEmissionTicks = Stopwatch.GetTimestamp();
+
+                                var frameTimeDiff = frame.FrameTimeDiff;
+
+                                if (_isFirstFrameAfterPlay)
+                                    _isFirstFrameAfterPlay = false;         // Skip initial wait for the first frame after play/seek
+
+                                await ProcessCommand();
                             }
-                            if (frame.ImuSample.HasValue)
-                                _frameCaptureBroker.UpdateImu(frame.ImuSample.Value);
-
-                            foreach (var ev in frame.InputEvents)
-                                _frameCaptureBroker.PushInputLogEvent(ev);
-
-                            frame.Capture?.Dispose();
-
-                            //var frameTimeDiff = ReadAndProcessFrame();
-                            var frameTimeDiff = frame.FrameTimeDiff;
-                            var endSystemTime = Stopwatch.GetTimestamp();
-                            var processingTime = TimeSpan.FromTicks(endSystemTime - startSystemTime);
-
-                            var waitTime = frameTimeDiff - processingTime;
-
-                            if (_isFirstFrameAfterPlay)
-                                _isFirstFrameAfterPlay = false;         // Skip initial wait for the first frame after play/seek
-                            else if (waitTime.TotalMilliseconds > 0)
-                                await Task.Delay(waitTime, token);      // Wait to recreate video scene in real time.
-
-                            await ProcessCommand();
+                            finally
+                            {
+                                frame.Capture?.Dispose();
+                            }
                         }
                     }
                 }
                 else
+                {
                     await Task.Delay(50, token);    // Suppress polling rate in no-reading state
+                    lastEmissionTicks = Stopwatch.GetTimestamp();
+                }
             }
         }
-        catch (OperationCanceledException)
-        {
-            // Stop successfully on cancel requested
-        }
+        catch (OperationCanceledException) { }
         finally
         {
             _isReading.Value = false;
+            ClearBuffer();
         }
     }
 
     async Task ProducerLoop(CancellationToken token)
     {
-        while (!token.IsCancellationRequested)
+        try
         {
-            if (!_isReading.Value)
+            while (!token.IsCancellationRequested)
             {
-                await Task.Delay(100, token);
-                continue;
-            }
+                if (!_isReading.Value)
+                {
+                    await Task.Delay(100, token);
+                    continue;
+                }
 
-            try
-            {
                 if (!await _frameChannel.Writer.WaitToWriteAsync(token)) break;
-                if (!_isReading.Value) continue;
 
-                var frame = ReadNextFrame();
-                if (frame.Capture is null) continue;
+                if (!_isReading.Value) break;
 
-                _frameChannel.Writer.TryWrite(frame);
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"Producer Error: {ex.Message}");
-                await Task.Delay(1000, token);
+                PlaybackFrame frame = default;
+                try
+                {
+                    frame = ReadNextFrame();
+                    if (frame.Capture is null) continue;
+
+                    if (!_frameChannel.Writer.TryWrite(frame))
+                        frame.Capture?.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    frame.Capture?.Dispose();
+                    Console.Error.WriteLine($"Producer Error: {ex.Message}");
+                    await Task.Delay(1000, token);
+                }
             }
         }
+        catch (OperationCanceledException) { }
     }
 
     async Task StopReadingLoop()
