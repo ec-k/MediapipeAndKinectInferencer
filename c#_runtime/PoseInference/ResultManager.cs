@@ -40,19 +40,7 @@ public class ResultManager : IDisposable
     }
     public void UpdateFace(FaceResults result)
     {
-        if (Result.FaceResults is null)
-        {
-            Result.FaceResults = new()
-            {
-                Blendshapes = new()
-            };
-        }
-
-        if (result is FaceResults { Blendshapes.Scores: { Count: > 0 } })
-        {
-            Result.FaceResults.Blendshapes.Scores.Clear();
-            Result.FaceResults.Blendshapes.Scores.AddRange(result.Blendshapes.Scores);
-        }
+        Result.FaceResults = result;
     }
 
     public void Dispose()
