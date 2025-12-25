@@ -2,7 +2,7 @@
 using System.Windows;
 
 
-namespace KinectPoseInferencer.UI;
+namespace KinectPoseInferencer.WPF.UI;
 
 public partial class MainWindow
 {

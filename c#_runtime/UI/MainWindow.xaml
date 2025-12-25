@@ -1,11 +1,10 @@
-<Window x:Class="KinectPoseInferencer.UI.MainWindow"
+<Window x:Class="KinectPoseInferencer.WPF.UI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
-        xmlns:helix="clr-namespace:HelixToolkit.Wpf;assembly=HelixToolkit.Wpf"
-        xmlns:converters="clr-namespace:KinectPoseInferencer.UI.Converters"
+        xmlns:converters="clr-namespace:KinectPoseInferencer.WPF.UI.Converters"
         mc:Ignorable="d"
         Title="Kinect Pose Inferencer" Height="600" Width="800">
 

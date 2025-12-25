@@ -1,4 +1,4 @@
-<Project Sdk="MSTest.Sdk/3.6.4">
+﻿<Project Sdk="MSTest.Sdk/3.6.4">
 
   <PropertyGroup>
     <TargetFramework>net9.0-windows</TargetFramework>
@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\c#_runtime\KinectPoseInferencer.csproj" />
+    <ProjectReference Include="..\c#_runtime\KinectPoseInferencer.WPF.csproj" />
   </ItemGroup>
 
 </Project>

@@ -4,10 +4,11 @@ using K4AdotNet;
 using K4AdotNet.BodyTracking;
 using K4AdotNet.Record;
 using K4AdotNet.Sensor;
-using KinectPoseInferencer.InputHook;
-using KinectPoseInferencer.Playback;
-using KinectPoseInferencer.Renderers.Unused;
-using KinectPoseInferencer.Settings;
+using KinectPoseInferencer.Core;
+using KinectPoseInferencer.Core.InputHook;
+using KinectPoseInferencer.Core.Playback;
+using KinectPoseInferencer.Core.Settings;
+using KinectPoseInferencer.WPF.Renderers;
 using R3;
 using System;
 using System.Collections.ObjectModel;
@@ -17,7 +18,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
 
-namespace KinectPoseInferencer.UI;
+namespace KinectPoseInferencer.WPF.UI;
 
 public partial class MainWindowViewModel : ObservableObject, IDisposable
 {
@@ -188,7 +189,6 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         var size   = colorImage.SizeBytes;
         Application.Current.Dispatcher.InvokeAsync(() =>
         {
-
             try
             {
                 if (ColorBitmap is null

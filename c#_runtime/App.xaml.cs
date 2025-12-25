@@ -1,9 +1,10 @@
 ﻿using CliWrap;
-using KinectPoseInferencer.Playback;
-using KinectPoseInferencer.PoseInference;
-using KinectPoseInferencer.Renderers.Unused;
-using KinectPoseInferencer.Settings;
-using KinectPoseInferencer.UI;
+using KinectPoseInferencer.Core;
+using KinectPoseInferencer.Core.Playback;
+using KinectPoseInferencer.Core.PoseInference;
+using KinectPoseInferencer.Core.Settings;
+using KinectPoseInferencer.WPF.UI;
+using KinectPoseInferencer.WPF.Renderers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -14,7 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace KinectPoseInferencer;
+namespace KinectPoseInferencer.WPF;
 
 public partial class App : Application
 {
@@ -106,8 +107,8 @@ public partial class App : Application
                     new UdpResultReceiver(ReceiverEventSettings.Face | ReceiverEventSettings.LeftHand | ReceiverEventSettings.RightHand, 9001)
                     );
                 // result processors
-                services.AddSingleton<PoseInference.Filters.TiltCorrector>();
-                services.AddSingleton<PoseInference.Utils.SkeletonToPoseLandmarksConverter>();
+                services.AddSingleton<Core.PoseInference.Filters.TiltCorrector>();
+                services.AddSingleton<Core.PoseInference.Utils.SkeletonToPoseLandmarksConverter>();
                 // renderers
                 services.AddSingleton<Renderer>();
                 services.AddSingleton(provider => new ImageWriter(mmfFilePath));
@@ -119,11 +120,11 @@ public partial class App : Application
                 services.AddSingleton<MainWindowViewModel>();
 
                 // Register filter chain
-                services.AddSingleton<PoseInference.Filters.ILandmarkFilter, PoseInference.Filters.MilimeterToMeter>();
-                services.AddSingleton<PoseInference.Filters.ILandmarkFilter, PoseInference.Filters.TiltCorrector>(
-                    provider => provider.GetRequiredService<PoseInference.Filters.TiltCorrector>()
+                services.AddSingleton<Core.PoseInference.Filters.ILandmarkFilter, Core.PoseInference.Filters.MilimeterToMeter>();
+                services.AddSingleton<Core.PoseInference.Filters.ILandmarkFilter, Core.PoseInference.Filters.TiltCorrector>(
+                    provider => provider.GetRequiredService<Core.PoseInference.Filters.TiltCorrector>()
                     );
-                services.AddSingleton<PoseInference.Filters.ILandmarkFilter, PoseInference.Filters.TransformCoordinator>();
+                services.AddSingleton<Core.PoseInference.Filters.ILandmarkFilter, Core.PoseInference.Filters.TransformCoordinator>();
 
                 // Register result users
                 services.AddSingleton<ILandmarkUser>(serviceProvider => new LandmarkSender("127.0.0.1", 22000));
