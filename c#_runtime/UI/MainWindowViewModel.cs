@@ -43,6 +43,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     readonly int MaxSeekFramesForColorImage = 100;
 
+    int _isRendering = 0;
+
     public ObservableCollection<UIElement> BodyVisualElements { get; } = new();
     public ObservableCollection<string> InputLogEvents { get; } = new();
 
@@ -173,6 +175,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (capture?.ColorImage is null) return;
 
+        if(Interlocked.CompareExchange(ref _isRendering, 1, 0) == 1)
+            return;
+
         var captureForUi = capture.DuplicateReference();
         if (captureForUi?.ColorImage is not Image colorImage) return;
 
@@ -203,6 +208,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             finally
             {
                 captureForUi?.Dispose();
+                Interlocked.Exchange(ref _isRendering, 0);
             }
         }, System.Windows.Threading.DispatcherPriority.Background);
     }
