@@ -153,24 +153,4 @@ public partial class App : Application
                 services.AddSingleton<SettingsManager>();
                 services.Configure<MediaPipeSettings>(context.Configuration.GetSection("MediaPipeSettings"));
             });
-
-    string CreateMMFFile()
-    {
-        var appTmpDirectory = ProjectConstants.AppTmpDirecotry;
-        if (!string.IsNullOrEmpty(appTmpDirectory) && !Directory.Exists(appTmpDirectory))
-        {
-            try
-            {
-                Directory.CreateDirectory(appTmpDirectory);
-                Console.WriteLine($"Created directory for ImageWriter: {appTmpDirectory}");
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"Error creating directory '{appTmpDirectory}': {ex.Message}");
-                Environment.Exit(1);
-            }
-        }
-
-        return Path.Combine(appTmpDirectory, "kinect_color_image.dat");
-    }
 }

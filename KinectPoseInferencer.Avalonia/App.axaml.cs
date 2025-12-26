@@ -1,11 +1,14 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using KinectPoseInferencer.Avalonia.ViewModels;
 using KinectPoseInferencer.Avalonia.Views;
+using KinectPoseInferencer.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace KinectPoseInferencer.Avalonia
 {
@@ -18,8 +21,24 @@ namespace KinectPoseInferencer.Avalonia
 
         public override void OnFrameworkInitializationCompleted()
         {
+            if (AppHost.Host is null)
+                return;
+
+            var services = AppHost.Host!.Services;
+            services.GetRequiredService<Core.PoseInference.LandmarkPresenter>();
+            services.GetRequiredService<Core.PoseInference.InputLogPresenter>();
+            services.GetRequiredService<Core.Playback.CapturePresenter>();
+
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
+                var renderer = services.GetRequiredService<Renderers.Renderer>();
+                renderer.StartVisualizationThread();
+
+                var mediapipe = services.GetRequiredService<MediaPipeProcessManager>();
+                Task.Run(mediapipe.StartMediapipeProcess);
+
+                var lifetimeService = services.GetRequiredService<IHostApplicationLifetime>();
+
                 // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
                 // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
                 DisableAvaloniaDataAnnotationValidation();
