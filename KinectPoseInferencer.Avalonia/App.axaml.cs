@@ -44,7 +44,7 @@ namespace KinectPoseInferencer.Avalonia
                 DisableAvaloniaDataAnnotationValidation();
                 desktop.MainWindow = new MainWindow
                 {
-                    DataContext = new MainWindowViewModel(),
+                    DataContext = services.GetRequiredService<MainWindowViewModel>()
                 };
             }
 
