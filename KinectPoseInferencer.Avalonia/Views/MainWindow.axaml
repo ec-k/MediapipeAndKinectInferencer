@@ -108,12 +108,19 @@
                     Minimum="0"
                     Maximum="{Binding TotalDurationSeconds}"
                     Value="{Binding CurrentPositionSeconds}"
-                    Height="8"
                     VerticalAlignment="Center"
                     />
 
             <!-- Current Time -->
-            <TextBlock Grid.Column="1" Text="{Binding CurrentPositionSeconds}" Margin="10,0,0,0" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1"
+                       Margin="10,0,0,0" VerticalAlignment="Center">
+                <TextBlock.Text>
+                    <MultiBinding StringFormat="{}{0:F3} / {1:F3}">
+                        <Binding Path="CurrentPositionSeconds"/>
+                        <Binding Path="TotalDurationSeconds"/>
+                    </MultiBinding>
+                </TextBlock.Text>
+            </TextBlock>
         </Grid>
 
 
