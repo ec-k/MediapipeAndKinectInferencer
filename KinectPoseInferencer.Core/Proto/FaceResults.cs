@@ -25,33 +25,33 @@ namespace HumanLandmarks {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChJmYWNlX3Jlc3VsdHMucHJvdG8SDmh1bWFuTGFuZG1hcmtzGg5sYW5kbWFy",
-            "ay5wcm90byJsCgtGYWNlUmVzdWx0cxIrCglsYW5kbWFya3MYASADKAsyGC5o",
-            "dW1hbkxhbmRtYXJrcy5MYW5kbWFyaxIwCgtibGVuZHNoYXBlcxgCIAEoCzIb",
-            "Lmh1bWFuTGFuZG1hcmtzLkJsZW5kc2hhcGVzIroICgtCbGVuZHNoYXBlcxIO",
-            "CgZzY29yZXMYASADKAIimggKEEJsZW5kc2hhcGVzSW5kZXgSDAoIX25ldXRy",
-            "YWwQABIQCgxicm93RG93bkxlZnQQARIRCg1icm93RG93blJpZ2h0EAISDwoL",
-            "YnJvd0lubmVyVXAQAxITCg9icm93T3V0ZXJVcExlZnQQBBIUChBicm93T3V0",
-            "ZXJVcFJpZ2h0EAUSDQoJY2hlZWtQdWZmEAYSEwoPY2hlZWtTcXVpbnRMZWZ0",
-            "EAcSFAoQY2hlZWtTcXVpbnRSaWdodBAIEhAKDGV5ZUJsaW5rTGVmdBAJEhEK",
-            "DWV5ZUJsaW5rUmlnaHQQChITCg9leWVMb29rRG93bkxlZnQQCxIUChBleWVM",
-            "b29rRG93blJpZ2h0EAwSEQoNZXllTG9va0luTGVmdBANEhIKDmV5ZUxvb2tJ",
-            "blJpZ2h0EA4SEgoOZXllTG9va091dExlZnQQDxITCg9leWVMb29rT3V0Umln",
-            "aHQQEBIRCg1leWVMb29rVXBMZWZ0EBESEgoOZXllTG9va1VwUmlnaHQQEhIR",
-            "Cg1leWVTcXVpbnRMZWZ0EBMSEgoOZXllU3F1aW50UmlnaHQQFBIPCgtleWVX",
-            "aWRlTGVmdBAVEhAKDGV5ZVdpZGVSaWdodBAWEg4KCmphd0ZvcndhcmQQFxIL",
-            "CgdqYXdMZWZ0EBgSCwoHamF3T3BlbhAZEgwKCGphd1JpZ2h0EBoSDgoKbW91",
-            "dGhDbG9zZRAbEhMKD21vdXRoRGltcGxlTGVmdBAcEhQKEG1vdXRoRGltcGxl",
-            "UmlnaHQQHRISCg5tb3V0aEZyb3duTGVmdBAeEhMKD21vdXRoRnJvd25SaWdo",
-            "dBAfEg8KC21vdXRoRnVubmVsECASDQoJbW91dGhMZWZ0ECESFgoSbW91dGhM",
-            "b3dlckRvd25MZWZ0ECISFwoTbW91dGhMb3dlckRvd25SaWdodBAjEhIKDm1v",
-            "dXRoUHJlc3NMZWZ0ECQSEwoPbW91dGhQcmVzc1JpZ2h0ECUSDwoLbW91dGhQ",
-            "dWNrZXIQJhIOCgptb3V0aFJpZ2h0ECcSEgoObW91dGhSb2xsTG93ZXIQKBIS",
-            "Cg5tb3V0aFJvbGxVcHBlchApEhMKD21vdXRoU2hydWdMb3dlchAqEhMKD21v",
-            "dXRoU2hydWdVcHBlchArEhIKDm1vdXRoU21pbGVMZWZ0ECwSEwoPbW91dGhT",
-            "bWlsZVJpZ2h0EC0SFAoQbW91dGhTdHJldGNoTGVmdBAuEhUKEW1vdXRoU3Ry",
-            "ZXRjaFJpZ2h0EC8SFAoQbW91dGhVcHBlclVwTGVmdBAwEhUKEW1vdXRoVXBw",
-            "ZXJVcFJpZ2h0EDESEQoNbm9zZVNuZWVyTGVmdBAyEhIKDm5vc2VTbmVlclJp",
-            "Z2h0EDMSDQoJdG9uZ3VlT3V0EDQSCgoGbGVuZ3RoEDViBnByb3RvMw=="));
+            "ay5wcm90byJxCgtGYWNlUmVzdWx0cxIwCglsYW5kbWFya3MYASADKAsyHS5o",
+            "dW1hbkxhbmRtYXJrcy5MYW5kbWFya1BvaW50EjAKC2JsZW5kc2hhcGVzGAIg",
+            "ASgLMhsuaHVtYW5MYW5kbWFya3MuQmxlbmRzaGFwZXMiuggKC0JsZW5kc2hh",
+            "cGVzEg4KBnNjb3JlcxgBIAMoAiKaCAoQQmxlbmRzaGFwZXNJbmRleBIMCghf",
+            "bmV1dHJhbBAAEhAKDGJyb3dEb3duTGVmdBABEhEKDWJyb3dEb3duUmlnaHQQ",
+            "AhIPCgticm93SW5uZXJVcBADEhMKD2Jyb3dPdXRlclVwTGVmdBAEEhQKEGJy",
+            "b3dPdXRlclVwUmlnaHQQBRINCgljaGVla1B1ZmYQBhITCg9jaGVla1NxdWlu",
+            "dExlZnQQBxIUChBjaGVla1NxdWludFJpZ2h0EAgSEAoMZXllQmxpbmtMZWZ0",
+            "EAkSEQoNZXllQmxpbmtSaWdodBAKEhMKD2V5ZUxvb2tEb3duTGVmdBALEhQK",
+            "EGV5ZUxvb2tEb3duUmlnaHQQDBIRCg1leWVMb29rSW5MZWZ0EA0SEgoOZXll",
+            "TG9va0luUmlnaHQQDhISCg5leWVMb29rT3V0TGVmdBAPEhMKD2V5ZUxvb2tP",
+            "dXRSaWdodBAQEhEKDWV5ZUxvb2tVcExlZnQQERISCg5leWVMb29rVXBSaWdo",
+            "dBASEhEKDWV5ZVNxdWludExlZnQQExISCg5leWVTcXVpbnRSaWdodBAUEg8K",
+            "C2V5ZVdpZGVMZWZ0EBUSEAoMZXllV2lkZVJpZ2h0EBYSDgoKamF3Rm9yd2Fy",
+            "ZBAXEgsKB2phd0xlZnQQGBILCgdqYXdPcGVuEBkSDAoIamF3UmlnaHQQGhIO",
+            "Cgptb3V0aENsb3NlEBsSEwoPbW91dGhEaW1wbGVMZWZ0EBwSFAoQbW91dGhE",
+            "aW1wbGVSaWdodBAdEhIKDm1vdXRoRnJvd25MZWZ0EB4SEwoPbW91dGhGcm93",
+            "blJpZ2h0EB8SDwoLbW91dGhGdW5uZWwQIBINCgltb3V0aExlZnQQIRIWChJt",
+            "b3V0aExvd2VyRG93bkxlZnQQIhIXChNtb3V0aExvd2VyRG93blJpZ2h0ECMS",
+            "EgoObW91dGhQcmVzc0xlZnQQJBITCg9tb3V0aFByZXNzUmlnaHQQJRIPCgtt",
+            "b3V0aFB1Y2tlchAmEg4KCm1vdXRoUmlnaHQQJxISCg5tb3V0aFJvbGxMb3dl",
+            "chAoEhIKDm1vdXRoUm9sbFVwcGVyECkSEwoPbW91dGhTaHJ1Z0xvd2VyECoS",
+            "EwoPbW91dGhTaHJ1Z1VwcGVyECsSEgoObW91dGhTbWlsZUxlZnQQLBITCg9t",
+            "b3V0aFNtaWxlUmlnaHQQLRIUChBtb3V0aFN0cmV0Y2hMZWZ0EC4SFQoRbW91",
+            "dGhTdHJldGNoUmlnaHQQLxIUChBtb3V0aFVwcGVyVXBMZWZ0EDASFQoRbW91",
+            "dGhVcHBlclVwUmlnaHQQMRIRCg1ub3NlU25lZXJMZWZ0EDISEgoObm9zZVNu",
+            "ZWVyUmlnaHQQMxINCgl0b25ndWVPdXQQNBIKCgZsZW5ndGgQNWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::HumanLandmarks.LandmarkReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
@@ -111,12 +111,12 @@ namespace HumanLandmarks {
 
     /// <summary>Field number for the "landmarks" field.</summary>
     public const int LandmarksFieldNumber = 1;
-    private static readonly pb::FieldCodec<global::HumanLandmarks.Landmark> _repeated_landmarks_codec
-        = pb::FieldCodec.ForMessage(10, global::HumanLandmarks.Landmark.Parser);
-    private readonly pbc::RepeatedField<global::HumanLandmarks.Landmark> landmarks_ = new pbc::RepeatedField<global::HumanLandmarks.Landmark>();
+    private static readonly pb::FieldCodec<global::HumanLandmarks.LandmarkPoint> _repeated_landmarks_codec
+        = pb::FieldCodec.ForMessage(10, global::HumanLandmarks.LandmarkPoint.Parser);
+    private readonly pbc::RepeatedField<global::HumanLandmarks.LandmarkPoint> landmarks_ = new pbc::RepeatedField<global::HumanLandmarks.LandmarkPoint>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public pbc::RepeatedField<global::HumanLandmarks.Landmark> Landmarks {
+    public pbc::RepeatedField<global::HumanLandmarks.LandmarkPoint> Landmarks {
       get { return landmarks_; }
     }
 

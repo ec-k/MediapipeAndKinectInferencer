@@ -25,17 +25,17 @@ namespace HumanLandmarks {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChRoYW5kX2xhbmRtYXJrcy5wcm90bxIOaHVtYW5MYW5kbWFya3MaDmxhbmRt",
-            "YXJrLnByb3RvIsQDCg1IYW5kTGFuZG1hcmtzEisKCWxhbmRtYXJrcxgBIAMo",
-            "CzIYLmh1bWFuTGFuZG1hcmtzLkxhbmRtYXJrIoUDCg1MYW5kbWFya0luZGV4",
-            "EgkKBXdyaXN0EAASDAoIdGh1bWJDTUMQARIMCgh0aHVtYk1DUBACEgsKB3Ro",
-            "dW1iSVAQAxIMCgh0aHVtYlRJUBAEEhIKDmluZGV4RmluZ2VyTUNQEAUSEgoO",
-            "aW5kZXhGaW5nZXJQSVAQBhISCg5pbmRleEZpbmdlckRJUBAHEhIKDmluZGV4",
-            "RmluZ2VyVElQEAgSEwoPbWlkZGxlRmluZ2VyTUNQEAkSEwoPbWlkZGxlRmlu",
-            "Z2VyUElQEAoSEwoPbWlkZGxlRmluZ2VyRElQEAsSEwoPbWlkZGxlRmluZ2Vy",
-            "VElQEAwSEQoNcmluZ0Zpbmdlck1DUBANEhEKDXJpbmdGaW5nZXJQSVAQDhIR",
-            "Cg1yaW5nRmluZ2VyRElQEA8SEQoNcmluZ0ZpbmdlclRJUBAQEgwKCHBpbmt5",
-            "TUNQEBESDAoIcGlua3lQSVAQEhIMCghwaW5reURJUBATEgwKCHBpbmt5VElQ",
-            "EBQSCgoGbGVuZ3RoEBViBnByb3RvMw=="));
+            "YXJrLnByb3RvIskDCg1IYW5kTGFuZG1hcmtzEjAKCWxhbmRtYXJrcxgBIAMo",
+            "CzIdLmh1bWFuTGFuZG1hcmtzLkxhbmRtYXJrUG9pbnQihQMKDUxhbmRtYXJr",
+            "SW5kZXgSCQoFd3Jpc3QQABIMCgh0aHVtYkNNQxABEgwKCHRodW1iTUNQEAIS",
+            "CwoHdGh1bWJJUBADEgwKCHRodW1iVElQEAQSEgoOaW5kZXhGaW5nZXJNQ1AQ",
+            "BRISCg5pbmRleEZpbmdlclBJUBAGEhIKDmluZGV4RmluZ2VyRElQEAcSEgoO",
+            "aW5kZXhGaW5nZXJUSVAQCBITCg9taWRkbGVGaW5nZXJNQ1AQCRITCg9taWRk",
+            "bGVGaW5nZXJQSVAQChITCg9taWRkbGVGaW5nZXJESVAQCxITCg9taWRkbGVG",
+            "aW5nZXJUSVAQDBIRCg1yaW5nRmluZ2VyTUNQEA0SEQoNcmluZ0ZpbmdlclBJ",
+            "UBAOEhEKDXJpbmdGaW5nZXJESVAQDxIRCg1yaW5nRmluZ2VyVElQEBASDAoI",
+            "cGlua3lNQ1AQERIMCghwaW5reVBJUBASEgwKCHBpbmt5RElQEBMSDAoIcGlu",
+            "a3lUSVAQFBIKCgZsZW5ndGgQFWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::HumanLandmarks.LandmarkReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
@@ -93,12 +93,12 @@ namespace HumanLandmarks {
 
     /// <summary>Field number for the "landmarks" field.</summary>
     public const int LandmarksFieldNumber = 1;
-    private static readonly pb::FieldCodec<global::HumanLandmarks.Landmark> _repeated_landmarks_codec
-        = pb::FieldCodec.ForMessage(10, global::HumanLandmarks.Landmark.Parser);
-    private readonly pbc::RepeatedField<global::HumanLandmarks.Landmark> landmarks_ = new pbc::RepeatedField<global::HumanLandmarks.Landmark>();
+    private static readonly pb::FieldCodec<global::HumanLandmarks.LandmarkPoint> _repeated_landmarks_codec
+        = pb::FieldCodec.ForMessage(10, global::HumanLandmarks.LandmarkPoint.Parser);
+    private readonly pbc::RepeatedField<global::HumanLandmarks.LandmarkPoint> landmarks_ = new pbc::RepeatedField<global::HumanLandmarks.LandmarkPoint>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public pbc::RepeatedField<global::HumanLandmarks.Landmark> Landmarks {
+    public pbc::RepeatedField<global::HumanLandmarks.LandmarkPoint> Landmarks {
       get { return landmarks_; }
     }
 
