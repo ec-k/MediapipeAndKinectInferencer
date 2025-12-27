@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "KinectPoseInferencer.WPF": {
+    "KinectPoseInferencer.Avalonia": {
       "commandName": "Project",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"

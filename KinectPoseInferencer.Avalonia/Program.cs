@@ -1,95 +1,70 @@
-﻿using CliWrap;
+﻿using Avalonia;
+using KinectPoseInferencer.Renderers;
 using KinectPoseInferencer.Core;
 using KinectPoseInferencer.Core.Playback;
 using KinectPoseInferencer.Core.PoseInference;
 using KinectPoseInferencer.Core.Settings;
-using KinectPoseInferencer.WPF.UI;
-using KinectPoseInferencer.WPF.Renderers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using System;
 using System.IO;
 using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
+using KinectPoseInferencer.Avalonia.Models;
 
-namespace KinectPoseInferencer.WPF;
 
-public partial class App : Application
+namespace KinectPoseInferencer.Avalonia;
+
+public static class AppHost
 {
-    IHost _host;
-    CancellationTokenSource _forcefulCts = new();
-    CancellationTokenSource _gracefulCts = new();
+    public static IHost? Host { get; set; }
+}
 
-    public App()
+internal sealed class Program
+{
+
+    // Initialization code. Don't use any Avalonia, third-party APIs or any
+    // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
+    // yet and stuff might break.
+    [STAThread]
+    public static void Main(string[] args)
     {
         var mmfFilePath = CreateMMFFile();
-        _host = CreateHostBuilder(mmfFilePath).Build();
+        var host = CreateHostBuilder(mmfFilePath).Build();
+
+        AppHost.Host = host;
+
+        var app = BuildAvaloniaApp()
+            .StartWithClassicDesktopLifetime(args);
     }
 
-    protected override void OnStartup(StartupEventArgs e)
+    // Avalonia configuration, don't remove; also used by visual designer.
+    public static AppBuilder BuildAvaloniaApp()
+        => AppBuilder.Configure<App>()
+            .UsePlatformDetect()
+            .WithInterFont()
+            .LogToTrace();
+
+    static string CreateMMFFile()
     {
-        base.OnStartup(e);
-
-        var services = _host.Services;
-
-        var mainWindow = services.GetRequiredService<MainWindow>();
-        mainWindow.Show();
-
-        var renderer = services.GetRequiredService<Renderer>();
-        renderer.StartVisualizationThread();
-
-        services.GetRequiredService<LandmarkPresenter>();
-        services.GetRequiredService<InputLogPresenter>();
-        services.GetRequiredService<CapturePresenter>();
-
-        // Start MediaPipe process
-        var _ = StartMediapipeProcess();
-    }
-
-    async Task StartMediapipeProcess()
-    {
-        try
+        var appTmpDirectory = ProjectConstants.AppTmpDirecotry;
+        if (!string.IsNullOrEmpty(appTmpDirectory) && !Directory.Exists(appTmpDirectory))
         {
-            var config = _host.Services.GetRequiredService<IOptions<MediaPipeSettings>>().Value;
-            var exePath = config.ExecutablePath;
-            if(string.IsNullOrWhiteSpace(exePath))
+            try
             {
-                MessageBox.Show("MediaPipe Inferencer .exe path is not specified at MediaPipeSettings:ExecutablePath.");
-                return;
+                Directory.CreateDirectory(appTmpDirectory);
+                Console.WriteLine($"Created directory for ImageWriter: {appTmpDirectory}");
             }
-
-            var fullPath = Path.GetFullPath(exePath, AppContext.BaseDirectory);
-
-            if (!File.Exists(fullPath))
+            catch (Exception ex)
             {
-                MessageBox.Show($"MediaPipe Inferencer .exe is not found: {fullPath}");
-                return;
+                Console.Error.WriteLine($"Error creating directory '{appTmpDirectory}': {ex.Message}");
+                Environment.Exit(1);
             }
-
-                await Cli.Wrap(fullPath)
-                         .ExecuteAsync(_forcefulCts.Token, _gracefulCts.Token);
-        }
-        catch (OperationCanceledException) { }
-    }
-
-    protected override void OnExit(ExitEventArgs e)
-    {
-        _gracefulCts.Cancel();
-        _forcefulCts.CancelAfter(TimeSpan.FromSeconds(3));
-
-        if(_host is not null)
-        {
-            _host.StopAsync().GetAwaiter().GetResult();
-            _host.Dispose();
         }
 
-        base.OnExit(e);
+        return Path.Combine(appTmpDirectory, "kinect_color_image.dat");
     }
 
-    IHostBuilder CreateHostBuilder(string mmfFilePath) =>
+    static IHostBuilder CreateHostBuilder(string mmfFilePath) =>
         Host.CreateDefaultBuilder()
             .ConfigureServices((context, services) =>
             {
@@ -115,9 +90,9 @@ public partial class App : Application
                 // brokers
                 services.AddSingleton<FrameManager>();
                 services.AddSingleton<RecordDataBroker>();
-                services.AddSingleton<MainWindow>();
+                services.AddSingleton<Views.MainWindow>();
                 // ui
-                services.AddSingleton<MainWindowViewModel>();
+                services.AddSingleton<ViewModels.MainWindowViewModel>();
 
                 // Register filter chain
                 services.AddSingleton<Core.PoseInference.Filters.ILandmarkFilter, Core.PoseInference.Filters.MilimeterToMeter>();
@@ -130,7 +105,7 @@ public partial class App : Application
                 services.AddSingleton<ILandmarkUser>(serviceProvider => new LandmarkSender("127.0.0.1", 22000));
 
                 // Register input event users
-                services.AddSingleton(serviceProvider => 
+                services.AddSingleton(serviceProvider =>
                     new InputEventSender(
                         new IPEndPoint[] {
                             new(IPAddress.Parse("127.0.0.1"), 9002 ),
@@ -152,5 +127,9 @@ public partial class App : Application
                 // settings
                 services.AddSingleton<SettingsManager>();
                 services.Configure<MediaPipeSettings>(context.Configuration.GetSection("MediaPipeSettings"));
+                services.AddSingleton<IMediaPipeConfiguration, MediaPipeConfigurationAdapter>();
+
+                // misc
+                services.AddSingleton<MediaPipeProcessManager>();
             });
 }

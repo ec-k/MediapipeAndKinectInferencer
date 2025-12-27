@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 
-namespace KinectPoseInferencer.UI.Converters;
+namespace KinectPoseInferencer.WPF.UI.Converters;
 
 class BooleanToVisibilityConverter:IValueConverter
 {

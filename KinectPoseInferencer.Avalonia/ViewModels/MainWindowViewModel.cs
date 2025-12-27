@@ -1,38 +1,38 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using K4AdotNet;
+using K4AdotNet.Sensor;
 using K4AdotNet.BodyTracking;
 using K4AdotNet.Record;
-using K4AdotNet.Sensor;
 using KinectPoseInferencer.Core;
 using KinectPoseInferencer.Core.InputHook;
 using KinectPoseInferencer.Core.Playback;
 using KinectPoseInferencer.Core.Settings;
-using KinectPoseInferencer.WPF.Renderers;
+using KinectPoseInferencer.Renderers;
 using R3;
 using System;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Media.Imaging;
+using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 
-namespace KinectPoseInferencer.WPF.UI;
+namespace KinectPoseInferencer.Avalonia.ViewModels;
 
-public partial class MainWindowViewModel : ObservableObject, IDisposable
+public partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
     readonly IPlaybackController _playbackController;
     readonly KinectDeviceController _kinectDeviceController;
     readonly SettingsManager _settingsManager;
 
-    [ObservableProperty] double _currentFrameTimestamp      = 0.0;
-    [ObservableProperty] string _playbackLength             = "";
-    [ObservableProperty] string _playPauseIconUnicode       = PlayIconUnicode;
+    [ObservableProperty] double _currentFrameTimestamp = 0.0;
+    [ObservableProperty] string _playbackLength = "";
+    [ObservableProperty] string _playPauseIconUnicode = PlayIconUnicode;
     [ObservableProperty] string _kinectPlayPauseIconUnicode = PlayIconUnicode;
-    [ObservableProperty] string _videoFilePath              = "";
-    [ObservableProperty] string _inputLogFilePath           = "";
-    [ObservableProperty] string _metaFilePath               = "";
+    [ObservableProperty] string _videoFilePath = "";
+    [ObservableProperty] string _inputLogFilePath = "";
+    [ObservableProperty] string _metaFilePath = "";
     [ObservableProperty] WriteableBitmap? _colorBitmap;
 
     [ObservableProperty] bool _isLoading = false;
@@ -51,31 +51,31 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     RecordDataBroker _broker;
     DisposableBag _disposables = new();
-    
+
     public MainWindowViewModel(
         IPlaybackController playbackController,
         KinectDeviceController kinectDeviceController,
         RecordDataBroker broker,
         SettingsManager settingManager)
     {
-        _playbackController     = playbackController     ?? throw new ArgumentNullException(nameof(playbackController));
+        _playbackController = playbackController ?? throw new ArgumentNullException(nameof(playbackController));
         _kinectDeviceController = kinectDeviceController ?? throw new ArgumentNullException(nameof(kinectDeviceController));
-        _broker                 = broker                 ?? throw new ArgumentNullException(nameof(broker));
-        _settingsManager        = settingManager         ?? throw new ArgumentNullException(nameof(settingManager));
+        _broker = broker ?? throw new ArgumentNullException(nameof(broker));
+        _settingsManager = settingManager ?? throw new ArgumentNullException(nameof(settingManager));
         // _bodyVisualElements = new ObservableCollection<UIElement>(); // No longer needed
 
         var latestSetting = _settingsManager.Load();
-        _videoFilePath    = latestSetting.VideoFilePath;
+        _videoFilePath = latestSetting.VideoFilePath;
         _inputLogFilePath = latestSetting.InputLogFilePath;
-        _metaFilePath     = latestSetting.MetaFilePath;
+        _metaFilePath = latestSetting.MetaFilePath;
 
         _playbackController.Reader.Playback
             .Where(playback => playback is not null)
             .Subscribe(playback => {
-                    UpdatePlaybackLengthDisplay(playback);
-                    playback.GetCalibration(out var calibration);
-                    PointCloud.ComputePointCloudCache(calibration);
-                    TotalDurationSeconds = playback.RecordLength.TotalSeconds;
+                UpdatePlaybackLengthDisplay(playback);
+                playback.GetCalibration(out var calibration);
+                PointCloud.ComputePointCloudCache(calibration);
+                TotalDurationSeconds = playback.RecordLength.TotalSeconds;
             })
             .AddTo(ref _disposables);
         _playbackController.Reader.IsReading
@@ -83,11 +83,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .AddTo(ref _disposables);
 
         _kinectDeviceController.IsReading
-            .Subscribe(isReading => KinectPlayPauseIconUnicode = isReading ? PauseIconUnicode: PlayIconUnicode)
+            .Subscribe(isReading => KinectPlayPauseIconUnicode = isReading ? PauseIconUnicode : PlayIconUnicode)
             .AddTo(ref _disposables);
 
         _playbackController.Reader.CurrentPositionUs
-            .ThrottleLast(TimeSpan.FromSeconds(1.0/2.0))
+            .ThrottleFirstLast(TimeSpan.FromSeconds(1.0/10.0))
             .Subscribe(position => CurrentPositionSeconds = position.TotalSeconds)
             .AddTo(ref _disposables);
 
@@ -97,13 +97,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .AddTo(ref _disposables);
         _broker.InputEvents
             .Where(input => input is not null)
-            .Chunk(TimeSpan.FromSeconds(1.0 / 10.0))
+            .Chunk(TimeSpan.FromSeconds(1.0 / 15.0))
             .Where(inputs => inputs is { Length: > 0 })
             .Subscribe(inputs => OnNewInputLogEvent(inputs))
             .AddTo(ref _disposables);
     }
 
-    void DisplayFirstColorFrame(K4AdotNet.Record.Playback playback, CancellationToken token)
+    async Task DisplayFirstColorFrame(Playback playback, CancellationToken token)
     {
         try
         {
@@ -136,11 +136,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
             if (foundColorImage && captureToDisplay is { ColorImage: not null })
             {
-                Application.Current.Dispatcher.Invoke(() =>
+                await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    if(ColorBitmap is not null)
-                        ColorBitmap = captureToDisplay.ColorImage.ToWritableBitmap();
-                }, System.Windows.Threading.DispatcherPriority.Background, token); // Pass token to Invoke
+                    ColorBitmap = captureToDisplay.ColorImage.ToWriteableBitmap(ColorBitmap);
+                    captureToDisplay?.Dispose();
+                });
             }
             else
             {
@@ -148,18 +148,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 playback.SeekTimestamp(new Microseconds64(0), PlaybackSeekOrigin.Begin);
                 if (playback.TryGetNextCapture(out var firstCapture))
                 {
-                    if (firstCapture?.DepthImage is not null)
+                    using (firstCapture)
                     {
-                        Application.Current.Dispatcher.Invoke(() =>
+                        if (firstCapture?.DepthImage is not null)
                         {
-                            ColorBitmap = firstCapture.DepthImage.ToWritableBitmap();
-                        }, System.Windows.Threading.DispatcherPriority.Background, token); // Pass token to Invoke
+                            await Dispatcher.UIThread.InvokeAsync(() =>
+                            {
+                                ColorBitmap = firstCapture.DepthImage.ToWriteableBitmap(ColorBitmap);
+                            });
+                        }
                     }
-                    firstCapture?.Dispose();
                 }
             }
-
-            captureToDisplay?.Dispose();
         }
         catch (OperationCanceledException)
         {
@@ -176,41 +176,29 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         if (capture?.ColorImage is null) return;
 
-        if(Interlocked.CompareExchange(ref _isRendering, 1, 0) == 1)
-            return;
+        //if (Interlocked.CompareExchange(ref _isRendering, 1, 0) == 1)
+        //    return;
 
         var captureForUi = capture.DuplicateReference();
         if (captureForUi?.ColorImage is not Image colorImage) return;
 
-        var width  = colorImage.WidthPixels;
+        var width = colorImage.WidthPixels;
         var height = colorImage.HeightPixels;
         var stride = colorImage.StrideBytes;
         var buffer = colorImage.Buffer;
-        var size   = colorImage.SizeBytes;
-        Application.Current.Dispatcher.InvokeAsync(() =>
+        var size = colorImage.SizeBytes;
+        Dispatcher.UIThread.Post(() =>
         {
             try
             {
-                if (ColorBitmap is null
-                || ColorBitmap.PixelHeight != height
-                || ColorBitmap.PixelWidth  != width)
-                    ColorBitmap = captureForUi.ColorImage.ToWritableBitmap();
-                else
-                {
-                    ColorBitmap.WritePixels(
-                        new Int32Rect(0, 0, width, height),
-                        buffer,
-                        size,
-                        stride
-                    );
-                }
+                ColorBitmap = captureForUi.ColorImage.ToWriteableBitmap(null);
             }
             finally
             {
                 captureForUi?.Dispose();
-                Interlocked.Exchange(ref _isRendering, 0);
+                //Interlocked.Exchange(ref _isRendering, 0);
             }
-        }, System.Windows.Threading.DispatcherPriority.Background);
+        });
     }
 
     void OnNewFrame(Capture capture, BodyFrame frame)
@@ -225,10 +213,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         //                                .ToList();
 
         WriteableBitmap? colorImage = null;
-        colorImage = capture?.ColorImage?.ToWritableBitmap();
+        colorImage = capture?.ColorImage?.ToWriteableBitmap(colorImage);
 
         // Update UI on the main thread
-        Application.Current.Dispatcher.Invoke(() =>
+        Dispatcher.UIThread.Post(() =>
         {
             if (colorImage is not null)
                 ColorBitmap = colorImage;
@@ -250,7 +238,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     void OnNewInputLogEvent(DeviceInputData[] inputEvents)
     {
-        Application.Current.Dispatcher.InvokeAsync(() =>
+        Dispatcher.UIThread.Post(() =>
         {
             foreach (var input in inputEvents)
             {
@@ -258,7 +246,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 if (InputLogEvents.Count > 10)
                     InputLogEvents.RemoveAt(0);
             }
-        }, System.Windows.Threading.DispatcherPriority.Background);
+        });
     }
 
     void UpdatePlaybackLengthDisplay(K4AdotNet.Record.Playback playback)
@@ -278,9 +266,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         _settingsManager.Save(new()
         {
-            VideoFilePath    = VideoFilePath,
+            VideoFilePath = VideoFilePath,
             InputLogFilePath = InputLogFilePath,
-            MetaFilePath     = MetaFilePath,
+            MetaFilePath = MetaFilePath,
         });
 
         try
@@ -316,7 +304,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         _playbackController.Rewind();
         CurrentPositionSeconds = 0; // Reset CurrentPositionSeconds
-        
+
         // Display the first frame
         if (_playbackController.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
         {

@@ -1,0 +1,147 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:KinectPoseInferencer.Avalonia.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="KinectPoseInferencer.Avalonia.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="KinectPoseInferencer.Avalonia">
+
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="400"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,20,20">
+            <StackPanel.Styles>
+                <Style Selector="TextBox">
+                    <Setter Property="Height" Value="30.0"/>
+                </Style>
+                <Style Selector="Button">
+                    <Setter Property="Height" Value="30.0"/>
+                </Style>
+            </StackPanel.Styles>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="video" VerticalAlignment="Center" Margin="0,0,10,5"/>
+                <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding VideoFilePath}" Margin="0,0,0,5"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="input log" VerticalAlignment="Center" Margin="0,0,10,5"/>
+                <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding InputLogFilePath}" Margin="0,0,0,5"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="meta"  VerticalAlignment="Center" Margin="0,0,10,30"/>
+                <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding MetaFilePath}" Margin="0,0,0,30"/>
+
+                <Button Grid.Row="3" Grid.Column="0" Command="{Binding LoadFilesCommand}" Grid.ColumnSpan="2" HorizontalAlignment="Left" Width="80">
+                    <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xED25;"/>
+                </Button>
+            </Grid>
+        </StackPanel>
+
+        <!-- Input Log Display -->
+        <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding InputLogEvents}" Margin="0,0,20,0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <!-- Video View -->
+        <Border x:Name="VideoWindowBorder"
+                Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                Background="Black" CornerRadius="4"
+                VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+            <Viewbox x:Name="VideoWindowViewBox" Stretch="Uniform">
+                <Grid Width="640" Height="360" ClipToBounds="True">
+                    <Image Source="{Binding ColorBitmap}" Stretch="Fill"
+                           ZIndex="10"/>
+                    <!-- Loading Indicator -->
+                    <TextBlock Text="&#xE72C;"
+                               FontFamily="Segoe Fluent Icons"
+                               FontSize="48"
+                               Foreground="White"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding IsLoading}"/>
+                </Grid>
+            </Viewbox>
+        </Border>
+
+        <!-- Seek Bar -->
+        <Grid Grid.Row="2" Grid.ColumnSpan="2" Margin="0,20,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Seek Bar -->
+            <Slider Grid.Column="0"
+                    Minimum="0"
+                    Maximum="{Binding TotalDurationSeconds}"
+                    Value="{Binding CurrentPositionSeconds}"
+                    Height="8"
+                    VerticalAlignment="Center"
+                    />
+
+            <!-- Current Time -->
+            <TextBlock Grid.Column="1" Text="{Binding CurrentPositionSeconds}" Margin="10,0,0,0" VerticalAlignment="Center"/>
+        </Grid>
+
+
+        <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+
+            <!-- Stop / Rewind Button -->
+            <Button Command="{Binding RewindCommand}" Width="80" Height="60" Margin="0,0,20,0">
+                <!-- Rewind Icon -->
+                <Grid>
+                    <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xE892;"/>
+                </Grid>
+            </Button>
+
+            <!-- Play / Pause Button -->
+            <Button Command="{Binding PlayOrPauseCommand}" Width="80" Height="60">
+
+                <Grid>
+                    <TextBlock FontFamily="Segoe Fluent Icons" Text="{Binding PlayPauseIconUnicode}"/>
+                </Grid>
+            </Button>
+
+            <Button Command="{Binding KinectPlayOrPauseCommand}" Width="80" Height="60">
+
+                <Grid>
+                    <TextBlock FontFamily="Segoe Fluent Icons" Text="{Binding KinectPlayPauseIconUnicode}"/>
+                </Grid>
+            </Button>
+        </StackPanel>
+    </Grid>
+
+</Window>

@@ -405,3 +405,8 @@ colorImg.dat
 # Protobuf generated files
 **/*_pb2.py
 /c#_runtime/KinectPoseInferencer/Proto/
+
+
+# Cache directory created by Avalonia XAML Compiler
+**/Avalonia.Generators/
+**/Avalonia.Generators.sng
