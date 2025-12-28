@@ -1,5 +1,5 @@
 ﻿using Microsoft.Azure.Kinect.BodyTracking;
-using MediapipeJointId = HumanLandmarks.PoseLandmarks.Types.LandmarkIndex;
+using MediapipeJointId = HumanLandmarks.MediaPipePoseLandmarks.Types.LandmarkIndex;
 
 namespace KinectPoseInferencer.Core.PoseInference.Utils;
 

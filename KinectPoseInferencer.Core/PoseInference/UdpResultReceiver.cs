@@ -16,10 +16,10 @@ public enum ReceiverEventSettings
 
 public class UdpResultReceiver: IDisposable
 {
-    public Action<KinectPoseLandmarks>? PoseReceived;
-    public Action<HandLandmarks>?       ReceiveLeftHand;
-    public Action<HandLandmarks>?       ReceiveRightHand;
-    public Action<FaceResults>?         ReceiveFace;
+    public Action<MediaPipePoseLandmarks>? PoseReceived;
+    public Action<HandLandmarks>?      ReceiveLeftHand;
+    public Action<HandLandmarks>?      ReceiveRightHand;
+    public Action<FaceResults>?        ReceiveFace;
 
     UdpClient _receiver;
     ReceiverEventSettings _settings;
@@ -54,7 +54,7 @@ public class UdpResultReceiver: IDisposable
             var receivedBody = HolisticLandmarks.Parser.ParseFrom(getByte);
 
             // Invoke events
-            if (_settings.HasFlag(ReceiverEventSettings.Body)) PoseReceived?.Invoke(receivedBody.PoseLandmarks);
+            if (_settings.HasFlag(ReceiverEventSettings.Body)) PoseReceived?.Invoke(receivedBody.MediaPipePoseLandmarks);
             if (_settings.HasFlag(ReceiverEventSettings.LeftHand)) ReceiveLeftHand?.Invoke(receivedBody.LeftHandLandmarks);
             if (_settings.HasFlag(ReceiverEventSettings.RightHand)) ReceiveRightHand?.Invoke(receivedBody.RightHandLandmarks);
             if (_settings.HasFlag(ReceiverEventSettings.Face)) ReceiveFace?.Invoke(receivedBody.FaceResults);

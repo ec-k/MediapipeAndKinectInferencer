@@ -32,9 +32,9 @@ public class ResultManager : IDisposable
     {
         Result.RightHandLandmarks = result;
     }
-    public void UpdateBody(KinectPoseLandmarks result)
+    public void UpdateBody(MediaPipePoseLandmarks result)
     {
-        Result.PoseLandmarks = result;
+        Result.MediaPipePoseLandmarks = result;
     }
     public void UpdateFace(FaceResults result)
     {

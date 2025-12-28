@@ -72,8 +72,8 @@ public class LandmarkPresenter: IDisposable
             })
             .AddTo(ref _disposables);
 
-        if (_resultManager.Result.PoseLandmarks is null)
-            _resultManager.Result.PoseLandmarks = new();
+        if (_resultManager.Result.KinectPoseLandmarks is null)
+            _resultManager.Result.KinectPoseLandmarks = new();
 
         // Process frames
         _recordDataBroker.Capture
@@ -120,8 +120,8 @@ public class LandmarkPresenter: IDisposable
             })
             .ToList();
 
-        _resultManager?.Result?.PoseLandmarks?.Landmarks?.Clear();
-        _resultManager?.Result?.PoseLandmarks?.Landmarks?.AddRange(resultLandmark);
+        _resultManager?.Result?.KinectPoseLandmarks?.Landmarks?.Clear();
+        _resultManager?.Result?.KinectPoseLandmarks?.Landmarks?.AddRange(resultLandmark);
     }
 
     void Configure()
