@@ -1,27 +1,21 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Channels;
-using System.Threading.Tasks;
 
 namespace KinectPoseInferencer.Core.Playback;
 
 
-public class InputLogReader : IAsyncDisposable
+public class InputLogReader : IInputLogReader
 {
     long                      _kinectToStopwatchOffset = 0;
     string?                   _logFilePath;
     StreamReader?             _reader;
-    DeviceInputData?          _peekedEvent;
                               
     Channel<DeviceInputData>? _eventChannel;
     readonly int              _bufferSize = 100;
     Task?                     _producerTask;
     CancellationTokenSource?  _cts;
 
-    public LogMetadata? Metadata { get; private set; }
+    LogMetadata?              _metadata;
 
     public async Task<bool> LoadMetaFileAsync(string filePath)
     {
@@ -34,9 +28,9 @@ public class InputLogReader : IAsyncDisposable
         try
         {
             using var openStream = File.OpenRead(filePath);
-            Metadata = await JsonSerializer.DeserializeAsync<LogMetadata>(openStream);
+            _metadata = await JsonSerializer.DeserializeAsync<LogMetadata>(openStream);
             
-            if (Metadata is not null)
+            if (_metadata is not null)
             {
                 CalculateKinectOffset();
                 return true;
@@ -48,7 +42,7 @@ public class InputLogReader : IAsyncDisposable
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Error reading input log metadata file: {ex.Message}");
-            Metadata = null;
+            _metadata = null;
             return false;
         }
     }
@@ -83,7 +77,6 @@ public class InputLogReader : IAsyncDisposable
                 });
 
             _reader = new StreamReader(new FileStream(_logFilePath, FileMode.Open, FileAccess.Read, FileShare.Read));
-            _peekedEvent = null;
 
             _cts = new();
             _producerTask = ProducerLoop(_cts.Token);
@@ -104,7 +97,7 @@ public class InputLogReader : IAsyncDisposable
 
     private void CalculateKinectOffset()
     {
-        if (Metadata is null || Metadata.SystemStopwatchTimestampAtKinectStart == 0 || Metadata.FirstKinectDeviceTimestampUs == 0)
+        if (_metadata is null || _metadata.SystemStopwatchTimestampAtKinectStart == 0 || _metadata.FirstKinectDeviceTimestampUs == 0)
         {
             _kinectToStopwatchOffset = 0;
             return;
@@ -112,12 +105,12 @@ public class InputLogReader : IAsyncDisposable
 
         // Offset = KinectTimestamp - SystemStopwatchTimestamp
         // This offset is added to a system stopwatch timestamp to get an equivalent Kinect timestamp.
-        _kinectToStopwatchOffset = Metadata.SystemStopwatchTimestampAtKinectStart - Metadata.FirstKinectDeviceTimestampUs * TimeSpan.TicksPerMicrosecond;
+        _kinectToStopwatchOffset = _metadata.SystemStopwatchTimestampAtKinectStart - _metadata.FirstKinectDeviceTimestampUs * TimeSpan.TicksPerMicrosecond;
     }
 
     async Task ProducerLoop(CancellationToken token)
     {
-        if(_reader is null || _eventChannel is null || Metadata is null) return;
+        if(_reader is null || _eventChannel is null || _metadata is null) return;
 
         try
         {
@@ -141,7 +134,7 @@ public class InputLogReader : IAsyncDisposable
                 if (inputEvent?.Data is null) continue;
 
                 var eventTimestamp = inputEvent.Data.RawStopwatchTimestamp;
-                if (eventTimestamp < Metadata.SystemStopwatchTimestampAtKinectStart)
+                if (eventTimestamp < _metadata.SystemStopwatchTimestampAtKinectStart)
                     continue;
 
                 await _eventChannel.Writer.WriteAsync(inputEvent);
@@ -159,39 +152,26 @@ public class InputLogReader : IAsyncDisposable
     /// </summary>
     /// <param name="kinectDeviceTimestampUs">The Kinect device timestamp in microseconds.</param>
     /// <returns>A list of input events that occurred up to the given timestamp.</returns>
-    public IList<DeviceInputData> GetEventsUpToKinectTimestamp(long kinectDeviceTimestampUs)
+    public bool TryRead(long kinectDeviceTimestampUs, out IList<DeviceInputData> results)
     {
-        var result = new List<DeviceInputData>();
-        if (_reader is null || Metadata is null || _eventChannel is null) return result;
+        results = new List<DeviceInputData>();
+        if (_reader is null || _metadata is null || _eventChannel is null) return false;
 
         // Convert Kinect timestamp to equivalent system stopwatch timestamp
         var targetSystemStopwatchTimestamp = kinectDeviceTimestampUs * TimeSpan.TicksPerMicrosecond + _kinectToStopwatchOffset;
 
-        if (_peekedEvent?.Data is not null)
-        {
-            if(_peekedEvent.Data.RawStopwatchTimestamp <= targetSystemStopwatchTimestamp)
-            {
-                result.Add(_peekedEvent);
-                _peekedEvent = null;
-            }
-            else
-                return result;
-        }
-
         while (_eventChannel.Reader.TryRead(out var inputEvent))
         {
-            if (inputEvent.Data is not IDeviceInput deviceInput) continue;
+            if (inputEvent.Data is not IDeviceInput deviceInput)
+                continue;
 
-            if(deviceInput.RawStopwatchTimestamp <= targetSystemStopwatchTimestamp)
-                result.Add(inputEvent);
+            if (deviceInput.RawStopwatchTimestamp <= targetSystemStopwatchTimestamp)
+                results.Add(inputEvent);
             else
-            {
-                _peekedEvent = inputEvent;
                 break;
-            }
         }
 
-        return result;
+        return true;
     }
 
     async Task StopProducer()
@@ -217,6 +197,6 @@ public class InputLogReader : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await StopProducer();
-        Metadata = null;
+        _metadata = null;
     }
 }

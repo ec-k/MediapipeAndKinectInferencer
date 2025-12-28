@@ -1,19 +1,15 @@
 ﻿using R3;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
+using K4AdotNet.Sensor;
 
 namespace KinectPoseInferencer.Core.Playback;
 
-public interface IPlaybackReader: IDisposable
+public interface IPlaybackReader: IAsyncDisposable
 {
     ReadOnlyReactiveProperty<K4AdotNet.Record.Playback> Playback { get; }
-    ReadOnlyReactiveProperty<bool> IsReading { get; }
     ReadOnlyReactiveProperty<K4AdotNet.Microseconds64> CurrentPositionUs { get; }
 
     Task Configure(PlaybackDescriptor descriptor, CancellationToken token);
-    void Play();
-    void Pause();
+    bool TryRead(TimeSpan targetFrameTime, out Capture? capture, out ImuSample? imuSample);
     void Rewind();
-    void Seek(TimeSpan position);
+    void Seek(TimeSpan targetFrameTime);
 }

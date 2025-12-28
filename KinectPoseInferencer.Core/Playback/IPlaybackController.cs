@@ -1,18 +1,17 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using R3;
 
 namespace KinectPoseInferencer.Core.Playback;
 
-public interface IPlaybackController: IDisposable
+public interface IPlaybackController: IAsyncDisposable
 {
     IPlaybackReader Reader { get; }
     RecordDataBroker Broker { get; }
     PlaybackDescriptor? Descriptor { get; set; }
+    ReadOnlyReactiveProperty<bool> IsPlaying { get; }
 
     Task Prepare(CancellationToken token);
     void Play();
     void Pause();
-    void Rewind();
+    Task Rewind();
     void Seek(TimeSpan position);
 }

@@ -78,7 +78,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 TotalDurationSeconds = playback.RecordLength.TotalSeconds;
             })
             .AddTo(ref _disposables);
-        _playbackController.Reader.IsReading
+        _playbackController.IsPlaying
             .Subscribe(isPlaying => PlayPauseIconUnicode = isPlaying ? PauseIconUnicode : PlayIconUnicode)
             .AddTo(ref _disposables);
 
@@ -360,7 +360,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     public void PlayOrPause()
     {
-        if (_playbackController.Reader.IsReading.CurrentValue)
+        if (_playbackController.IsPlaying.CurrentValue)
             _playbackController.Pause();
         else
             _playbackController.Play();
@@ -369,7 +369,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         _kinectDeviceController?.Dispose();
-        _playbackController?.Dispose();
+        _playbackController?.DisposeAsync();
         _disposables.Dispose();
 
         if (GlobalInputHook.IsHookActive)

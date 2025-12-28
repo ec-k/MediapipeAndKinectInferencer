@@ -1,6 +1,6 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using Cysharp.Threading;
+using R3;
+using ValueTaskSupplement;
 
 namespace KinectPoseInferencer.Core.Playback;
 
@@ -13,6 +13,13 @@ public class PlaybackController : IPlaybackController
     public RecordDataBroker Broker { get; }
     public PlaybackDescriptor? Descriptor { get; set; }
 
+    public int TargetFps { get; private set; } = 30;
+    LogicLooper? _readingLoop;
+    TimeSpan _playbackCurrentTimestamp;
+
+    public ReadOnlyReactiveProperty<bool> IsPlaying => _isPlaying;
+    ReactiveProperty<bool> _isPlaying = new(false);
+    bool _terminateLoop = false;
 
     public PlaybackController(
         IPlaybackReader playbackReader,
@@ -26,7 +33,7 @@ public class PlaybackController : IPlaybackController
 
     public async Task Prepare(CancellationToken token)
     {
-        if (Descriptor is null || String.IsNullOrEmpty(Descriptor.MetadataFilePath)) return;
+        if (Descriptor is null || string.IsNullOrEmpty(Descriptor.MetadataFilePath)) return;
 
         await Task.WhenAll(
             _logReader.LoadMetaFileAsync(Descriptor.MetadataFilePath),
@@ -36,17 +43,52 @@ public class PlaybackController : IPlaybackController
 
     public void Play()
     {
-        _playbackReader.Play();
+        if (_isPlaying.Value) return;
+
+        if (_readingLoop is null)
+        {
+            _readingLoop = new(TargetFps);
+            _playbackCurrentTimestamp = TimeSpan.Zero;
+        }
+
+        _isPlaying.Value = true;
+
+        _readingLoop.RegisterActionAsync((in LogicLooperActionContext ctx) =>
+        {
+            if (_terminateLoop)
+            {
+                _terminateLoop = false;
+                return false;
+            }
+            if (!_isPlaying.Value) return true;
+
+            _playbackCurrentTimestamp += ctx.ElapsedTimeFromPreviousFrame;
+
+            if (_playbackReader.TryRead(_playbackCurrentTimestamp, out var capture, out var imuSample))
+            {
+                if (capture is not null) Broker.SetCapture(capture);
+                if (imuSample.HasValue)  Broker.SetImu(imuSample.Value);
+            }
+            _logReader.TryRead(_playbackCurrentTimestamp.Microseconds, out var deviceInputs);
+
+            foreach (var input in deviceInputs)
+                Broker.SetDeviceInputData(input);
+
+            return true;
+        });
     }
 
     public void Pause()
     {
-        _playbackReader.Pause();
+        _isPlaying.Value = false;
     }
 
-    public void Rewind()
+    public async Task Rewind()
     {
+        Pause();
+
         _playbackReader.Rewind();
+        await _logReader.Rewind();
     }
 
     public void Seek(TimeSpan position)
@@ -54,8 +96,10 @@ public class PlaybackController : IPlaybackController
         _playbackReader.Seek(position);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        _playbackReader.Dispose();
+        await ValueTaskEx.WhenAll(
+            _playbackReader.DisposeAsync(),
+            _logReader.DisposeAsync());
     }
 }
