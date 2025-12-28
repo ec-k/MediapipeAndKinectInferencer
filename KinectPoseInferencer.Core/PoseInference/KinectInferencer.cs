@@ -25,7 +25,7 @@ public class KinectInferencer
 
     public void EnqueueData(Capture capture)
     {
-        if(capture.DepthImage is not null)
+        if(capture is {DepthImage: not null, IRImage: not null })
             _tracker?.EnqueueCapture(capture);
     }
 
