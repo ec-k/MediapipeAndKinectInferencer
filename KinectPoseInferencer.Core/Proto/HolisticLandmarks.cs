@@ -25,18 +25,21 @@ namespace HumanLandmarks {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "Chhob2xpc3RpY19sYW5kbWFya3MucHJvdG8SDmh1bWFuTGFuZG1hcmtzGhtr",
-            "aW5lY3RfcG9zZV9sYW5kbWFya3MucHJvdG8aFGhhbmRfbGFuZG1hcmtzLnBy",
-            "b3RvGhJmYWNlX3Jlc3VsdHMucHJvdG8i9gEKEUhvbGlzdGljTGFuZG1hcmtz",
-            "EjoKDXBvc2VMYW5kbWFya3MYASABKAsyIy5odW1hbkxhbmRtYXJrcy5LaW5l",
-            "Y3RQb3NlTGFuZG1hcmtzEjgKEWxlZnRIYW5kTGFuZG1hcmtzGAIgASgLMh0u",
-            "aHVtYW5MYW5kbWFya3MuSGFuZExhbmRtYXJrcxI5ChJyaWdodEhhbmRMYW5k",
-            "bWFya3MYAyABKAsyHS5odW1hbkxhbmRtYXJrcy5IYW5kTGFuZG1hcmtzEjAK",
-            "C2ZhY2VSZXN1bHRzGAQgASgLMhsuaHVtYW5MYW5kbWFya3MuRmFjZVJlc3Vs",
-            "dHNiBnByb3RvMw=="));
+            "aW5lY3RfcG9zZV9sYW5kbWFya3MucHJvdG8aHm1lZGlhcGlwZV9wb3NlX2xh",
+            "bmRtYXJrcy5wcm90bxoUaGFuZF9sYW5kbWFya3MucHJvdG8aEmZhY2VfcmVz",
+            "dWx0cy5wcm90byLZAgoRSG9saXN0aWNMYW5kbWFya3MSQgoTa2luZWN0UG9z",
+            "ZUxhbmRtYXJrcxgBIAEoCzIjLmh1bWFuTGFuZG1hcmtzLktpbmVjdFBvc2VM",
+            "YW5kbWFya3NIABJIChZtZWRpYVBpcGVQb3NlTGFuZG1hcmtzGAUgASgLMiYu",
+            "aHVtYW5MYW5kbWFya3MuTWVkaWFQaXBlUG9zZUxhbmRtYXJrc0gAEjgKEWxl",
+            "ZnRIYW5kTGFuZG1hcmtzGAIgASgLMh0uaHVtYW5MYW5kbWFya3MuSGFuZExh",
+            "bmRtYXJrcxI5ChJyaWdodEhhbmRMYW5kbWFya3MYAyABKAsyHS5odW1hbkxh",
+            "bmRtYXJrcy5IYW5kTGFuZG1hcmtzEjAKC2ZhY2VSZXN1bHRzGAQgASgLMhsu",
+            "aHVtYW5MYW5kbWFya3MuRmFjZVJlc3VsdHNCDwoNcG9zZUxhbmRtYXJrc2IG",
+            "cHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-          new pbr::FileDescriptor[] { global::HumanLandmarks.KinectPoseLandmarksReflection.Descriptor, global::HumanLandmarks.HandLandmarksReflection.Descriptor, global::HumanLandmarks.FaceResultsReflection.Descriptor, },
+          new pbr::FileDescriptor[] { global::HumanLandmarks.KinectPoseLandmarksReflection.Descriptor, global::HumanLandmarks.MediapipePoseLandmarksReflection.Descriptor, global::HumanLandmarks.HandLandmarksReflection.Descriptor, global::HumanLandmarks.FaceResultsReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::HumanLandmarks.HolisticLandmarks), global::HumanLandmarks.HolisticLandmarks.Parser, new[]{ "PoseLandmarks", "LeftHandLandmarks", "RightHandLandmarks", "FaceResults" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::HumanLandmarks.HolisticLandmarks), global::HumanLandmarks.HolisticLandmarks.Parser, new[]{ "KinectPoseLandmarks", "MediaPipePoseLandmarks", "LeftHandLandmarks", "RightHandLandmarks", "FaceResults" }, new[]{ "PoseLandmarks" }, null, null, null)
           }));
     }
     #endregion
@@ -78,10 +81,18 @@ namespace HumanLandmarks {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public HolisticLandmarks(HolisticLandmarks other) : this() {
-      poseLandmarks_ = other.poseLandmarks_ != null ? other.poseLandmarks_.Clone() : null;
       leftHandLandmarks_ = other.leftHandLandmarks_ != null ? other.leftHandLandmarks_.Clone() : null;
       rightHandLandmarks_ = other.rightHandLandmarks_ != null ? other.rightHandLandmarks_.Clone() : null;
       faceResults_ = other.faceResults_ != null ? other.faceResults_.Clone() : null;
+      switch (other.PoseLandmarksCase) {
+        case PoseLandmarksOneofCase.KinectPoseLandmarks:
+          KinectPoseLandmarks = other.KinectPoseLandmarks.Clone();
+          break;
+        case PoseLandmarksOneofCase.MediaPipePoseLandmarks:
+          MediaPipePoseLandmarks = other.MediaPipePoseLandmarks.Clone();
+          break;
+      }
+
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -91,15 +102,27 @@ namespace HumanLandmarks {
       return new HolisticLandmarks(this);
     }
 
-    /// <summary>Field number for the "poseLandmarks" field.</summary>
-    public const int PoseLandmarksFieldNumber = 1;
-    private global::HumanLandmarks.KinectPoseLandmarks poseLandmarks_;
+    /// <summary>Field number for the "kinectPoseLandmarks" field.</summary>
+    public const int KinectPoseLandmarksFieldNumber = 1;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::HumanLandmarks.KinectPoseLandmarks PoseLandmarks {
-      get { return poseLandmarks_; }
+    public global::HumanLandmarks.KinectPoseLandmarks KinectPoseLandmarks {
+      get { return poseLandmarksCase_ == PoseLandmarksOneofCase.KinectPoseLandmarks ? (global::HumanLandmarks.KinectPoseLandmarks) poseLandmarks_ : null; }
       set {
         poseLandmarks_ = value;
+        poseLandmarksCase_ = value == null ? PoseLandmarksOneofCase.None : PoseLandmarksOneofCase.KinectPoseLandmarks;
+      }
+    }
+
+    /// <summary>Field number for the "mediaPipePoseLandmarks" field.</summary>
+    public const int MediaPipePoseLandmarksFieldNumber = 5;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::HumanLandmarks.MediaPipePoseLandmarks MediaPipePoseLandmarks {
+      get { return poseLandmarksCase_ == PoseLandmarksOneofCase.MediaPipePoseLandmarks ? (global::HumanLandmarks.MediaPipePoseLandmarks) poseLandmarks_ : null; }
+      set {
+        poseLandmarks_ = value;
+        poseLandmarksCase_ = value == null ? PoseLandmarksOneofCase.None : PoseLandmarksOneofCase.MediaPipePoseLandmarks;
       }
     }
 
@@ -139,6 +162,27 @@ namespace HumanLandmarks {
       }
     }
 
+    private object poseLandmarks_;
+    /// <summary>Enum of possible cases for the "poseLandmarks" oneof.</summary>
+    public enum PoseLandmarksOneofCase {
+      None = 0,
+      KinectPoseLandmarks = 1,
+      MediaPipePoseLandmarks = 5,
+    }
+    private PoseLandmarksOneofCase poseLandmarksCase_ = PoseLandmarksOneofCase.None;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PoseLandmarksOneofCase PoseLandmarksCase {
+      get { return poseLandmarksCase_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearPoseLandmarks() {
+      poseLandmarksCase_ = PoseLandmarksOneofCase.None;
+      poseLandmarks_ = null;
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -154,10 +198,12 @@ namespace HumanLandmarks {
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (!object.Equals(PoseLandmarks, other.PoseLandmarks)) return false;
+      if (!object.Equals(KinectPoseLandmarks, other.KinectPoseLandmarks)) return false;
+      if (!object.Equals(MediaPipePoseLandmarks, other.MediaPipePoseLandmarks)) return false;
       if (!object.Equals(LeftHandLandmarks, other.LeftHandLandmarks)) return false;
       if (!object.Equals(RightHandLandmarks, other.RightHandLandmarks)) return false;
       if (!object.Equals(FaceResults, other.FaceResults)) return false;
+      if (PoseLandmarksCase != other.PoseLandmarksCase) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -165,10 +211,12 @@ namespace HumanLandmarks {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
-      if (poseLandmarks_ != null) hash ^= PoseLandmarks.GetHashCode();
+      if (poseLandmarksCase_ == PoseLandmarksOneofCase.KinectPoseLandmarks) hash ^= KinectPoseLandmarks.GetHashCode();
+      if (poseLandmarksCase_ == PoseLandmarksOneofCase.MediaPipePoseLandmarks) hash ^= MediaPipePoseLandmarks.GetHashCode();
       if (leftHandLandmarks_ != null) hash ^= LeftHandLandmarks.GetHashCode();
       if (rightHandLandmarks_ != null) hash ^= RightHandLandmarks.GetHashCode();
       if (faceResults_ != null) hash ^= FaceResults.GetHashCode();
+      hash ^= (int) poseLandmarksCase_;
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -187,9 +235,9 @@ namespace HumanLandmarks {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      if (poseLandmarks_ != null) {
+      if (poseLandmarksCase_ == PoseLandmarksOneofCase.KinectPoseLandmarks) {
         output.WriteRawTag(10);
-        output.WriteMessage(PoseLandmarks);
+        output.WriteMessage(KinectPoseLandmarks);
       }
       if (leftHandLandmarks_ != null) {
         output.WriteRawTag(18);
@@ -202,6 +250,10 @@ namespace HumanLandmarks {
       if (faceResults_ != null) {
         output.WriteRawTag(34);
         output.WriteMessage(FaceResults);
+      }
+      if (poseLandmarksCase_ == PoseLandmarksOneofCase.MediaPipePoseLandmarks) {
+        output.WriteRawTag(42);
+        output.WriteMessage(MediaPipePoseLandmarks);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -213,9 +265,9 @@ namespace HumanLandmarks {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (poseLandmarks_ != null) {
+      if (poseLandmarksCase_ == PoseLandmarksOneofCase.KinectPoseLandmarks) {
         output.WriteRawTag(10);
-        output.WriteMessage(PoseLandmarks);
+        output.WriteMessage(KinectPoseLandmarks);
       }
       if (leftHandLandmarks_ != null) {
         output.WriteRawTag(18);
@@ -229,6 +281,10 @@ namespace HumanLandmarks {
         output.WriteRawTag(34);
         output.WriteMessage(FaceResults);
       }
+      if (poseLandmarksCase_ == PoseLandmarksOneofCase.MediaPipePoseLandmarks) {
+        output.WriteRawTag(42);
+        output.WriteMessage(MediaPipePoseLandmarks);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -239,8 +295,11 @@ namespace HumanLandmarks {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
-      if (poseLandmarks_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(PoseLandmarks);
+      if (poseLandmarksCase_ == PoseLandmarksOneofCase.KinectPoseLandmarks) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(KinectPoseLandmarks);
+      }
+      if (poseLandmarksCase_ == PoseLandmarksOneofCase.MediaPipePoseLandmarks) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(MediaPipePoseLandmarks);
       }
       if (leftHandLandmarks_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(LeftHandLandmarks);
@@ -263,12 +322,6 @@ namespace HumanLandmarks {
       if (other == null) {
         return;
       }
-      if (other.poseLandmarks_ != null) {
-        if (poseLandmarks_ == null) {
-          PoseLandmarks = new global::HumanLandmarks.KinectPoseLandmarks();
-        }
-        PoseLandmarks.MergeFrom(other.PoseLandmarks);
-      }
       if (other.leftHandLandmarks_ != null) {
         if (leftHandLandmarks_ == null) {
           LeftHandLandmarks = new global::HumanLandmarks.HandLandmarks();
@@ -287,6 +340,21 @@ namespace HumanLandmarks {
         }
         FaceResults.MergeFrom(other.FaceResults);
       }
+      switch (other.PoseLandmarksCase) {
+        case PoseLandmarksOneofCase.KinectPoseLandmarks:
+          if (KinectPoseLandmarks == null) {
+            KinectPoseLandmarks = new global::HumanLandmarks.KinectPoseLandmarks();
+          }
+          KinectPoseLandmarks.MergeFrom(other.KinectPoseLandmarks);
+          break;
+        case PoseLandmarksOneofCase.MediaPipePoseLandmarks:
+          if (MediaPipePoseLandmarks == null) {
+            MediaPipePoseLandmarks = new global::HumanLandmarks.MediaPipePoseLandmarks();
+          }
+          MediaPipePoseLandmarks.MergeFrom(other.MediaPipePoseLandmarks);
+          break;
+      }
+
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -303,10 +371,12 @@ namespace HumanLandmarks {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
           case 10: {
-            if (poseLandmarks_ == null) {
-              PoseLandmarks = new global::HumanLandmarks.KinectPoseLandmarks();
+            global::HumanLandmarks.KinectPoseLandmarks subBuilder = new global::HumanLandmarks.KinectPoseLandmarks();
+            if (poseLandmarksCase_ == PoseLandmarksOneofCase.KinectPoseLandmarks) {
+              subBuilder.MergeFrom(KinectPoseLandmarks);
             }
-            input.ReadMessage(PoseLandmarks);
+            input.ReadMessage(subBuilder);
+            KinectPoseLandmarks = subBuilder;
             break;
           }
           case 18: {
@@ -328,6 +398,15 @@ namespace HumanLandmarks {
               FaceResults = new global::HumanLandmarks.FaceResults();
             }
             input.ReadMessage(FaceResults);
+            break;
+          }
+          case 42: {
+            global::HumanLandmarks.MediaPipePoseLandmarks subBuilder = new global::HumanLandmarks.MediaPipePoseLandmarks();
+            if (poseLandmarksCase_ == PoseLandmarksOneofCase.MediaPipePoseLandmarks) {
+              subBuilder.MergeFrom(MediaPipePoseLandmarks);
+            }
+            input.ReadMessage(subBuilder);
+            MediaPipePoseLandmarks = subBuilder;
             break;
           }
         }
@@ -346,10 +425,12 @@ namespace HumanLandmarks {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
           case 10: {
-            if (poseLandmarks_ == null) {
-              PoseLandmarks = new global::HumanLandmarks.KinectPoseLandmarks();
+            global::HumanLandmarks.KinectPoseLandmarks subBuilder = new global::HumanLandmarks.KinectPoseLandmarks();
+            if (poseLandmarksCase_ == PoseLandmarksOneofCase.KinectPoseLandmarks) {
+              subBuilder.MergeFrom(KinectPoseLandmarks);
             }
-            input.ReadMessage(PoseLandmarks);
+            input.ReadMessage(subBuilder);
+            KinectPoseLandmarks = subBuilder;
             break;
           }
           case 18: {
@@ -371,6 +452,15 @@ namespace HumanLandmarks {
               FaceResults = new global::HumanLandmarks.FaceResults();
             }
             input.ReadMessage(FaceResults);
+            break;
+          }
+          case 42: {
+            global::HumanLandmarks.MediaPipePoseLandmarks subBuilder = new global::HumanLandmarks.MediaPipePoseLandmarks();
+            if (poseLandmarksCase_ == PoseLandmarksOneofCase.MediaPipePoseLandmarks) {
+              subBuilder.MergeFrom(MediaPipePoseLandmarks);
+            }
+            input.ReadMessage(subBuilder);
+            MediaPipePoseLandmarks = subBuilder;
             break;
           }
         }
