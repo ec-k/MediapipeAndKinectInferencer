@@ -13,8 +13,6 @@ public record struct PlaybackFrame(
 
 public class PlaybackReader : IPlaybackReader
 {
-    readonly InputLogReader _inputLogReader;
-
     public ReadOnlyReactiveProperty<K4AdotNet.Record.Playback> Playback => _playback;
     public ReadOnlyReactiveProperty<Microseconds64> CurrentPositionUs => _currentPositionUs;
 
@@ -29,12 +27,8 @@ public class PlaybackReader : IPlaybackReader
     CancellationTokenSource _producerLoopCts = new();
     readonly int _taskCancelTimeoutSec = 2;
 
-    public PlaybackReader(
-        InputLogReader inputLogReader,
-        int bufferSize = 10)
+    public PlaybackReader(int bufferSize = 10)
     {
-        _inputLogReader = inputLogReader ?? throw new ArgumentNullException(nameof(inputLogReader));
-
         _frameChannel = Channel.CreateBounded<PlaybackFrame>(
             new BoundedChannelOptions(bufferSize)
             {
@@ -54,16 +48,12 @@ public class PlaybackReader : IPlaybackReader
 
         await Task.Run(() => _playback.Value = new(descriptor.VideoFilePath), token);
 
-        // Load input log file if path is provided
-        if (!string.IsNullOrEmpty(descriptor.InputLogFilePath))
-            await _inputLogReader.LoadLogFile(descriptor.InputLogFilePath);
-
         _playback.Value.GetCalibration(out var calibration);
 
         ClearBuffer();        
         _producerLoopCts?.Dispose();
         _producerLoopCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-        _producerLoopTask = ProducerLoop(_producerLoopCts.Token);
+        _producerLoopTask = Task.Run(() => ProducerLoop(_producerLoopCts.Token));
 
         _currentPositionUs.Value = new(0); // Reset current position
     }
