@@ -45,7 +45,6 @@ public class KinectInferencer
             }
             return frame.DuplicateReference();
         }
-        
     }
 
     Skeleton? Inference(BodyFrame frame)
