@@ -7,6 +7,7 @@ using KinectPoseInferencer.Avalonia.Views;
 using KinectPoseInferencer.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -31,13 +32,24 @@ namespace KinectPoseInferencer.Avalonia
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
+                var lifetime = services.GetRequiredService<IHostApplicationLifetime>();
+
                 var renderer = services.GetRequiredService<Renderers.Renderer>();
                 renderer.StartVisualizationThread();
 
                 var mediapipe = services.GetRequiredService<MediaPipeProcessManager>();
-                Task.Run(mediapipe.StartMediapipeProcess);
-
-                var lifetimeService = services.GetRequiredService<IHostApplicationLifetime>();
+                lifetime.ApplicationStopping.Register(mediapipe.StopProcess);
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await mediapipe.StartMediapipeProcessAsync(lifetime.ApplicationStopping);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"MediaPipe Process Error: {ex.Message}");
+                    }
+                });
 
                 // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
                 // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins

@@ -1,14 +1,13 @@
 ﻿using CliWrap;
-using System.Windows;
 
 namespace KinectPoseInferencer.Core;
 
-public class MediaPipeProcessManager
+public class MediaPipeProcessManager: IDisposable
 {
     readonly IMediaPipeConfiguration _config;
 
-    CancellationTokenSource _gracefulCts = new();
-    CancellationTokenSource _forcefulCts = new();
+    CancellationTokenSource? _gracefulCts;
+    CancellationTokenSource? _forcefulCts;
     readonly TimeSpan _gracefulStopTimeoutSec = TimeSpan.FromSeconds(3);
 
     public MediaPipeProcessManager(IMediaPipeConfiguration config)
@@ -16,25 +15,29 @@ public class MediaPipeProcessManager
         _config = config;
     }
 
-    public async Task StartMediapipeProcess()
+    public async Task StartMediapipeProcessAsync(CancellationToken token)
     {
+        StopProcess();
+
+        _gracefulCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+        _forcefulCts = new();
+
+        var exePath = _config.ExecutablePath;
+        if (string.IsNullOrWhiteSpace(exePath))
+        {
+            Console.Error.WriteLine("MediaPipe Inferencer .exe path is not specified at MediaPipeSettings:ExecutablePath.");
+            return;
+        }
+
+        var fullPath = Path.GetFullPath(exePath, AppContext.BaseDirectory);
+        if (!File.Exists(fullPath))
+        {
+            Console.Error.WriteLine($"MediaPipe Inferencer .exe is not found: {fullPath}");
+            return;
+        }
+
         try
         {
-            var exePath = _config.ExecutablePath;
-            if (string.IsNullOrWhiteSpace(exePath))
-            {
-                MessageBox.Show("MediaPipe Inferencer .exe path is not specified at MediaPipeSettings:ExecutablePath.");
-                return;
-            }
-
-            var fullPath = Path.GetFullPath(exePath, AppContext.BaseDirectory);
-
-            if (!File.Exists(fullPath))
-            {
-                MessageBox.Show($"MediaPipe Inferencer .exe is not found: {fullPath}");
-                return;
-            }
-
             await Cli.Wrap(fullPath)
                      .ExecuteAsync(_forcefulCts.Token, _gracefulCts.Token);
         }
@@ -43,7 +46,14 @@ public class MediaPipeProcessManager
 
     public void StopProcess()
     {
-        _gracefulCts.Cancel();
-        _forcefulCts.CancelAfter(_gracefulStopTimeoutSec);
+        _gracefulCts?.Cancel();
+        _forcefulCts?.CancelAfter(_gracefulStopTimeoutSec);
+    }
+
+    public void Dispose()
+    {
+        StopProcess();
+        _gracefulCts?.Dispose();
+        _forcefulCts?.Dispose();
     }
 }
