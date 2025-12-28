@@ -79,7 +79,15 @@ public class PlaybackReader : IPlaybackReader
         capture   = null;
         imuSample = null;
 
-        if (!_frameChannel.Reader.TryRead(out var frame))
+        if (!_frameChannel.Reader.TryPeek(out var frame))
+            return false;
+
+        var targetUs = new Microseconds64(targetFrameTime);
+        if (frame.Capture?.DepthImage is not { DeviceTimestamp: var deviceTimeUs}
+        || deviceTimeUs > targetUs)
+            return false;
+
+        if (!_frameChannel.Reader.TryRead(out frame))
             return false;
 
         try
