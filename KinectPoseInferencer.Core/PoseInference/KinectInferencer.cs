@@ -33,13 +33,19 @@ public class KinectInferencer
     {
         if (_tracker is null) return null;
 
-        using var frame = _tracker.PopResult();
-        var nullableLandmark = Inference(frame);
-        if(nullableLandmark is Skeleton landmark)
+        if (!_tracker.TryPopResult(out var frame))
+            return null;
+
+        using (frame)
         {
-            _result.Value = landmark;
+            var nullableLandmark = Inference(frame);
+            if (nullableLandmark is Skeleton landmark)
+            {
+                _result.Value = landmark;
+            }
+            return frame.DuplicateReference();
         }
-        return frame.DuplicateReference();
+        
     }
 
     Skeleton? Inference(BodyFrame frame)
