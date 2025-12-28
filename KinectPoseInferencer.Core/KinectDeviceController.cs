@@ -145,14 +145,14 @@ public class KinectDeviceController: IDisposable
 
         if(device.TryGetImuSample(out var imu, _captureTimeoutMs))
         {
-            _dataBroker.UpdateImu(imu);
+            _dataBroker.SetImu(imu);
         }
 
         if (device.TryGetCapture(out var capture, _captureTimeoutMs))
         {
             using (capture)
             {
-                _dataBroker.UpdateCapture(capture);
+                _dataBroker.SetCapture(capture);
             }
         }
     }

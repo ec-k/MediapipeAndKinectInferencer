@@ -18,7 +18,7 @@ public class InputLogPresenter : IDisposable
         _sender = sender ?? throw new ArgumentNullException(nameof(sender));
         _recordDataBroker = recordDataBroker ?? throw new ArgumentNullException(nameof(recordDataBroker));
 
-        _recordDataBroker.InputEvents
+        _recordDataBroker.DeviceInputData
             .Where(inputEvent => inputEvent is not null)
             .Subscribe(inputEvent =>
             {
@@ -38,7 +38,7 @@ public class InputLogPresenter : IDisposable
             Data = keyInputEvent
         };
 
-        _recordDataBroker.PushInputLogEvent(deviceInputData);
+        _recordDataBroker.SetDeviceInputData(deviceInputData);
     }
 
     void MouseInputEventCallback(MouseEventData mouseInputEvent)
@@ -49,7 +49,7 @@ public class InputLogPresenter : IDisposable
             Data = mouseInputEvent
         };
 
-        _recordDataBroker.PushInputLogEvent(deviceInputData);
+        _recordDataBroker.SetDeviceInputData(deviceInputData);
     }
 
     public void Dispose()

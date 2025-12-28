@@ -211,7 +211,7 @@ public class PlaybackReader : IPlaybackReader
 
                                 if (frame.Capture is not null)
                                 {
-                                    _frameCaptureBroker.UpdateCapture(frame.Capture);
+                                    _frameCaptureBroker.SetCapture(frame.Capture);
                                     if (frame.Capture.DepthImage is not null)
                                     {
                                         _currentTimestampUs = frame.Capture.DepthImage.DeviceTimestamp;
@@ -219,10 +219,10 @@ public class PlaybackReader : IPlaybackReader
                                     }
                                 }
                                 if (frame.ImuSample.HasValue)
-                                    _frameCaptureBroker.UpdateImu(frame.ImuSample.Value);
+                                    _frameCaptureBroker.SetImu(frame.ImuSample.Value);
 
                                 foreach (var ev in frame.InputEvents)
-                                    _frameCaptureBroker.PushInputLogEvent(ev);
+                                    _frameCaptureBroker.SetDeviceInputData(ev);
 
                                 lastEmissionTicks = Stopwatch.GetTimestamp();
 

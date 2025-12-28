@@ -95,7 +95,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             .Where(capture => capture is not null)
             .Subscribe(capture => DisplayCapture(capture))
             .AddTo(ref _disposables);
-        _broker.InputEvents
+        _broker.DeviceInputData
             .Where(input => input is not null)
             .Chunk(TimeSpan.FromSeconds(1.0 / 10.0))
             .Where(inputs => inputs is { Length: > 0 })

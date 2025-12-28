@@ -83,7 +83,7 @@ public class LandmarkPresenter: IDisposable
                 using var frame = _inferencer.ProcessFrame();
                 if (frame is null) return;
                 _frameManager.Frame = frame.DuplicateReference();
-                _recordDataBroker.UpdateBodyFrame(frame);
+                _recordDataBroker.SetBodyFrame(frame);
             })
             .AddTo(ref _disposables);
         _recordDataBroker.Imu
