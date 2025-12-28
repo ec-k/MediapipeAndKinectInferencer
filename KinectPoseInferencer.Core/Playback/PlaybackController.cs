@@ -1,4 +1,5 @@
 ﻿using Cysharp.Threading;
+using K4AdotNet;
 using R3;
 using ValueTaskSupplement;
 
@@ -33,10 +34,13 @@ public class PlaybackController : IPlaybackController
 
     public async Task Prepare(CancellationToken token)
     {
-        if (Descriptor is null || string.IsNullOrEmpty(Descriptor.MetadataFilePath)) return;
+        if (Descriptor is null
+            || string.IsNullOrEmpty(Descriptor.MetadataFilePath)
+            || string.IsNullOrEmpty(Descriptor.InputLogFilePath)) return;
 
+        await _logReader.LoadMetaFileAsync(Descriptor.MetadataFilePath);
         await Task.WhenAll(
-            _logReader.LoadMetaFileAsync(Descriptor.MetadataFilePath),
+            _logReader.LoadLogFile(Descriptor.InputLogFilePath),
             _playbackReader.Configure(Descriptor, token)
         );
     }
@@ -69,7 +73,8 @@ public class PlaybackController : IPlaybackController
                 if (capture is not null) Broker.SetCapture(capture);
                 if (imuSample.HasValue)  Broker.SetImu(imuSample.Value);
             }
-            _logReader.TryRead(_playbackCurrentTimestamp.Microseconds, out var deviceInputs);
+            var currentTimeUs = new Microseconds64(_playbackCurrentTimestamp);
+            _logReader.TryRead(currentTimeUs.ValueUsec, out var deviceInputs);
 
             foreach (var input in deviceInputs)
                 Broker.SetDeviceInputData(input);
@@ -87,6 +92,7 @@ public class PlaybackController : IPlaybackController
     {
         Pause();
 
+        _playbackCurrentTimestamp = TimeSpan.Zero;
         _playbackReader.Rewind();
         await _logReader.Rewind();
     }

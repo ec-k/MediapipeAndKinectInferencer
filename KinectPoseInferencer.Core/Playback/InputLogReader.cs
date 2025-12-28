@@ -64,7 +64,8 @@ public class InputLogReader : IInputLogReader
     {
         try
         {
-            await StopProducer();
+            if(_producerTask is not null)
+                await StopProducer();
 
             if (string.IsNullOrWhiteSpace(_logFilePath)) return false;
 
@@ -79,7 +80,7 @@ public class InputLogReader : IInputLogReader
             _reader = new StreamReader(new FileStream(_logFilePath, FileMode.Open, FileAccess.Read, FileShare.Read));
 
             _cts = new();
-            _producerTask = ProducerLoop(_cts.Token);
+            _producerTask = Task.Run(() => ProducerLoop(_cts.Token));
 
             return true;
         }
@@ -108,6 +109,36 @@ public class InputLogReader : IInputLogReader
         _kinectToStopwatchOffset = _metadata.SystemStopwatchTimestampAtKinectStart - _metadata.FirstKinectDeviceTimestampUs * TimeSpan.TicksPerMicrosecond;
     }
 
+    /// <summary>
+    /// Finds all input events that occurred before or at the given Kinect device timestamp.
+    /// </summary>
+    /// <param name="kinectDeviceTimestampUs">The Kinect device timestamp in microseconds.</param>
+    /// <returns>A list of input events that occurred up to the given timestamp.</returns>
+    public bool TryRead(long kinectDeviceTimestampUs, out IList<DeviceInputData> results)
+    {
+        results = new List<DeviceInputData>();
+        if (_reader is null || _metadata is null || _eventChannel is null) return false;
+
+        // Convert Kinect timestamp to equivalent system stopwatch timestamp
+        var targetSystemStopwatchTimestamp = kinectDeviceTimestampUs * TimeSpan.TicksPerMicrosecond + _kinectToStopwatchOffset;
+
+        while (_eventChannel.Reader.TryPeek(out var inputEvent))
+        {
+            if (inputEvent.Data is not IDeviceInput deviceInput)
+                continue;
+
+            if (deviceInput.RawStopwatchTimestamp <= targetSystemStopwatchTimestamp)
+            {
+                if (_eventChannel.Reader.TryRead(out inputEvent))
+                    results.Add(inputEvent);
+            }
+            else
+                break;
+        }
+
+        return true;
+    }
+
     async Task ProducerLoop(CancellationToken token)
     {
         if(_reader is null || _eventChannel is null || _metadata is null) return;
@@ -116,6 +147,9 @@ public class InputLogReader : IInputLogReader
         {
             while (!token.IsCancellationRequested)
             {
+                if (!await _eventChannel.Writer.WaitToWriteAsync(token))
+                    break;
+
                 var line = await _reader.ReadLineAsync();
                 if (line is null) break;
                 if (string.IsNullOrWhiteSpace(line)) continue;
@@ -137,41 +171,10 @@ public class InputLogReader : IInputLogReader
                 if (eventTimestamp < _metadata.SystemStopwatchTimestampAtKinectStart)
                     continue;
 
-                await _eventChannel.Writer.WriteAsync(inputEvent);
+                _eventChannel.Writer.TryWrite(inputEvent);
             }
         }
         catch (OperationCanceledException) { }
-        finally
-        {
-            _eventChannel?.Writer.TryComplete();
-        }
-    }
-
-    /// <summary>
-    /// Finds all input events that occurred before or at the given Kinect device timestamp.
-    /// </summary>
-    /// <param name="kinectDeviceTimestampUs">The Kinect device timestamp in microseconds.</param>
-    /// <returns>A list of input events that occurred up to the given timestamp.</returns>
-    public bool TryRead(long kinectDeviceTimestampUs, out IList<DeviceInputData> results)
-    {
-        results = new List<DeviceInputData>();
-        if (_reader is null || _metadata is null || _eventChannel is null) return false;
-
-        // Convert Kinect timestamp to equivalent system stopwatch timestamp
-        var targetSystemStopwatchTimestamp = kinectDeviceTimestampUs * TimeSpan.TicksPerMicrosecond + _kinectToStopwatchOffset;
-
-        while (_eventChannel.Reader.TryRead(out var inputEvent))
-        {
-            if (inputEvent.Data is not IDeviceInput deviceInput)
-                continue;
-
-            if (deviceInput.RawStopwatchTimestamp <= targetSystemStopwatchTimestamp)
-                results.Add(inputEvent);
-            else
-                break;
-        }
-
-        return true;
     }
 
     async Task StopProducer()
