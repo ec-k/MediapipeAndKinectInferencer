@@ -28,12 +28,12 @@ public class UdpResultReceiver: IDisposable
     readonly Action<ObjectDisposedException>? _objectDisposedExceptionCallback;
 
     public UdpResultReceiver(
-        ReceiverEventSettings settings,
-        int port
+        IPEndPoint receiverEndPoint,
+        ReceiverEventSettings settings
         )
     {
         _settings = settings;
-        _receiver = new UdpClient(port);
+        _receiver = new UdpClient(receiverEndPoint);
         _receiver.BeginReceive(OnReceived, _receiver);
     }
 
