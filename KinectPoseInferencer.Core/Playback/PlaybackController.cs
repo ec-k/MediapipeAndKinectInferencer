@@ -21,11 +21,14 @@ public class PlaybackController : IPlaybackController
     public int TargetFps { get; private set; } = 120;
     LogicLooper? _readingLoop;
     ReactiveProperty<TimeSpan> _playbackElapsedTime = new();
+    TimeSpan _recordLength = TimeSpan.Zero;
 
     public ReadOnlyReactiveProperty<TimeSpan> CurrentTime => _playbackElapsedTime;
     public ReadOnlyReactiveProperty<bool> IsPlaying => _isPlaying;
     ReactiveProperty<bool> _isPlaying = new(false);
     bool _terminateLoop = false;
+
+    DisposableBag _disposables = new();
 
     public PlaybackController(
         IPlaybackReader playbackReader,
@@ -35,6 +38,11 @@ public class PlaybackController : IPlaybackController
         _playbackReader = playbackReader ?? throw new ArgumentNullException(nameof(playbackReader));
         _logReader = logReader ?? throw new ArgumentNullException(nameof(logReader));
         _broker = broker ?? throw new ArgumentNullException(nameof(broker));
+
+        _playbackReader.Playback
+            .Where(playback => playback is not null)
+            .Subscribe(playback => _recordLength = playback.RecordLength)
+            .AddTo(ref _disposables);
     }
 
     public async Task Prepare(CancellationToken token)
@@ -106,6 +114,8 @@ public class PlaybackController : IPlaybackController
                 _terminateLoop = false;
                 return false;
             }
+            if (_playbackElapsedTime.Value > _recordLength) 
+                _isPlaying.Value = false;
             if (!_isPlaying.Value) return true;
 
             _playbackElapsedTime.Value += ctx.ElapsedTimeFromPreviousFrame;
@@ -148,6 +158,7 @@ public class PlaybackController : IPlaybackController
 
     public async ValueTask DisposeAsync()
     {
+        _disposables.Dispose();
         await ValueTaskEx.WhenAll(
             _playbackReader.DisposeAsync(),
             _logReader.DisposeAsync());
