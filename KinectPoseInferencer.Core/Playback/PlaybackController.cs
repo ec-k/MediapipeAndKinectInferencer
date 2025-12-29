@@ -88,13 +88,16 @@ public class PlaybackController : IPlaybackController
     {
         if (_isPlaying.Value) return;
 
-        if (_readingLoop is null)
-        {
-            _readingLoop = new(TargetFps);
-            _playbackElapsedTime.Value = TimeSpan.Zero;
-        }
-
         _isPlaying.Value = true;
+
+        if (_readingLoop is null)
+            StartReadingLoop();
+    }
+
+    void StartReadingLoop()
+    {
+        _readingLoop = new(TargetFps);
+        _playbackElapsedTime.Value = TimeSpan.Zero;
 
         _readingLoop.RegisterActionAsync((in LogicLooperActionContext ctx) =>
         {
@@ -112,7 +115,7 @@ public class PlaybackController : IPlaybackController
             if (_playbackReader.TryRead(kinectAbsoluteTime, out var capture, out var imuSample))
             {
                 if (capture is not null) _broker.SetCapture(capture);
-                if (imuSample.HasValue)  _broker.SetImu(imuSample.Value);
+                if (imuSample.HasValue) _broker.SetImu(imuSample.Value);
             }
             _logReader.TryRead(systemAbsoluteTime, out var deviceInputs);
 
