@@ -1,5 +1,4 @@
 ﻿using Cysharp.Threading;
-using K4AdotNet;
 using R3;
 using ValueTaskSupplement;
 
@@ -73,8 +72,7 @@ public class PlaybackController : IPlaybackController
                 if (capture is not null) Broker.SetCapture(capture);
                 if (imuSample.HasValue)  Broker.SetImu(imuSample.Value);
             }
-            var currentTimeUs = new Microseconds64(_playbackCurrentTimestamp);
-            _logReader.TryRead(currentTimeUs.ValueUsec, out var deviceInputs);
+            _logReader.TryRead(_playbackCurrentTimestamp, out var deviceInputs);
 
             foreach (var input in deviceInputs)
                 Broker.SetDeviceInputData(input);

@@ -6,7 +6,7 @@ namespace KinectPoseInferencer.Core.Playback;
 
 public class InputLogReader : IInputLogReader
 {
-    long                      _kinectToStopwatchOffset = 0;
+    TimeSpan                  _kinectToSystemOffset = TimeSpan.Zero;
     string?                   _logFilePath;
     StreamReader?             _reader;
                               
@@ -96,38 +96,31 @@ public class InputLogReader : IInputLogReader
         await InitializeProducer();
     }
 
-    private void CalculateKinectOffset()
+    void CalculateKinectOffset()
     {
-        if (_metadata is null || _metadata.SystemStopwatchTimestampAtKinectStart == 0 || _metadata.FirstKinectDeviceTimestampUs == 0)
-        {
-            _kinectToStopwatchOffset = 0;
-            return;
-        }
-
-        // Offset = KinectTimestamp - SystemStopwatchTimestamp
-        // This offset is added to a system stopwatch timestamp to get an equivalent Kinect timestamp.
-        _kinectToStopwatchOffset = _metadata.SystemStopwatchTimestampAtKinectStart - _metadata.FirstKinectDeviceTimestampUs * TimeSpan.TicksPerMicrosecond;
+        if (_metadata is not null)
+            _kinectToSystemOffset = _metadata.FirstFrameSystemTime - _metadata.FirstFrameKinectDeviceTime;
     }
 
     /// <summary>
     /// Finds all input events that occurred before or at the given Kinect device timestamp.
     /// </summary>
-    /// <param name="kinectDeviceTimestampUs">The Kinect device timestamp in microseconds.</param>
+    /// <param name="kinectDeviceTimestamp">The Kinect device timestamp.</param>
     /// <returns>A list of input events that occurred up to the given timestamp.</returns>
-    public bool TryRead(long kinectDeviceTimestampUs, out IList<DeviceInputData> results)
+    public bool TryRead(TimeSpan kinectDeviceTimestamp, out IList<DeviceInputData> results)
     {
         results = new List<DeviceInputData>();
-        if (_reader is null || _metadata is null || _eventChannel is null) return false;
+        if (_reader is null || _eventChannel is null) return false;
 
         // Convert Kinect timestamp to equivalent system stopwatch timestamp
-        var targetSystemStopwatchTimestamp = kinectDeviceTimestampUs * TimeSpan.TicksPerMicrosecond + _kinectToStopwatchOffset;
+        var targetSystemTime = kinectDeviceTimestamp + _kinectToSystemOffset;
 
         while (_eventChannel.Reader.TryPeek(out var inputEvent))
         {
-            if (inputEvent.Data is not IDeviceInput deviceInput)
+            if (inputEvent.Data is not IDeviceInput)
                 continue;
 
-            if (deviceInput.RawStopwatchTimestamp <= targetSystemStopwatchTimestamp)
+            if (inputEvent.Timestamp <= targetSystemTime)
             {
                 if (_eventChannel.Reader.TryRead(out inputEvent))
                     results.Add(inputEvent);
@@ -167,8 +160,7 @@ public class InputLogReader : IInputLogReader
 
                 if (inputEvent?.Data is null) continue;
 
-                var eventTimestamp = inputEvent.Data.RawStopwatchTimestamp;
-                if (eventTimestamp < _metadata.SystemStopwatchTimestampAtKinectStart)
+                if (inputEvent.Timestamp < _metadata.FirstFrameSystemTime)
                     continue;
 
                 _eventChannel.Writer.TryWrite(inputEvent);

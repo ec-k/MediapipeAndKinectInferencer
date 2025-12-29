@@ -34,7 +34,7 @@ public class InputLogPresenter : IDisposable
     {
         var deviceInputData = new DeviceInputData
         {
-            Timestamp = TimeSpan.FromTicks(keyInputEvent.RawStopwatchTimestamp).TotalMicroseconds,
+            Timestamp = TimeSpan.FromTicks(keyInputEvent.RawStopwatchTimestamp),
             Data = keyInputEvent
         };
 
@@ -45,7 +45,7 @@ public class InputLogPresenter : IDisposable
     {
         var deviceInputData = new DeviceInputData
         {
-            Timestamp = TimeSpan.FromTicks(mouseInputEvent.RawStopwatchTimestamp).TotalMicroseconds,
+            Timestamp = TimeSpan.FromTicks(mouseInputEvent.RawStopwatchTimestamp),
             Data = mouseInputEvent
         };
 

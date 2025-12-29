@@ -1,5 +1,4 @@
-﻿using System;
-using MessagePack;
+﻿using MessagePack;
 using System.Text.Json.Serialization;
 
 
@@ -8,14 +7,14 @@ namespace KinectPoseInferencer.Core;
 [MessagePackObject]
 public class LogMetadata
 {
-    [Key(0)] public long SystemStopwatchTimestampAtKinectStart { get; set; }
-    [Key(1)] public long FirstKinectDeviceTimestampUs { get; set; }
+    [Key(0)] public TimeSpan FirstFrameSystemTime { get; set; }
+    [Key(1)] public TimeSpan FirstFrameKinectDeviceTime { get; set; }
 }
 
 [MessagePackObject]
 public class DeviceInputData
 {
-    [Key(0)] public double Timestamp { get; set; }
+    [Key(0)] public TimeSpan Timestamp { get; set; }
     [Key(1)] public IDeviceInput? Data { get; set; }
 }
 
