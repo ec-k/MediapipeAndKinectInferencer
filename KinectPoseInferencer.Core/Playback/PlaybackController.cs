@@ -1,5 +1,6 @@
 ﻿using Cysharp.Threading;
 using R3;
+using System.Text.Json;
 using ValueTaskSupplement;
 
 namespace KinectPoseInferencer.Core.Playback;
@@ -8,14 +9,18 @@ public class PlaybackController : IPlaybackController
 {
     readonly IPlaybackReader _playbackReader;
     readonly InputLogReader _logReader;
+    readonly RecordDataBroker _broker;
 
     public IPlaybackReader Reader => _playbackReader;
-    public RecordDataBroker Broker { get; }
     public PlaybackDescriptor? Descriptor { get; set; }
 
-    public int TargetFps { get; private set; } = 30;
+    LogMetadata? _metadata;
+    TimeSpan _firstFrameKinectTime = TimeSpan.Zero;
+    TimeSpan _firstFrameSystemTime = TimeSpan.Zero;
+
+    public int TargetFps { get; private set; } = 120;
     LogicLooper? _readingLoop;
-    TimeSpan _playbackCurrentTimestamp;
+    TimeSpan _playbackElapsedTime;
 
     public ReadOnlyReactiveProperty<bool> IsPlaying => _isPlaying;
     ReactiveProperty<bool> _isPlaying = new(false);
@@ -28,20 +33,54 @@ public class PlaybackController : IPlaybackController
     {
         _playbackReader = playbackReader ?? throw new ArgumentNullException(nameof(playbackReader));
         _logReader = logReader ?? throw new ArgumentNullException(nameof(logReader));
-        Broker = broker ?? throw new ArgumentNullException(nameof(broker));
+        _broker = broker ?? throw new ArgumentNullException(nameof(broker));
     }
 
     public async Task Prepare(CancellationToken token)
     {
         if (Descriptor is null
             || string.IsNullOrEmpty(Descriptor.MetadataFilePath)
-            || string.IsNullOrEmpty(Descriptor.InputLogFilePath)) return;
+            || string.IsNullOrEmpty(Descriptor.InputLogFilePath))
+            return;
 
-        await _logReader.LoadMetaFileAsync(Descriptor.MetadataFilePath);
+        await LoadMetaFileAsync(Descriptor.MetadataFilePath);
         await Task.WhenAll(
             _logReader.LoadLogFile(Descriptor.InputLogFilePath),
             _playbackReader.Configure(Descriptor, token)
         );
+    }
+
+    public async Task<bool> LoadMetaFileAsync(string filePath)
+    {
+        if (!File.Exists(filePath))
+        {
+            Console.WriteLine($"Error: Input log metadata file not found at {filePath}");
+            return false;
+        }
+
+        try
+        {
+            using var openStream = File.OpenRead(filePath);
+            _metadata = await JsonSerializer.DeserializeAsync<LogMetadata>(openStream);
+
+            if (_metadata is not null)
+            {
+                _firstFrameKinectTime = _metadata.FirstFrameKinectDeviceTime;
+                _firstFrameSystemTime = _metadata.FirstFrameSystemTime;
+
+                _logReader.FirstFrameTime = _firstFrameSystemTime;
+                return true;
+            }
+
+            Console.Error.WriteLine("Error: Failed to deserialize LogMetadata.");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error reading input log metadata file: {ex.Message}");
+            _metadata = null;
+            return false;
+        }
     }
 
     public void Play()
@@ -51,7 +90,7 @@ public class PlaybackController : IPlaybackController
         if (_readingLoop is null)
         {
             _readingLoop = new(TargetFps);
-            _playbackCurrentTimestamp = TimeSpan.Zero;
+            _playbackElapsedTime = TimeSpan.Zero;
         }
 
         _isPlaying.Value = true;
@@ -65,17 +104,19 @@ public class PlaybackController : IPlaybackController
             }
             if (!_isPlaying.Value) return true;
 
-            _playbackCurrentTimestamp += ctx.ElapsedTimeFromPreviousFrame;
+            _playbackElapsedTime += ctx.ElapsedTimeFromPreviousFrame;
+            var kinectAbsoluteTime = _playbackElapsedTime + _firstFrameKinectTime;
+            var systemAbsoluteTime = _playbackElapsedTime + _firstFrameSystemTime;
 
-            if (_playbackReader.TryRead(_playbackCurrentTimestamp, out var capture, out var imuSample))
+            if (_playbackReader.TryRead(kinectAbsoluteTime, out var capture, out var imuSample))
             {
-                if (capture is not null) Broker.SetCapture(capture);
-                if (imuSample.HasValue)  Broker.SetImu(imuSample.Value);
+                if (capture is not null) _broker.SetCapture(capture);
+                if (imuSample.HasValue)  _broker.SetImu(imuSample.Value);
             }
-            _logReader.TryRead(_playbackCurrentTimestamp, out var deviceInputs);
+            _logReader.TryRead(systemAbsoluteTime, out var deviceInputs);
 
             foreach (var input in deviceInputs)
-                Broker.SetDeviceInputData(input);
+                _broker.SetDeviceInputData(input);
 
             return true;
         });
@@ -90,7 +131,7 @@ public class PlaybackController : IPlaybackController
     {
         Pause();
 
-        _playbackCurrentTimestamp = TimeSpan.Zero;
+        _playbackElapsedTime = TimeSpan.Zero;
         _playbackReader.Rewind();
         await _logReader.Rewind();
     }
@@ -98,6 +139,7 @@ public class PlaybackController : IPlaybackController
     public void Seek(TimeSpan position)
     {
         _playbackReader.Seek(position);
+        _playbackElapsedTime = position;
     }
 
     public async ValueTask DisposeAsync()

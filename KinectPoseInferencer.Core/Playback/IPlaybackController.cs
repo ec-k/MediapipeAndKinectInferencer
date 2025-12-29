@@ -5,7 +5,6 @@ namespace KinectPoseInferencer.Core.Playback;
 public interface IPlaybackController: IAsyncDisposable
 {
     IPlaybackReader Reader { get; }
-    RecordDataBroker Broker { get; }
     PlaybackDescriptor? Descriptor { get; set; }
     ReadOnlyReactiveProperty<bool> IsPlaying { get; }
 

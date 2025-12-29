@@ -6,7 +6,8 @@ namespace KinectPoseInferencer.Core.Playback;
 
 public class InputLogReader : IInputLogReader
 {
-    TimeSpan                  _kinectToSystemOffset = TimeSpan.Zero;
+    public TimeSpan FirstFrameTime { get; set; }
+
     string?                   _logFilePath;
     StreamReader?             _reader;
                               
@@ -14,38 +15,6 @@ public class InputLogReader : IInputLogReader
     readonly int              _bufferSize = 100;
     Task?                     _producerTask;
     CancellationTokenSource?  _cts;
-
-    LogMetadata?              _metadata;
-
-    public async Task<bool> LoadMetaFileAsync(string filePath)
-    {
-        if (!File.Exists(filePath))
-        {
-            Console.WriteLine($"Error: Input log metadata file not found at {filePath}");
-            return false;
-        }
-
-        try
-        {
-            using var openStream = File.OpenRead(filePath);
-            _metadata = await JsonSerializer.DeserializeAsync<LogMetadata>(openStream);
-            
-            if (_metadata is not null)
-            {
-                CalculateKinectOffset();
-                return true;
-            }
-
-            Console.Error.WriteLine("Error: Failed to deserialize LogMetadata.");
-            return false;
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"Error reading input log metadata file: {ex.Message}");
-            _metadata = null;
-            return false;
-        }
-    }
 
     public async Task<bool> LoadLogFile(string filePath)
     {
@@ -96,31 +65,23 @@ public class InputLogReader : IInputLogReader
         await InitializeProducer();
     }
 
-    void CalculateKinectOffset()
-    {
-        if (_metadata is not null)
-            _kinectToSystemOffset = _metadata.FirstFrameSystemTime - _metadata.FirstFrameKinectDeviceTime;
-    }
-
     /// <summary>
-    /// Finds all input events that occurred before or at the given Kinect device timestamp.
+    /// Retrieves input events that occurred between the last read operation and the specified system timestamp.
     /// </summary>
-    /// <param name="kinectDeviceTimestamp">The Kinect device timestamp.</param>
-    /// <returns>A list of input events that occurred up to the given timestamp.</returns>
-    public bool TryRead(TimeSpan kinectDeviceTimestamp, out IList<DeviceInputData> results)
+    /// <param name="targetTime">The upper bound system timestamp to read up to, corresponding to the system timestamp of a Kinect capture.</param>
+    /// <param name="results">When this method returns, contains the list of input events found since the last read until the <paramref name="targetTime"/>.</param>
+    /// <returns><c>true</c> if the operation was executed; <c>false</c> if the reader or channel is not initialized.</returns>
+    public bool TryRead(TimeSpan targetTime, out IList<DeviceInputData> results)
     {
         results = new List<DeviceInputData>();
         if (_reader is null || _eventChannel is null) return false;
-
-        // Convert Kinect timestamp to equivalent system stopwatch timestamp
-        var targetSystemTime = kinectDeviceTimestamp + _kinectToSystemOffset;
 
         while (_eventChannel.Reader.TryPeek(out var inputEvent))
         {
             if (inputEvent.Data is not IDeviceInput)
                 continue;
 
-            if (inputEvent.Timestamp <= targetSystemTime)
+            if (inputEvent.Timestamp <= targetTime)
             {
                 if (_eventChannel.Reader.TryRead(out inputEvent))
                     results.Add(inputEvent);
@@ -134,7 +95,7 @@ public class InputLogReader : IInputLogReader
 
     async Task ProducerLoop(CancellationToken token)
     {
-        if(_reader is null || _eventChannel is null || _metadata is null) return;
+        if(_reader is null || _eventChannel is null) return;
 
         try
         {
@@ -160,7 +121,7 @@ public class InputLogReader : IInputLogReader
 
                 if (inputEvent?.Data is null) continue;
 
-                if (inputEvent.Timestamp < _metadata.FirstFrameSystemTime)
+                if (inputEvent.Timestamp < FirstFrameTime)
                     continue;
 
                 _eventChannel.Writer.TryWrite(inputEvent);
@@ -192,6 +153,5 @@ public class InputLogReader : IInputLogReader
     public async ValueTask DisposeAsync()
     {
         await StopProducer();
-        _metadata = null;
     }
 }

@@ -7,8 +7,8 @@ using System.Threading.Channels;
 namespace KinectPoseInferencer.Core.Playback;
 
 public record struct PlaybackFrame(
-    K4AdotNet.Sensor.Capture? Capture,
-    K4AdotNet.Sensor.ImuSample? ImuSample
+    Capture? Capture,
+    ImuSample? ImuSample
 );
 
 public class PlaybackReader : IPlaybackReader
@@ -49,7 +49,7 @@ public class PlaybackReader : IPlaybackReader
         await Task.Run(() => _playback.Value = new(descriptor.VideoFilePath), token);
         _playback.Value.SetColorConversion(ImageFormat.ColorBgra32);
 
-        ClearBuffer();        
+        ClearBuffer();
         _producerLoopCts?.Dispose();
         _producerLoopCts = CancellationTokenSource.CreateLinkedTokenSource(token);
         _producerLoopTask = Task.Run(() => ProducerLoop(_producerLoopCts.Token));
@@ -67,7 +67,7 @@ public class PlaybackReader : IPlaybackReader
         if (Playback.CurrentValue is null) return;
 
         ClearBuffer();
-        
+
         var targetUs = new Microseconds64(position);
         Playback.CurrentValue.SeekTimestamp(targetUs, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
         _currentPositionUs.Value = targetUs;
@@ -81,9 +81,8 @@ public class PlaybackReader : IPlaybackReader
         if (!_frameChannel.Reader.TryPeek(out var frame))
             return false;
 
-        var targetUs = new Microseconds64(targetFrameTime);
-        if (frame.Capture?.DepthImage is not { DeviceTimestamp: var deviceTimeUs}
-        || deviceTimeUs > targetUs)
+        if (frame.Capture?.DepthImage is not { DeviceTimestamp: var peekedFrameTime}
+        || peekedFrameTime > targetFrameTime)
             return false;
 
         if (!_frameChannel.Reader.TryRead(out frame))
