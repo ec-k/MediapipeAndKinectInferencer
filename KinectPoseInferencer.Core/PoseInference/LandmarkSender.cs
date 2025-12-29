@@ -12,19 +12,17 @@ public class LandmarkSender: ILandmarkUser, IDisposable
 {
     UdpClient _sender = new();
 
-    public LandmarkSender(string uri, int port)
+    public LandmarkSender(IPEndPoint endPoint)
     {
-        var senderEndPoint = new IPEndPoint(IPAddress.Parse(uri), port);
-        _sender.Connect(senderEndPoint);
+        _sender.Connect(endPoint);
     }
 
-    public void Connect(string uri, int port)
+    public void Connect(IPEndPoint endPoint)
     {
         if (_sender.Client.Connected)
             _sender.Close();
 
-        var senderEndPoint = new IPEndPoint(IPAddress.Parse(uri), port);
-        _sender.Connect(senderEndPoint);
+        _sender.Connect(endPoint);
     }
 
     public void Process(in HolisticLandmarks landmark)
