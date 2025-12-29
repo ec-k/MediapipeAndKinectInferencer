@@ -14,10 +14,7 @@ public record struct PlaybackFrame(
 public class PlaybackReader : IPlaybackReader
 {
     public ReadOnlyReactiveProperty<K4AdotNet.Record.Playback> Playback => _playback;
-    public ReadOnlyReactiveProperty<Microseconds64> CurrentPositionUs => _currentPositionUs;
-
     ReactiveProperty<K4AdotNet.Record.Playback> _playback = new();
-    ReactiveProperty<Microseconds64> _currentPositionUs = new(new Microseconds64(0));
 
     enum Command { None, Rewind }
     ConcurrentQueue<Command> _commandQueue = new();
@@ -53,8 +50,6 @@ public class PlaybackReader : IPlaybackReader
         _producerLoopCts?.Dispose();
         _producerLoopCts = CancellationTokenSource.CreateLinkedTokenSource(token);
         _producerLoopTask = Task.Run(() => ProducerLoop(_producerLoopCts.Token));
-
-        _currentPositionUs.Value = new(0); // Reset current position
     }
 
     public void Rewind()
@@ -68,9 +63,8 @@ public class PlaybackReader : IPlaybackReader
 
         ClearBuffer();
 
-        var targetUs = new Microseconds64(position);
-        Playback.CurrentValue.SeekTimestamp(targetUs, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
-        _currentPositionUs.Value = targetUs;
+        var targetTime = new Microseconds64(position);
+        Playback.CurrentValue.SeekTimestamp(targetTime, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
     }
 
     public bool TryRead(TimeSpan targetFrameTime, out Capture? capture, out ImuSample? imuSample)
@@ -112,7 +106,6 @@ public class PlaybackReader : IPlaybackReader
 
     void ProcessRewindAction()
     {
-        _currentPositionUs.Value = new(0); // Reset current position
         ClearBuffer();
 
         if (Playback.CurrentValue is not null)
@@ -227,6 +220,5 @@ public class PlaybackReader : IPlaybackReader
 
         Playback.Dispose();
         _producerLoopCts.Dispose();
-        _currentPositionUs.Dispose();
     }
 }

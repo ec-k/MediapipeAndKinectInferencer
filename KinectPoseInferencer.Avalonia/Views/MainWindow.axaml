@@ -106,8 +106,8 @@
             <!-- Seek Bar -->
             <Slider Grid.Column="0"
                     Minimum="0"
-                    Maximum="{Binding TotalDurationSeconds}"
-                    Value="{Binding CurrentPositionSeconds}"
+                    Maximum="{Binding PlaybackLength.TotalSeconds}"
+                    Value="{Binding CurrentTime.TotalSeconds}"
                     VerticalAlignment="Center"
                     />
 
@@ -115,9 +115,9 @@
             <TextBlock Grid.Column="1"
                        Margin="10,0,0,0" VerticalAlignment="Center">
                 <TextBlock.Text>
-                    <MultiBinding StringFormat="{}{0:F3} / {1:F3}">
-                        <Binding Path="CurrentPositionSeconds"/>
-                        <Binding Path="TotalDurationSeconds"/>
+                    <MultiBinding StringFormat="{}{0:mm\:ss} / {1:mm\:ss}">
+                        <Binding Path="CurrentTime"/>
+                        <Binding Path="PlaybackLength"/>
                     </MultiBinding>
                 </TextBlock.Text>
             </TextBlock>

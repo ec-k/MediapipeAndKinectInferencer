@@ -20,8 +20,9 @@ public class PlaybackController : IPlaybackController
 
     public int TargetFps { get; private set; } = 120;
     LogicLooper? _readingLoop;
-    TimeSpan _playbackElapsedTime;
+    ReactiveProperty<TimeSpan> _playbackElapsedTime = new();
 
+    public ReadOnlyReactiveProperty<TimeSpan> CurrentTime => _playbackElapsedTime;
     public ReadOnlyReactiveProperty<bool> IsPlaying => _isPlaying;
     ReactiveProperty<bool> _isPlaying = new(false);
     bool _terminateLoop = false;
@@ -90,7 +91,7 @@ public class PlaybackController : IPlaybackController
         if (_readingLoop is null)
         {
             _readingLoop = new(TargetFps);
-            _playbackElapsedTime = TimeSpan.Zero;
+            _playbackElapsedTime.Value = TimeSpan.Zero;
         }
 
         _isPlaying.Value = true;
@@ -104,9 +105,9 @@ public class PlaybackController : IPlaybackController
             }
             if (!_isPlaying.Value) return true;
 
-            _playbackElapsedTime += ctx.ElapsedTimeFromPreviousFrame;
-            var kinectAbsoluteTime = _playbackElapsedTime + _firstFrameKinectTime;
-            var systemAbsoluteTime = _playbackElapsedTime + _firstFrameSystemTime;
+            _playbackElapsedTime.Value += ctx.ElapsedTimeFromPreviousFrame;
+            var kinectAbsoluteTime = _playbackElapsedTime.Value + _firstFrameKinectTime;
+            var systemAbsoluteTime = _playbackElapsedTime.Value + _firstFrameSystemTime;
 
             if (_playbackReader.TryRead(kinectAbsoluteTime, out var capture, out var imuSample))
             {
@@ -131,7 +132,7 @@ public class PlaybackController : IPlaybackController
     {
         Pause();
 
-        _playbackElapsedTime = TimeSpan.Zero;
+        _playbackElapsedTime.Value = TimeSpan.Zero;
         _playbackReader.Rewind();
         await _logReader.Rewind();
     }
@@ -139,7 +140,7 @@ public class PlaybackController : IPlaybackController
     public void Seek(TimeSpan position)
     {
         _playbackReader.Seek(position);
-        _playbackElapsedTime = position;
+        _playbackElapsedTime.Value = position;
     }
 
     public async ValueTask DisposeAsync()

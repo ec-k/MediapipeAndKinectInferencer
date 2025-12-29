@@ -26,8 +26,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     readonly KinectDeviceController _kinectDeviceController;
     readonly SettingsManager _settingsManager;
 
-    [ObservableProperty] double _currentFrameTimestamp = 0.0;
-    [ObservableProperty] string _playbackLength = "";
     [ObservableProperty] string _playPauseIconUnicode = PlayIconUnicode;
     [ObservableProperty] string _kinectPlayPauseIconUnicode = PlayIconUnicode;
     [ObservableProperty] string _videoFilePath = "";
@@ -36,8 +34,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty] WriteableBitmap? _colorBitmap;
 
     [ObservableProperty] bool _isLoading = false;
-    [ObservableProperty] double _totalDurationSeconds;
-    [ObservableProperty] double _currentPositionSeconds;
+    [ObservableProperty] TimeSpan _playbackLength;
+    [ObservableProperty] TimeSpan _currentTime;
 
     const string PlayIconUnicode = "\uE768";
     const string PauseIconUnicode = "\uE769";
@@ -72,10 +70,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _playbackController.Reader.Playback
             .Where(playback => playback is not null)
             .Subscribe(playback => {
-                UpdatePlaybackLengthDisplay(playback);
                 playback.GetCalibration(out var calibration);
                 PointCloud.ComputePointCloudCache(calibration);
-                TotalDurationSeconds = playback.RecordLength.TotalSeconds;
+                PlaybackLength = playback.RecordLength;
             })
             .AddTo(ref _disposables);
         _playbackController.IsPlaying
@@ -86,9 +83,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             .Subscribe(isReading => KinectPlayPauseIconUnicode = isReading ? PauseIconUnicode : PlayIconUnicode)
             .AddTo(ref _disposables);
 
-        _playbackController.Reader.CurrentPositionUs
-            .ThrottleFirstLast(TimeSpan.FromSeconds(1.0/10.0))
-            .Subscribe(position => CurrentPositionSeconds = position.TotalSeconds)
+        _playbackController.CurrentTime
+            .Subscribe(time => CurrentTime = time)
             .AddTo(ref _disposables);
 
         _broker.Capture
@@ -253,16 +249,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         });
     }
 
-    void UpdatePlaybackLengthDisplay(K4AdotNet.Record.Playback playback)
-    {
-        if (playback is null) return;
-
-        var minutes = (int)playback.RecordLength.TotalSeconds / 60;
-        var seconds = (int)playback.RecordLength.TotalSeconds % 60;
-
-        PlaybackLength = $"{minutes}:{seconds}";
-    }
-
     [RelayCommand(IncludeCancelCommand = true)]
     async Task LoadFiles(CancellationToken token)
     {
@@ -306,8 +292,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [RelayCommand(IncludeCancelCommand = true)]
     async Task Rewind(CancellationToken token)
     {
-        _playbackController.Rewind();
-        CurrentPositionSeconds = 0; // Reset CurrentPositionSeconds
+        await _playbackController.Rewind();
 
         // Display the first frame
         if (_playbackController.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
