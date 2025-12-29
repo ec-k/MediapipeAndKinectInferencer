@@ -97,7 +97,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             .AddTo(ref _disposables);
         _broker.DeviceInputData
             .Where(input => input is not null)
-            .Chunk(TimeSpan.FromSeconds(1.0 / 15.0))
+            .Chunk(TimeSpan.FromSeconds(1.0 / 30.0))
             .Where(inputs => inputs is { Length: > 0 })
             .Subscribe(inputs => OnNewInputLogEvent(inputs))
             .AddTo(ref _disposables);
@@ -242,7 +242,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             foreach (var input in inputEvents)
             {
-                InputLogEvents.Add($"[{CurrentPositionSeconds:F3}s] {input.GetType().Name}: {input.Timestamp}");
+                if (input.Data is MouseEventData mouseEventData)
+                    InputLogEvents.Add($"[{input.Timestamp:hh\\:mm\\:ss\\.fff}] Mouse: {mouseEventData.X}, {mouseEventData.Y}");
+                else if (input.Data is KeyboardEventData keyboardEventData && !keyboardEventData.IsKeyDown)
+                    InputLogEvents.Add($"[{input.Timestamp:hh\\:mm\\:ss\\.fff}] Keyboard: {keyboardEventData.KeyCode.ToString()}");
+
                 if (InputLogEvents.Count > 10)
                     InputLogEvents.RemoveAt(0);
             }
