@@ -47,8 +47,7 @@ public class PlaybackReader : IPlaybackReader
             await StopProducerLoop();
 
         await Task.Run(() => _playback.Value = new(descriptor.VideoFilePath), token);
-
-        _playback.Value.GetCalibration(out var calibration);
+        _playback.Value.SetColorConversion(ImageFormat.ColorBgra32);
 
         ClearBuffer();        
         _producerLoopCts?.Dispose();
