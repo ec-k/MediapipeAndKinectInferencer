@@ -18,6 +18,7 @@ public static class ServiceCollectionExtensions
         var landmarkSenderEndPoint    = settings.GetLandmarkSenderEndPoint();
         var inputEventSenderEndPoints = settings.GetInputEventSenderEndPoints();
         var oneEuroFilterSettings     = settings.FilterSettings.OneEuroFilter;
+        var appFps                    = settings.AppFrameRate;
         var mmfFilePath               = CreateMmfFile(settings.MmfFileName);
 
         // inferencer
@@ -27,7 +28,7 @@ public static class ServiceCollectionExtensions
             new ResultManager(
                 sp.GetRequiredService<UdpResultReceiver>(), receiverSettings)
             );
-        services.AddSingleton(serviceProvider =>
+        services.AddSingleton(sp =>
             new UdpResultReceiver(resultReceiverEndPoint, receiverSettings)
             );
         // result processors
@@ -53,14 +54,20 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ILandmarkFilter, TransformCoordinator>();
 
         // Register result users
-        services.AddSingleton<ILandmarkUser>(serviceProvider => new LandmarkSender(landmarkSenderEndPoint));
+        services.AddSingleton<ILandmarkUser>(sp => new LandmarkSender(landmarkSenderEndPoint));
 
         // Register input event users
-        services.AddSingleton(serviceProvider => new InputEventSender(inputEventSenderEndPoints));
+        services.AddSingleton(sp => new InputEventSender(inputEventSenderEndPoints));
 
         // readers
         services.AddSingleton<KinectDeviceController>();
-        services.AddSingleton<IPlaybackController, PlaybackController>();
+        services.AddSingleton<IPlaybackController, PlaybackController>(sp=>
+            new PlaybackController(
+                sp.GetRequiredService<IPlaybackReader>(),
+                sp.GetRequiredService<InputLogReader>(),
+                sp.GetRequiredService<RecordDataBroker>(),
+                appFps)
+        );
         services.AddSingleton<IPlaybackReader, PlaybackReader>();
         services.AddSingleton<InputLogReader>();
 

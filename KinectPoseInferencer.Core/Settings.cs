@@ -10,6 +10,7 @@ public record CoreSettings()
     public string ResultReceiverEndPoint { get; init; } = "127.0.0.1:9001";
     public string LandmarkSenderEndPoint { get; init; } = "127.0.0.1:22000";
     public string[] InputEventSenderEndPoints { get; init; } = Array.Empty<string>();
+    public int AppFrameRate { get; init; } = 60;
     public FilterSettings FilterSettings { get; init; } = new();
 
     public IPEndPoint GetLandmarkSenderEndPoint() => IPEndPoint.Parse(LandmarkSenderEndPoint);

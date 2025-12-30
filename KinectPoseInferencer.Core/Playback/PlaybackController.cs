@@ -18,7 +18,7 @@ public class PlaybackController : IPlaybackController
     TimeSpan _firstFrameKinectTime = TimeSpan.Zero;
     TimeSpan _firstFrameSystemTime = TimeSpan.Zero;
 
-    public int TargetFps { get; private set; } = 120;
+    public int TargetFps { get; private set; }
     LogicLooper? _readingLoop;
     ReactiveProperty<TimeSpan> _playbackElapsedTime = new();
     TimeSpan _recordLength = TimeSpan.Zero;
@@ -33,11 +33,13 @@ public class PlaybackController : IPlaybackController
     public PlaybackController(
         IPlaybackReader playbackReader,
         InputLogReader logReader,
-        RecordDataBroker broker)
+        RecordDataBroker broker,
+        int targetFps = 60)
     {
         _playbackReader = playbackReader ?? throw new ArgumentNullException(nameof(playbackReader));
         _logReader = logReader ?? throw new ArgumentNullException(nameof(logReader));
         _broker = broker ?? throw new ArgumentNullException(nameof(broker));
+        TargetFps = targetFps;
 
         _playbackReader.Playback
             .Where(playback => playback is not null)
