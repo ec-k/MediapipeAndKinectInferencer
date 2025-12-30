@@ -33,5 +33,4 @@ public record OneEuroFilterSettings
     public float MinCutoff { get; init; } = 1.0f;
     public float Slope { get; init; } = 0.007f;
     public float DCutoff { get; init; } = 1.0f;
-    public float FrameRate { get; init; } = 30.0f;
 }
