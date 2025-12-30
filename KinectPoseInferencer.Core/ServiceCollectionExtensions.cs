@@ -17,6 +17,7 @@ public static class ServiceCollectionExtensions
         var resultReceiverEndPoint    = settings.GetResultReceiverEndPoint();
         var landmarkSenderEndPoint    = settings.GetLandmarkSenderEndPoint();
         var inputEventSenderEndPoints = settings.GetInputEventSenderEndPoints();
+        var oneEuroFilterSettings     = settings.FilterSettings.OneEuroFilter;
         var mmfFilePath               = CreateMmfFile(settings.MmfFileName);
 
         // inferencer
@@ -40,10 +41,9 @@ public static class ServiceCollectionExtensions
         // Register filter chain
         services.AddSingleton<ILandmarkFilter, OneEuroFilter>(sp =>
             new OneEuroFilter(
-                minCutoff: 1,
-                slope: 4,
-                dCutoff: 1,
-                frameRate: 30
+                oneEuroFilterSettings.MinCutoff,
+                oneEuroFilterSettings.Slope,
+                oneEuroFilterSettings.DCutoff
                 )
         );
         services.AddSingleton<ILandmarkFilter, MilimeterToMeter>();
