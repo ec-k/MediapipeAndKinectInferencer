@@ -1,5 +1,4 @@
 ﻿using K4AdotNet.Sensor;
-using K4AdotNet.BodyTracking;
 using R3;
 using ZLinq;
 
@@ -25,8 +24,18 @@ public class LandmarkPresenter: IDisposable
     readonly IEnumerable<ILandmarkUser> _resultUsers;
     readonly IEnumerable<ILandmarkFilter> _landmarkFilterChain;
 
-    Calibration? _currentCalibration = null;
+    bool _isKinectEnabled = true;
+    public bool IsKinectEnabled
+    {
+        get => _isKinectEnabled;
+        set
+        {
+            _isKinectEnabled = value;
+            UpdateResultManagerSettings(_isKinectEnabled);
+        }
+    }
 
+    Calibration? _currentCalibration = null;
     DisposableBag _disposables = new();
 
     public LandmarkPresenter(
@@ -96,7 +105,8 @@ public class LandmarkPresenter: IDisposable
 
         _inferencer.Result
             .Subscribe(result => {
-                ProcessResult(result);
+                if(_isKinectEnabled)
+                    ProcessResult(result);
 
                 foreach(var user in _resultUsers)
                     user.Process(_resultManager.Result);
@@ -129,6 +139,16 @@ public class LandmarkPresenter: IDisposable
     {
         if(_currentCalibration is K4AdotNet.Sensor.Calibration calibration)
             _inferencer.Configure(calibration);
+    }
+
+    void UpdateResultManagerSettings(bool isKinectEnabled)
+    {
+        // set flag
+        var flag = isKinectEnabled 
+            ? _resultManager.ReceiverSetting | ReceiverEventSettings.Body
+            : _resultManager.ReceiverSetting & ~ReceiverEventSettings.Body;
+
+        _resultManager.UpdateSettings(flag);
     }
 
     public void Dispose()

@@ -49,6 +49,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="video" VerticalAlignment="Center" Margin="0,0,10,5"/>
@@ -60,9 +61,12 @@
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="meta"  VerticalAlignment="Center" Margin="0,0,10,30"/>
                 <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding MetaFilePath}" Margin="0,0,0,30"/>
 
-                <Button Grid.Row="3" Grid.Column="0" Command="{Binding LoadFilesCommand}" Grid.ColumnSpan="2" HorizontalAlignment="Left" Width="80">
-                    <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xED25;"/>
+                <Button Grid.Row="3" Grid.Column="0" Command="{Binding LoadFilesCommand}" HorizontalAlignment="Left" Width="80">
+                    <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xED25;" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                 </Button>
+
+                <CheckBox Grid.Row="4" Grid.Column="0" IsChecked="{Binding IsKinectInferenceEnabled}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                <TextBlock Grid.Row="4" Grid.Column="1" VerticalAlignment="Bottom" Margin="0,0,10,5">Inference Body by Kinect</TextBlock>
             </Grid>
         </StackPanel>
 

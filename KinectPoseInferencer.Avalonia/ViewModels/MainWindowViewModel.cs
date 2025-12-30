@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using KinectPoseInferencer.Core.PoseInference;
 
 namespace KinectPoseInferencer.Avalonia.ViewModels;
 
@@ -31,6 +32,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty] string _videoFilePath = "";
     [ObservableProperty] string _inputLogFilePath = "";
     [ObservableProperty] string _metaFilePath = "";
+    [ObservableProperty] bool _isKinectInferenceEnabled = true;
     [ObservableProperty] WriteableBitmap? _colorBitmap;
 
     [ObservableProperty] bool _isLoading = false;
@@ -54,12 +56,14 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         IPlaybackController playbackController,
         KinectDeviceController kinectDeviceController,
         RecordDataBroker broker,
-        SettingsManager settingManager)
+        SettingsManager settingManager,
+        LandmarkPresenter landmarkPresenter)
     {
         _playbackController = playbackController ?? throw new ArgumentNullException(nameof(playbackController));
         _kinectDeviceController = kinectDeviceController ?? throw new ArgumentNullException(nameof(kinectDeviceController));
         _broker = broker ?? throw new ArgumentNullException(nameof(broker));
         _settingsManager = settingManager ?? throw new ArgumentNullException(nameof(settingManager));
+        if (landmarkPresenter is null) throw new ArgumentNullException(nameof(landmarkPresenter));
         // _bodyVisualElements = new ObservableCollection<UIElement>(); // No longer needed
 
         var latestSetting = _settingsManager.Load();
@@ -96,6 +100,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             .Chunk(TimeSpan.FromSeconds(1.0 / 30.0))
             .Where(inputs => inputs is { Length: > 0 })
             .Subscribe(inputs => OnNewInputLogEvent(inputs))
+            .AddTo(ref _disposables);
+
+        this.ObservePropertyChanged(x => x.IsKinectInferenceEnabled)
+            .Subscribe(isEnabled => landmarkPresenter.IsKinectEnabled = isEnabled)
             .AddTo(ref _disposables);
     }
 
