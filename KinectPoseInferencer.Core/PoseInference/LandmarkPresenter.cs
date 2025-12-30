@@ -116,8 +116,7 @@ public class LandmarkPresenter: IDisposable
 
     void ProcessResult(KinectInferenceResult result)
     {
-        var kinectLandmarks = _converter.Convert(result.Skeleton);
-        var resultLandmark = kinectLandmarks.Landmarks
+        var resultLandmarks = _converter.Convert(result.Skeleton).Landmarks
             .AsValueEnumerable()
             .Where(nullableLandmark => nullableLandmark is Landmark landmark)
             .Select(landmark =>
@@ -131,8 +130,10 @@ public class LandmarkPresenter: IDisposable
             })
             .ToList();
 
-        _resultManager?.Result?.KinectPoseLandmarks?.Landmarks?.Clear();
-        _resultManager?.Result?.KinectPoseLandmarks?.Landmarks?.AddRange(resultLandmark);
+        _resultManager.Result.KinectPoseLandmarks = new()
+        {
+            Landmarks = { resultLandmarks }
+        };
     }
 
     void Configure()
@@ -143,8 +144,8 @@ public class LandmarkPresenter: IDisposable
 
     void UpdateResultManagerSettings(bool isKinectEnabled)
     {
-        // set flag
-        var flag = isKinectEnabled 
+        // set inveted flag
+        var flag = !isKinectEnabled 
             ? _resultManager.ReceiverSetting | ReceiverEventSettings.Body
             : _resultManager.ReceiverSetting & ~ReceiverEventSettings.Body;
 
