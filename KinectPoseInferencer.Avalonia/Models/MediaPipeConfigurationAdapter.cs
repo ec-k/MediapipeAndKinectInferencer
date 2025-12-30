@@ -14,4 +14,6 @@ public class MediaPipeConfigurationAdapter : IMediaPipeConfiguration
     }
 
     public string ExecutablePath => _settings.ExecutablePath;
+    public bool EnablePoseInference => _settings.EnablePoseInference;
+    public bool EnableVisualizationWindow => _settings.EnableVisualizationWindow;
 }

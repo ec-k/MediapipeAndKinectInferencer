@@ -80,7 +80,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<SettingsManager>();
 
         // misc
-        services.AddSingleton<MediaPipeProcessManager>();
+        services.AddSingleton(sp => 
+            new MediaPipeProcessManager(
+                sp.GetRequiredService<IMediaPipeConfiguration>(),
+                mmfFilePath)
+        );
 
         return services;
     }
