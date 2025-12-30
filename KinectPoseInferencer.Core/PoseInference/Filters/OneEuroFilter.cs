@@ -1,4 +1,5 @@
 using HumanLandmarks;
+using System.ComponentModel;
 using System.Numerics;
 
 
@@ -9,26 +10,29 @@ internal class OneEuroFilter : ILandmarkFilter
     float _minCutoff;
     float _slope;
     float _dCutoff;
-    float _updateRate = 1f;
+    float _prevTime;
     SingleExponentialSmoothingFilter _xFilter;
     SingleExponentialSmoothingFilter _dxFilter;
 
     bool _isFirst = true;
 
-    internal OneEuroFilter(float minCutoff, float slope, float dCutoff, float frameRate)
+    internal OneEuroFilter(float minCutoff, float slope, float dCutoff)
     {
         _minCutoff = minCutoff;
         _slope = slope;
         _dCutoff = dCutoff;
-        _updateRate = frameRate;
         _xFilter = new();
         _dxFilter = new();
     }
 
-    public Landmark Apply(in Landmark current)
+    public Landmark Apply(in Landmark current, float timestamp)
     {
-        var result = current;
+        var result = current.Clone();
 
+        var dt = timestamp - _prevTime;
+        if (dt <= 1e-5f) return result; // Do nothing if the time difference is too small.
+
+        var updateRate = 1f / dt;
         var dx = new Landmark()
         {
             Position = Vector3.Zero.ToPosition(),
@@ -37,17 +41,21 @@ internal class OneEuroFilter : ILandmarkFilter
         };
 
         if (_isFirst || _xFilter.PrevResult is null)
+        {
+            _prevTime = timestamp;
             _isFirst = false;
+        }
         else
         {
             dx = result.Sub(_xFilter.PrevResult);
-            dx.Position = dx.Position!.Multiply(_updateRate);
+            dx.Position = dx.Position!.Multiply(updateRate);
         }
 
-        var edx = _dxFilter.Apply(dx, Alpha(_updateRate, _dCutoff));
+        var edx = _dxFilter.Apply(dx, Alpha(updateRate, _dCutoff));
         var cutoff = _minCutoff + _slope * edx.Position.ToVector3().Magnitude();
-        result = _xFilter.Apply(result, Alpha(_updateRate, cutoff));
+        result = _xFilter.Apply(result, Alpha(updateRate, cutoff));
 
+        _prevTime = timestamp;
         return result;
     }
 

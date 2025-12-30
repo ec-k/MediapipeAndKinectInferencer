@@ -4,7 +4,7 @@ namespace KinectPoseInferencer.Core.PoseInference.Filters;
 
 public class TransformCoordinator: ILandmarkFilter
 {
-    public Landmark Apply(in Landmark landmark)
+    public Landmark Apply(in Landmark landmark, float timestamp)
         => new Landmark
         {
             Position = new Position

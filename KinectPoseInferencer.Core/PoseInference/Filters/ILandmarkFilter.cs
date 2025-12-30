@@ -1,9 +1,8 @@
 ﻿using HumanLandmarks;
 
-namespace KinectPoseInferencer.Core.PoseInference.Filters
+namespace KinectPoseInferencer.Core.PoseInference.Filters;
+
+public interface ILandmarkFilter
 {
-    public interface ILandmarkFilter
-    {
-        Landmark Apply(in Landmark landmark);
-    }
+    Landmark Apply(in Landmark landmark, float timestamp);
 }

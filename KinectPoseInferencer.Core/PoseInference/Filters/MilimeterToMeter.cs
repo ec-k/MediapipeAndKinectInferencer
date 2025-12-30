@@ -9,7 +9,7 @@ public class MilimeterToMeter: ILandmarkFilter
     /// </summary>
     /// <param name="landmark"></param>
     /// <returns></returns>
-    public Landmark Apply(in Landmark landmark)
+    public Landmark Apply(in Landmark landmark, float timestamp)
         => new Landmark
         {
             Position = new Position

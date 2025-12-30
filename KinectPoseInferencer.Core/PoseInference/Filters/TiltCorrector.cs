@@ -39,7 +39,7 @@ public class TiltCorrector: ILandmarkFilter
         return cameraTiltRotation;
     }
 
-    public Landmark Apply(in Landmark landmark)
+    public Landmark Apply(in Landmark landmark, float timestamp)
     {
         var pos = new Vector3((float)landmark.Position.X, (float)landmark.Position.Y, (float)landmark.Position.Z);
         var convertedPos = Vector3.Transform(pos, _inversedCameraTiltRotation);
