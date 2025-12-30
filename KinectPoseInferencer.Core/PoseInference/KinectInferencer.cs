@@ -4,10 +4,15 @@ using R3;
 
 namespace KinectPoseInferencer.Core.PoseInference;
 
+public record KinectInferenceResult(
+    Skeleton Skeleton,
+    float Timestamp
+    );
+
 public class KinectInferencer
 {
-    public ReadOnlyReactiveProperty<Skeleton> Result => _result;
-    ReactiveProperty<Skeleton> _result = new();
+    public ReadOnlyReactiveProperty<KinectInferenceResult> Result => _result;
+    ReactiveProperty<KinectInferenceResult> _result = new(new(new Skeleton(), 0f));
 
     Tracker? _tracker;
 
@@ -23,10 +28,15 @@ public class KinectInferencer
         _tracker = new(calibration, trackerConfig);
     }
 
-    public void EnqueueData(Capture capture)
+    public bool TryEnqueueData(Capture capture)
     {
-        if(capture is {DepthImage: not null, IRImage: not null })
+        if (capture is { DepthImage: not null, IRImage: not null })
+        {
             _tracker?.EnqueueCapture(capture);
+            return true;
+        }
+        else
+            return false;
     }
 
     public BodyFrame? ProcessFrame()
@@ -38,23 +48,22 @@ public class KinectInferencer
 
         using (frame)
         {
-            var nullableLandmark = Inference(frame);
-            if (nullableLandmark is Skeleton landmark)
-            {
-                _result.Value = landmark;
-            }
+            var result = Inference(frame);
+            if (result is not null)
+                _result.Value = result;
             return frame.DuplicateReference();
         }
     }
 
-    Skeleton? Inference(BodyFrame frame)
+    KinectInferenceResult? Inference(BodyFrame frame)
     {
         if (frame.BodyCount > 0)
         {
-            Skeleton skeleton;
-            frame.GetBodySkeleton(0, out skeleton);
+            var timestamp = (float)frame.DeviceTimestamp.TotalSeconds;
+            frame.GetBodySkeleton(0, out var nullableLandmark);
 
-            return skeleton;
+            if(nullableLandmark is Skeleton skeleton)
+                return new(skeleton, timestamp);
         }
         return null;
     }

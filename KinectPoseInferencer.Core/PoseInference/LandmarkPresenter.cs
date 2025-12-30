@@ -79,7 +79,8 @@ public class LandmarkPresenter: IDisposable
         _recordDataBroker.Capture
             .Where(capture => capture is not null)
             .Subscribe(capture => {
-                _inferencer.EnqueueData(capture);
+                if (!_inferencer.TryEnqueueData(capture)) return;
+
                 using var frame = _inferencer.ProcessFrame();
                 if (frame is null) return;
                 _frameManager.Frame = frame.DuplicateReference();
@@ -94,8 +95,8 @@ public class LandmarkPresenter: IDisposable
             .AddTo(ref _disposables);
 
         _inferencer.Result
-            .Subscribe(skeleton => {
-                ProcessResult(skeleton);
+            .Subscribe(result => {
+                ProcessResult(result);
 
                 foreach(var user in _resultUsers)
                     user.Process(_resultManager.Result);
@@ -103,9 +104,9 @@ public class LandmarkPresenter: IDisposable
             .AddTo(ref _disposables);
     }
 
-    void ProcessResult(Skeleton skeleton)
+    void ProcessResult(KinectInferenceResult result)
     {
-        var kinectLandmarks = _converter.Convert(skeleton);
+        var kinectLandmarks = _converter.Convert(result.Skeleton);
         var resultLandmark = kinectLandmarks.Landmarks
             .AsValueEnumerable()
             .Where(nullableLandmark => nullableLandmark is Landmark landmark)
@@ -115,7 +116,7 @@ public class LandmarkPresenter: IDisposable
                 return _landmarkFilterChain
                             .AsValueEnumerable()
                             .Aggregate(landmark,
-                                (current, filter) => filter.Apply(current)
+                                (current, filter) => filter.Apply(current, result.Timestamp)
                             );
             })
             .ToList();
