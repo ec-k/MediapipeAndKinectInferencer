@@ -1,8 +1,9 @@
 ﻿using KinectPoseInferencer.Core.Playback;
 using KinectPoseInferencer.Core.PoseInference;
+using KinectPoseInferencer.Core.PoseInference.Filters;
 using KinectPoseInferencer.Core.Settings;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace KinectPoseInferencer.Core;
 
@@ -29,7 +30,7 @@ public static class ServiceCollectionExtensions
             new UdpResultReceiver(resultReceiverEndPoint, receiverSettings)
             );
         // result processors
-        services.AddSingleton<PoseInference.Filters.TiltCorrector>();
+        services.AddSingleton<TiltCorrector>();
         services.AddSingleton<PoseInference.Utils.SkeletonToPoseLandmarksConverter>();
         services.AddSingleton(provider => new ImageWriter(mmfFilePath));
         // brokers
@@ -37,11 +38,19 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<RecordDataBroker>();
 
         // Register filter chain
-        services.AddSingleton<PoseInference.Filters.ILandmarkFilter, PoseInference.Filters.MilimeterToMeter>();
-        services.AddSingleton<PoseInference.Filters.ILandmarkFilter, PoseInference.Filters.TiltCorrector>(
-            provider => provider.GetRequiredService<PoseInference.Filters.TiltCorrector>()
+        services.AddSingleton<ILandmarkFilter, OneEuroFilter>(sp =>
+            new OneEuroFilter(
+                minCutoff: 1,
+                slope: 4,
+                dCutoff: 1,
+                frameRate: 30
+                )
+        );
+        services.AddSingleton<ILandmarkFilter, MilimeterToMeter>();
+        services.AddSingleton<ILandmarkFilter, TiltCorrector>(
+            provider => provider.GetRequiredService<TiltCorrector>()
             );
-        services.AddSingleton<PoseInference.Filters.ILandmarkFilter, PoseInference.Filters.TransformCoordinator>();
+        services.AddSingleton<ILandmarkFilter, TransformCoordinator>();
 
         // Register result users
         services.AddSingleton<ILandmarkUser>(serviceProvider => new LandmarkSender(landmarkSenderEndPoint));
