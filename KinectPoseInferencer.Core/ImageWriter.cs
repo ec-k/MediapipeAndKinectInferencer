@@ -12,7 +12,7 @@ namespace KinectPoseInferencer.Core
         int _bufferSize => Height * Width * 4;
 
         MemoryMappedFile _mmf;
-        MemoryMappedViewAccessor _accessor;
+        MemoryMappedViewStream _stream;
 
         public ImageWriter(string filePath)
         {
@@ -20,7 +20,7 @@ namespace KinectPoseInferencer.Core
             InitMmap();
         }
 
-        [MemberNotNull(nameof(_mmf), nameof(_accessor))]
+        [MemberNotNull(nameof(_mmf), nameof(_stream))]
         void InitMmap()
         {
             Console.WriteLine($"MMF Target Path: {_filePath}");
@@ -62,7 +62,7 @@ namespace KinectPoseInferencer.Core
             try
             {
                 _mmf = MemoryMappedFile.CreateFromFile(_filePath, FileMode.Open);
-                _accessor = _mmf.CreateViewAccessor();
+                _stream = _mmf.CreateViewStream();
                 Console.WriteLine($"Successfully opened MMF: {_filePath}");
             }
             catch (Exception ex)
@@ -77,19 +77,16 @@ namespace KinectPoseInferencer.Core
         {
             if (image is null) return;
             
-            var byteImg = image.GetSpan<byte>().ToArray();
-            Write(byteImg);
-        }
+            var byteImg = image.GetSpan<byte>();
 
-        void Write(byte[] data)
-        {
-            _accessor.WriteArray(0, data, 0, data.Length);
+            _stream.Seek(0, SeekOrigin.Begin);
+            _stream.Write(byteImg);
         }
         
         public void Dispose()
         {
             _mmf.Dispose();
-            _accessor.Dispose();
+            _stream.Dispose();
         }
     }
 }
