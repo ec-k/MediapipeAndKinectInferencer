@@ -9,6 +9,6 @@ public interface IPlaybackReader: IAsyncDisposable
 
     Task Configure(PlaybackDescriptor descriptor, CancellationToken token);
     bool TryRead(TimeSpan targetFrameTime, out Capture? capture, out ImuSample? imuSample);
-    void Rewind();
+    Task RewindAsync();
     void Seek(TimeSpan targetFrameTime);
 }

@@ -148,8 +148,8 @@ public class PlaybackController : IPlaybackController
         Pause();
 
         _playbackElapsedTime.Value = TimeSpan.Zero;
-        _playbackReader.Rewind();
-        await _logReader.Rewind();
+        await Task.WhenAll(_playbackReader.RewindAsync(),
+                           _logReader.Rewind());
     }
 
     public void Seek(TimeSpan position)

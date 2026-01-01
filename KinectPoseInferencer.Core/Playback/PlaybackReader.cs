@@ -17,7 +17,12 @@ public class PlaybackReader : IPlaybackReader
     ReactiveProperty<K4AdotNet.Record.Playback> _playback = new();
 
     enum Command { None, Rewind }
-    ConcurrentQueue<Command> _commandQueue = new();
+    record struct CommandRequest(
+        Command Type,
+        TaskCompletionSource Tcs,
+        TimeSpan? Position = null
+        );
+    ConcurrentQueue<CommandRequest> _commandQueue = new();
 
     Channel<PlaybackFrame> _frameChannel;
     Task? _producerLoopTask;
@@ -52,9 +57,19 @@ public class PlaybackReader : IPlaybackReader
         _producerLoopTask = Task.Run(() => ProducerLoop(_producerLoopCts.Token));
     }
 
-    public void Rewind()
+    public async Task RewindAsync()
     {
-        _commandQueue.Enqueue(Command.Rewind);
+        if (Playback.CurrentValue is null) return;
+
+        ClearBuffer();
+
+        if (Playback.CurrentValue is not null)
+            Playback.CurrentValue.SeekTimestamp(Microseconds64.Zero, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
+
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _commandQueue.Enqueue(new CommandRequest(Command.Rewind, tcs));
+
+        await tcs.Task;
     }
 
     public void Seek(TimeSpan position)
@@ -97,19 +112,27 @@ public class PlaybackReader : IPlaybackReader
 
     void ProcessCommand()
     {
-        if(_commandQueue.TryDequeue(out var command))
+        if(_commandQueue.TryDequeue(out var request))
         {
-            if(command is Command.Rewind)
-                ProcessRewindAction();
+            try
+            {
+                if (request.Type == Command.Rewind)
+                    ProcessSeekAction(TimeSpan.Zero);
+                request.Tcs.SetResult();
+            }
+            catch (Exception ex)
+            {
+                request.Tcs.SetException(ex);
+            }
         }
     }
 
-    void ProcessRewindAction()
+    void ProcessSeekAction(TimeSpan position)
     {
         ClearBuffer();
 
         if (Playback.CurrentValue is not null)
-            Playback.CurrentValue.SeekTimestamp(Microseconds64.Zero, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
+            Playback.CurrentValue.SeekTimestamp(position, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
     }
 
     async Task ProducerLoop(CancellationToken token)
@@ -122,6 +145,8 @@ public class PlaybackReader : IPlaybackReader
 
                 if (!await _frameChannel.Writer.WaitToWriteAsync(token))
                     break;
+
+                if (!_commandQueue.IsEmpty) continue;   // To process commands alived while waiting, go to the top of this loop.
 
                 PlaybackFrame frame = default;
                 try
