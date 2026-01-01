@@ -16,7 +16,7 @@ public class PlaybackReader : IPlaybackReader
     public ReadOnlyReactiveProperty<K4AdotNet.Record.Playback> Playback => _playback;
     ReactiveProperty<K4AdotNet.Record.Playback> _playback = new();
 
-    enum Command { None, Rewind }
+    enum Command { None, Seek, Rewind }
     record struct CommandRequest(
         Command Type,
         TaskCompletionSource Tcs,
@@ -67,19 +67,21 @@ public class PlaybackReader : IPlaybackReader
             Playback.CurrentValue.SeekTimestamp(Microseconds64.Zero, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _commandQueue.Enqueue(new CommandRequest(Command.Rewind, tcs));
+        _commandQueue.Enqueue(new(Command.Rewind, tcs));
 
         await tcs.Task;
     }
 
-    public void Seek(TimeSpan position)
+    public async Task SeekAsync(TimeSpan position)
     {
         if (Playback.CurrentValue is null) return;
 
         ClearBuffer();
 
-        var targetTime = new Microseconds64(position);
-        Playback.CurrentValue.SeekTimestamp(targetTime, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _commandQueue.Enqueue(new(Command.Seek, tcs, position));
+
+        await tcs.Task;
     }
 
     public bool TryRead(TimeSpan targetFrameTime, out Capture? capture, out ImuSample? imuSample)
@@ -116,8 +118,10 @@ public class PlaybackReader : IPlaybackReader
         {
             try
             {
-                if (request.Type == Command.Rewind)
+                if (request.Type is Command.Rewind)
                     ProcessSeekAction(TimeSpan.Zero);
+                if (request.Type is Command.Seek && request.Position.HasValue)
+                    ProcessSeekAction(request.Position.Value);
                 request.Tcs.SetResult();
             }
             catch (Exception ex)

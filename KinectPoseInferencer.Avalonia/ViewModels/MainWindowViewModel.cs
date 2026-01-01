@@ -19,6 +19,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using KinectPoseInferencer.Core.PoseInference;
 
+
 namespace KinectPoseInferencer.Avalonia.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase, IDisposable
@@ -37,8 +38,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty] bool _isLoading = false;
     [ObservableProperty] TimeSpan _playbackLength;
+    [ObservableProperty] double _seekSliderPosition;
     [ObservableProperty] TimeSpan _currentTime;
 
+    bool _isInternalUpdating = false;
     const string PlayIconUnicode = "\uE768";
     const string PauseIconUnicode = "\uE769";
 
@@ -88,7 +91,13 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             .AddTo(ref _disposables);
 
         _playbackController.CurrentTime
-            .Subscribe(time => CurrentTime = time)
+            .Subscribe(time =>
+            {
+                _isInternalUpdating = true;
+                CurrentTime = time;
+                SeekSliderPosition = time.TotalSeconds;
+                _isInternalUpdating = false;
+            })
             .AddTo(ref _disposables);
 
         _broker.Capture
@@ -308,6 +317,16 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             await Task.Run(() => DisplayFirstColorFrame(playback, token), token);
         }
     }
+    partial void OnSeekSliderPositionChanged(double value)
+    {
+        if (_isInternalUpdating) return;
+
+        var targetTime = TimeSpan.FromSeconds(value);
+        CurrentTime = targetTime;
+
+        _playbackController.SeekAsync(targetTime);
+    }
+
 
     [RelayCommand]
     public void KinectPlayOrPause()

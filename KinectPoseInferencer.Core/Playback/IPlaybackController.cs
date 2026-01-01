@@ -13,5 +13,5 @@ public interface IPlaybackController: IAsyncDisposable
     void Play();
     void Pause();
     Task Rewind();
-    void Seek(TimeSpan position);
+    Task SeekAsync(TimeSpan position);
 }

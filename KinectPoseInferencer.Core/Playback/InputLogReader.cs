@@ -65,6 +65,12 @@ public class InputLogReader : IInputLogReader
         await InitializeProducer();
     }
 
+    public async Task SeekAsync(TimeSpan position)
+    {
+        await InitializeProducer();
+        TryRead(position, out _);
+    }
+
     /// <summary>
     /// Retrieves input events that occurred between the last read operation and the specified system timestamp.
     /// </summary>

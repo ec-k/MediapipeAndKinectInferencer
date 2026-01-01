@@ -111,7 +111,7 @@
             <Slider Grid.Column="0"
                     Minimum="0"
                     Maximum="{Binding PlaybackLength.TotalSeconds}"
-                    Value="{Binding CurrentTime.TotalSeconds}"
+                    Value="{Binding SeekSliderPosition}"
                     VerticalAlignment="Center"
                     />
 

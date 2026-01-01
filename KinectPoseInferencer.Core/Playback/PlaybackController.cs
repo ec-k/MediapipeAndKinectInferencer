@@ -152,10 +152,10 @@ public class PlaybackController : IPlaybackController
                            _logReader.Rewind());
     }
 
-    public void Seek(TimeSpan position)
+    public async Task SeekAsync(TimeSpan position)
     {
-        _playbackReader.Seek(position);
         _playbackElapsedTime.Value = position;
+        await Task.WhenAll(_playbackReader.SeekAsync(position), _logReader.SeekAsync(position));
     }
 
     public async ValueTask DisposeAsync()
