@@ -21,7 +21,7 @@ public class PlaybackController : IPlaybackController
 
     public int TargetFps { get; private set; }
     LogicLooper? _readingLoop;
-    ReactiveProperty<TimeSpan> _playbackElapsedTime = new();
+    ReactiveProperty<TimeSpan> _playbackElapsedTime = new(TimeSpan.Zero);
     TimeSpan _recordLength = TimeSpan.Zero;
 
     public ReadOnlyReactiveProperty<TimeSpan> CurrentTime => _playbackElapsedTime;
@@ -111,7 +111,6 @@ public class PlaybackController : IPlaybackController
     void StartReadingLoop()
     {
         _readingLoop = new(TargetFps);
-        _playbackElapsedTime.Value = TimeSpan.Zero;
 
         _readingLoop.RegisterActionAsync((in LogicLooperActionContext ctx) =>
         {
