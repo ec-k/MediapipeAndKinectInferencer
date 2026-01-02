@@ -29,6 +29,9 @@ public class PlaybackReader : IPlaybackReader
     Task? _producerLoopTask;
     CancellationTokenSource _producerLoopCts = new();
     readonly int _taskCancelTimeoutSec = 2;
+    bool _isEOF = false;
+    readonly SemaphoreSlim _loopSignal = new(0);
+
     readonly ILogger<PlaybackReader> _logger;
 
     public PlaybackReader(
@@ -58,6 +61,7 @@ public class PlaybackReader : IPlaybackReader
         _playback.Value.SetColorConversion(ImageFormat.ColorBgra32);
 
         ClearBuffer();
+        _isEOF = false;
         _producerLoopCts?.Dispose();
         _producerLoopCts = CancellationTokenSource.CreateLinkedTokenSource(token);
         _producerLoopTask = Task.Run(() => ProducerLoop(_producerLoopCts.Token));
@@ -75,6 +79,11 @@ public class PlaybackReader : IPlaybackReader
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _commandQueue.Enqueue(new(Command.Rewind, tcs));
 
+        if(_loopSignal.CurrentCount == 0)
+        _loopSignal.Release();
+        _isEOF = false;
+
+
         await tcs.Task;
     }
 
@@ -86,6 +95,10 @@ public class PlaybackReader : IPlaybackReader
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _commandQueue.Enqueue(new(Command.Seek, tcs, position));
+
+        if (_loopSignal.CurrentCount == 0)
+        _loopSignal.Release();
+        _isEOF = false;
 
         await tcs.Task;
     }
@@ -140,6 +153,7 @@ public class PlaybackReader : IPlaybackReader
     void ProcessSeekAction(TimeSpan position)
     {
         ClearBuffer();
+        _isEOF = false;
 
         if (Playback.CurrentValue is not null)
             Playback.CurrentValue.SeekTimestamp(position, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
@@ -151,12 +165,23 @@ public class PlaybackReader : IPlaybackReader
         {
             while (!token.IsCancellationRequested)
             {
+                // Drain previous signals
+                while (_loopSignal.CurrentCount > 0) _loopSignal.Wait(0);
+                
                 ProcessCommand();
+
+                if (_isEOF && _commandQueue.IsEmpty)
+                {
+                    _logger.LogInformation("Waiting for next command at EOF.");
+                    await _loopSignal.WaitAsync(token);
+                    continue;
+                }
 
                 if (!await _frameChannel.Writer.WaitToWriteAsync(token))
                     break;
 
                 if (!_commandQueue.IsEmpty) continue;   // To process commands alived while waiting, go to the top of this loop.
+
 
                 PlaybackFrame frame = default;
                 try
@@ -223,6 +248,7 @@ public class PlaybackReader : IPlaybackReader
         if (!waitResult)
         {
             _logger.LogInformation("Playback reached end of file or failed to get a capture.");
+            _isEOF = true;
             return result;
         }
 
