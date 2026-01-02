@@ -112,6 +112,7 @@
                     Minimum="0"
                     Maximum="{Binding PlaybackLength.TotalSeconds}"
                     Value="{Binding SeekSliderPosition}"
+                    PointerCaptureLost="Slider_OnPointerCaptureLost"
                     VerticalAlignment="Center"
                     />
 

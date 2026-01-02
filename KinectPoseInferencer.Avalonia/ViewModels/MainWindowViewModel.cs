@@ -326,8 +326,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         var targetTime = TimeSpan.FromSeconds(value);
         CurrentTime = targetTime;
-
-        _playbackController.SeekAsync(targetTime);
+    }
+    public void ConfirmSeek()
+    {
+        _playbackController.SeekAsync(TimeSpan.FromSeconds(SeekSliderPosition));
     }
 
 

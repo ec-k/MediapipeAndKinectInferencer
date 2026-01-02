@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using System;
 
 namespace KinectPoseInferencer.Avalonia.Views
@@ -12,6 +13,14 @@ namespace KinectPoseInferencer.Avalonia.Views
             InitializeComponent();
 
             VideoWindowBorder.SizeChanged += OnVideoWindowSizeChanged;
+        }
+
+        void Slider_OnPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+        {
+            if (DataContext is ViewModels.MainWindowViewModel vm)
+            {
+                vm.ConfirmSeek();
+            }
         }
 
         void OnVideoWindowSizeChanged(object sender, SizeChangedEventArgs e)
