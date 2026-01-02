@@ -71,18 +71,11 @@ public class PlaybackReader : IPlaybackReader
     {
         if (Playback.CurrentValue is null) return;
 
-        ClearBuffer();
-
-        if (Playback.CurrentValue is not null)
-            Playback.CurrentValue.SeekTimestamp(Microseconds64.Zero, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
-
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _commandQueue.Enqueue(new(Command.Rewind, tcs));
 
         if(_loopSignal.CurrentCount == 0)
-        _loopSignal.Release();
-        _isEOF = false;
-
+            _loopSignal.Release();
 
         await tcs.Task;
     }
@@ -91,14 +84,11 @@ public class PlaybackReader : IPlaybackReader
     {
         if (Playback.CurrentValue is null) return;
 
-        ClearBuffer();
-
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _commandQueue.Enqueue(new(Command.Seek, tcs, position));
 
         if (_loopSignal.CurrentCount == 0)
-        _loopSignal.Release();
-        _isEOF = false;
+            _loopSignal.Release();
 
         await tcs.Task;
     }
