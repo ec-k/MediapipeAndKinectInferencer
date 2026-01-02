@@ -1,4 +1,5 @@
 ﻿using HumanLandmarks;
+using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Sockets;
 
@@ -27,12 +28,17 @@ public class UdpResultReceiver: IDisposable
     readonly Action<SocketException>?         _socketExceptionCallback;
     readonly Action<ObjectDisposedException>? _objectDisposedExceptionCallback;
 
+    readonly ILogger<UdpResultReceiver> _logger;
+
     public UdpResultReceiver(
         IPEndPoint receiverEndPoint,
-        ReceiverEventSettings settings
+        ReceiverEventSettings settings,
+        ILogger<UdpResultReceiver> logger
         )
     {
         _settings = settings;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
         _receiver = new UdpClient(receiverEndPoint);
         _receiver.BeginReceive(OnReceived, _receiver);
     }
@@ -43,7 +49,7 @@ public class UdpResultReceiver: IDisposable
 
         if (result.AsyncState is not UdpClient udp)
         {
-            Console.Error.WriteLine("UdpResultReceiver: result.AsyncState is null.");
+            _logger.LogError("UdpResultReceiver: result.AsyncState is null.");
             return;
         }
 

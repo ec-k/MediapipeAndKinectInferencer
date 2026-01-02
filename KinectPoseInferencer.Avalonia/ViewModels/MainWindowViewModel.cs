@@ -18,6 +18,7 @@ using System.Windows;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using KinectPoseInferencer.Core.PoseInference;
+using Microsoft.Extensions.Logging;
 
 
 namespace KinectPoseInferencer.Avalonia.ViewModels;
@@ -54,19 +55,22 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     RecordDataBroker _broker;
     DisposableBag _disposables = new();
+    readonly ILogger<MainWindowViewModel> _logger;
 
     public MainWindowViewModel(
         IPlaybackController playbackController,
         KinectDeviceController kinectDeviceController,
         RecordDataBroker broker,
         SettingsManager settingManager,
-        LandmarkPresenter landmarkPresenter)
+        LandmarkPresenter landmarkPresenter,
+        ILogger<MainWindowViewModel> logger)
     {
         _playbackController = playbackController ?? throw new ArgumentNullException(nameof(playbackController));
         _kinectDeviceController = kinectDeviceController ?? throw new ArgumentNullException(nameof(kinectDeviceController));
         _broker = broker ?? throw new ArgumentNullException(nameof(broker));
         _settingsManager = settingManager ?? throw new ArgumentNullException(nameof(settingManager));
         if (landmarkPresenter is null) throw new ArgumentNullException(nameof(landmarkPresenter));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         // _bodyVisualElements = new ObservableCollection<UIElement>(); // No longer needed
 
         var latestSetting = _settingsManager.Load();
@@ -177,7 +181,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         catch (OperationCanceledException)
         {
             // Handle cancellation
-            Console.WriteLine("DisplayFirstColorFrame was cancelled.");
+            _logger.LogInformation("DisplayFirstColorFrame was cancelled.");
         }
         finally
         {
@@ -293,12 +297,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
         catch (OperationCanceledException)
         {
-            // Handle cancellation if needed
-            Console.WriteLine("File loading was cancelled.");
+            _logger.LogInformation("File loading was cancelled.");
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error loading file: {ex.Message}");
+            _logger.LogError($"Error loading file: {ex.Message}");
         }
         finally
         {

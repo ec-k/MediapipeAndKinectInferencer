@@ -1,4 +1,5 @@
 ﻿using K4AdotNet.Sensor;
+using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.MemoryMappedFiles;
 
@@ -14,16 +15,22 @@ namespace KinectPoseInferencer.Core
         MemoryMappedFile _mmf;
         MemoryMappedViewStream _stream;
 
-        public ImageWriter(string filePath)
+        readonly ILogger<ImageWriter> _logger;
+
+        public ImageWriter(
+            string filePath,
+            ILogger<ImageWriter> logger)
         {
             _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
             InitMmap();
         }
 
         [MemberNotNull(nameof(_mmf), nameof(_stream))]
         void InitMmap()
         {
-            Console.WriteLine($"MMF Target Path: {_filePath}");
+            _logger.LogInformation($"MMF Target Path: {_filePath}");
 
             var directoryPath = Path.GetDirectoryName(_filePath);
 
@@ -32,11 +39,11 @@ namespace KinectPoseInferencer.Core
                 try
                 {
                     Directory.CreateDirectory(directoryPath);
-                    Console.WriteLine($"Created directory for MMF: {directoryPath}");
+                    _logger.LogInformation($"Created directory for MMF: {directoryPath}");
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"Error creating directory '{directoryPath}': {ex.Message}");
+                    _logger.LogError($"Error creating directory '{directoryPath}': {ex.Message}");
                     throw;
                 }
             }
@@ -50,11 +57,11 @@ namespace KinectPoseInferencer.Core
                     {
                         fs.Write(bs, 0, bs.Length);
                     }
-                    Console.WriteLine($"Created new MMF file at: {_filePath}");
+                    _logger.LogInformation($"Created new MMF file at: {_filePath}");
                 }
                 catch(Exception ex)
                 {
-                    Console.Error.WriteLine($"Error creating MMF file '{_filePath}': {ex.Message}");
+                    _logger.LogError($"Error creating MMF file '{_filePath}': {ex.Message}");
                     throw;
                 }
             }
@@ -63,12 +70,12 @@ namespace KinectPoseInferencer.Core
             {
                 _mmf = MemoryMappedFile.CreateFromFile(_filePath, FileMode.Open);
                 _stream = _mmf.CreateViewStream();
-                Console.WriteLine($"Successfully opened MMF: {_filePath}");
+                _logger.LogInformation($"Successfully opened MMF: {_filePath}");
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"Error opening MemoryMappedFile '{_filePath}': {ex.Message}");
-                Console.Error.WriteLine(ex.StackTrace);
+                _logger.LogError($"Error opening MemoryMappedFile '{_filePath}': {ex.Message}");
+                _logger.LogError(ex.StackTrace);
                 throw;
             }
         }

@@ -1,4 +1,5 @@
 ﻿using K4AdotNet.Sensor;
+using Microsoft.Extensions.Logging;
 using R3;
 using System;
 using System.Collections.Concurrent;
@@ -36,10 +37,14 @@ public class KinectDeviceController: IDisposable
     Task? _readingLoop = null;
     CancellationTokenSource? _cts = null;
     DisposableBag _disposables = new();
+    readonly ILogger<KinectDeviceController> _logger;
 
-    public KinectDeviceController(RecordDataBroker dataBroker)
+    public KinectDeviceController(
+        RecordDataBroker dataBroker,
+        ILogger<KinectDeviceController> logger)
     {
         _dataBroker = dataBroker ?? throw new ArgumentNullException(nameof(dataBroker));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public void Open()
@@ -47,7 +52,7 @@ public class KinectDeviceController: IDisposable
         if (Device.TryOpen(out var device))
             _kinectDevice.Value = device;
         else
-            Console.WriteLine("Failed to open a device.");
+            _logger.LogInformation("Failed to open a device.");
     }
 
     public K4AdotNet.Sensor.Calibration? GetCalibration()
@@ -130,7 +135,7 @@ public class KinectDeviceController: IDisposable
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error in ReadingLoop: {ex}");
+            _logger.LogError($"Error in ReadingLoop: {ex}");
         }
         finally
         {
@@ -178,7 +183,7 @@ public class KinectDeviceController: IDisposable
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Warning: ReadingLoop did not terminate gracefully within timeout. Error: {ex.Message}");
+            _logger.LogError($"Warning: ReadingLoop did not terminate gracefully within timeout. Error: {ex.Message}");
         }
         finally
         {

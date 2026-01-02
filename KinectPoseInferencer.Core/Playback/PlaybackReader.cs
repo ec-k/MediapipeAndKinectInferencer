@@ -3,6 +3,7 @@ using K4AdotNet.Sensor;
 using R3;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using Microsoft.Extensions.Logging;
 
 namespace KinectPoseInferencer.Core.Playback;
 
@@ -28,9 +29,14 @@ public class PlaybackReader : IPlaybackReader
     Task? _producerLoopTask;
     CancellationTokenSource _producerLoopCts = new();
     readonly int _taskCancelTimeoutSec = 2;
+    readonly ILogger<PlaybackReader> _logger;
 
-    public PlaybackReader(int bufferSize = 10)
+    public PlaybackReader(
+        ILogger<PlaybackReader> logger,
+        int bufferSize = 10)
     {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
         _frameChannel = Channel.CreateBounded<PlaybackFrame>(
             new BoundedChannelOptions(bufferSize)
             {
@@ -164,7 +170,7 @@ public class PlaybackReader : IPlaybackReader
                 catch (Exception ex)
                 {
                     frame.Capture?.Dispose();
-                    Console.Error.WriteLine($"Producer Error: {ex.Message}");
+                    _logger.LogError($"Producer Error: {ex.Message}");
                     await Task.Delay(1000, token);
                 }
             }
@@ -194,7 +200,7 @@ public class PlaybackReader : IPlaybackReader
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"Warning: FrameReadingLoop did not terminate gracefully within timeout. Error: {ex.Message}");
+                _logger.LogError($"Warning: FrameReadingLoop did not terminate gracefully within timeout. Error: {ex.Message}");
             }
             finally
             {
@@ -216,7 +222,7 @@ public class PlaybackReader : IPlaybackReader
 
         if (!waitResult)
         {
-            Console.WriteLine("Info: Playback reached end of file or failed to get a capture.");
+            _logger.LogInformation("Playback reached end of file or failed to get a capture.");
             return result;
         }
 

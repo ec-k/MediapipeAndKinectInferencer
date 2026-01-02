@@ -1,4 +1,5 @@
 ﻿using MessagePack;
+using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Sockets;
 
@@ -10,16 +11,27 @@ public class InputEventSender: IDisposable
     UdpClient _sender = new();
     readonly List<IPEndPoint> _endPoints = new();
 
-    public InputEventSender(string host, int port)
+    readonly ILogger<InputEventSender> _logger;
+
+    public InputEventSender(
+        string host,
+        int port,
+        ILogger<InputEventSender> logger)
     {
         _sender.Client?.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
         AddEndPoint(host, port);
+
+        _logger = _logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public InputEventSender(in IList<IPEndPoint> endPoints)
+    public InputEventSender(
+        in IList<IPEndPoint> endPoints,
+        ILogger<InputEventSender> logger)
     {
         _sender.Client?.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
         AddEndPoints(endPoints);
+
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public void AddEndPoint(string host, int port)
@@ -27,7 +39,7 @@ public class InputEventSender: IDisposable
         if(IPAddress.TryParse(host, out var ipAddress))
             _endPoints.Add(new(ipAddress, port));
         else
-            Console.WriteLine($"Warning: Could not parse host '{host}'. Only IP addresses are supported.");
+            _logger.LogInformation($"Warning: Could not parse host '{host}'. Only IP addresses are supported.");
     }
 
     public void AddEndPoints(in IList<IPEndPoint> endPoints)
@@ -53,7 +65,7 @@ public class InputEventSender: IDisposable
             }
             catch (SocketException ex)
             {
-                Console.WriteLine($"Error: Failed to send input event to {endPoint}: {ex.Message}");
+                _logger.LogInformation($"Error: Failed to send input event to {endPoint}: {ex.Message}");
             }
         }
     }

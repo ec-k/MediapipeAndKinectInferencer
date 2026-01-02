@@ -7,6 +7,7 @@ using KinectPoseInferencer.Avalonia.Views;
 using KinectPoseInferencer.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -29,6 +30,7 @@ namespace KinectPoseInferencer.Avalonia
             services.GetRequiredService<Core.PoseInference.LandmarkPresenter>();
             services.GetRequiredService<Core.PoseInference.InputLogPresenter>();
             services.GetRequiredService<Core.Playback.CapturePresenter>();
+            var logger = services.GetRequiredService<ILogger<App>>();
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
@@ -47,7 +49,7 @@ namespace KinectPoseInferencer.Avalonia
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"MediaPipe Process Error: {ex.Message}");
+                        logger.LogError($"MediaPipe Process Error: {ex.Message}");
                     }
                 });
 

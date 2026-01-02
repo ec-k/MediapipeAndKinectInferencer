@@ -4,6 +4,7 @@ using KinectPoseInferencer.Core.PoseInference.Filters;
 using KinectPoseInferencer.Core.Settings;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace KinectPoseInferencer.Core;
 
@@ -11,6 +12,13 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddCoreServices(this IServiceCollection services, IConfiguration configuration)
     {
+        using var loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder.AddConfiguration(configuration.GetSection("Logging"));
+            builder.AddConsole();
+        });
+        var logger = loggerFactory.CreateLogger(typeof(ServiceCollectionExtensions));
+
         var settings = configuration.GetSection("Core").Get<CoreSettings>()
                        ?? throw new InvalidOperationException("Core settings not found.");
         var receiverSettings          = settings.GetReceiverSettings();
@@ -19,7 +27,7 @@ public static class ServiceCollectionExtensions
         var inputEventSenderEndPoints = settings.GetInputEventSenderEndPoints();
         var oneEuroFilterSettings     = settings.FilterSettings.OneEuroFilter;
         var appFps                    = settings.AppFrameRate;
-        var mmfFilePath               = CreateMmfFile(settings.MmfFileName);
+        var mmfFilePath               = CreateMmfFile(settings.MmfFileName, logger);
 
         // inferencer
         services.AddSingleton<KinectInferencer>();
@@ -29,12 +37,19 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<UdpResultReceiver>(), receiverSettings)
             );
         services.AddSingleton(sp =>
-            new UdpResultReceiver(resultReceiverEndPoint, receiverSettings)
+            new UdpResultReceiver(
+                resultReceiverEndPoint,
+                receiverSettings,
+                sp.GetRequiredService<ILogger<UdpResultReceiver>>())
             );
         // result processors
         services.AddSingleton<TiltCorrector>();
         services.AddSingleton<PoseInference.Utils.SkeletonToPoseLandmarksConverter>();
-        services.AddSingleton(provider => new ImageWriter(mmfFilePath));
+        services.AddSingleton(sp => 
+        new ImageWriter(
+            mmfFilePath,
+            sp.GetRequiredService<ILogger<ImageWriter>>())
+        );
         // brokers
         services.AddSingleton<FrameManager>();
         services.AddSingleton<RecordDataBroker>();
@@ -57,7 +72,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ILandmarkUser>(sp => new LandmarkSender(landmarkSenderEndPoint));
 
         // Register input event users
-        services.AddSingleton(sp => new InputEventSender(inputEventSenderEndPoints));
+        services.AddSingleton(sp => 
+        new InputEventSender(
+            inputEventSenderEndPoints,
+            sp.GetRequiredService<ILogger<InputEventSender>>())
+        );
 
         // readers
         services.AddSingleton<KinectDeviceController>();
@@ -66,6 +85,7 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<IPlaybackReader>(),
                 sp.GetRequiredService<InputLogReader>(),
                 sp.GetRequiredService<RecordDataBroker>(),
+                sp.GetRequiredService<ILogger<PlaybackController>>(),
                 appFps)
         );
         services.AddSingleton<IPlaybackReader, PlaybackReader>();
@@ -83,13 +103,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => 
             new MediaPipeProcessManager(
                 sp.GetRequiredService<IMediaPipeConfiguration>(),
-                mmfFilePath)
+                mmfFilePath,
+                sp.GetRequiredService<ILogger<MediaPipeProcessManager>>())
         );
 
         return services;
     }
 
-    static string CreateMmfFile(string fileName)
+    static string CreateMmfFile(string fileName, ILogger logger)
     {
         var appTmpDirectory = ProjectConstants.AppTmpDirecotry;
         if (!string.IsNullOrEmpty(appTmpDirectory) && !Directory.Exists(appTmpDirectory))
@@ -97,11 +118,11 @@ public static class ServiceCollectionExtensions
             try
             {
                 Directory.CreateDirectory(appTmpDirectory);
-                Console.WriteLine($"Created directory for ImageWriter: {appTmpDirectory}");
+                logger.LogInformation($"Created directory for ImageWriter: {appTmpDirectory}");
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"Error creating directory '{appTmpDirectory}': {ex.Message}");
+                logger.LogError($"Error creating directory '{appTmpDirectory}': {ex.Message}");
                 Environment.Exit(1);
             }
         }

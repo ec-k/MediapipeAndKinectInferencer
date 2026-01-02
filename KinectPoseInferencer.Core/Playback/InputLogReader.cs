@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Threading.Channels;
 
@@ -16,11 +17,18 @@ public class InputLogReader : IInputLogReader
     Task?                     _producerTask;
     CancellationTokenSource?  _cts;
 
+    readonly ILogger<InputLogReader> _logger;
+
+    public InputLogReader(ILogger<InputLogReader> logger)
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
     public async Task<bool> LoadLogFile(string filePath)
     {
         if (!File.Exists(filePath))
         {
-            Console.WriteLine($"Error: Input log file not found at {filePath}");
+            _logger.LogInformation($"Error: Input log file not found at {filePath}");
             return false;
         }
 
@@ -55,7 +63,7 @@ public class InputLogReader : IInputLogReader
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error opening input log file: {ex.Message}");
+            _logger.LogError($"Error opening input log file: {ex.Message}");
             return false;
         }
     }
@@ -121,7 +129,7 @@ public class InputLogReader : IInputLogReader
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Warning: Failed to parse JSON line. Error: {ex.Message}");
+                    _logger.LogInformation($"Warning: Failed to parse JSON line. Error: {ex.Message}");
                     continue;
                 }
 

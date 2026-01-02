@@ -1,4 +1,5 @@
 ﻿using Cysharp.Threading;
+using Microsoft.Extensions.Logging;
 using R3;
 using System.Text.Json;
 using ValueTaskSupplement;
@@ -29,16 +30,19 @@ public class PlaybackController : IPlaybackController
     bool _terminateLoop = false;
 
     DisposableBag _disposables = new();
+    readonly ILogger<PlaybackController> _logger;
 
     public PlaybackController(
         IPlaybackReader playbackReader,
         InputLogReader logReader,
         RecordDataBroker broker,
+        ILogger<PlaybackController> logger,
         int targetFps = 60)
     {
         _playbackReader = playbackReader ?? throw new ArgumentNullException(nameof(playbackReader));
         _logReader = logReader ?? throw new ArgumentNullException(nameof(logReader));
         _broker = broker ?? throw new ArgumentNullException(nameof(broker));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         TargetFps = targetFps;
 
         _playbackReader.Playback
@@ -65,7 +69,7 @@ public class PlaybackController : IPlaybackController
     {
         if (!File.Exists(filePath))
         {
-            Console.WriteLine($"Error: Input log metadata file not found at {filePath}");
+            _logger.LogInformation($"Error: Input log metadata file not found at {filePath}");
             return false;
         }
 
@@ -83,12 +87,12 @@ public class PlaybackController : IPlaybackController
                 return true;
             }
 
-            Console.Error.WriteLine("Error: Failed to deserialize LogMetadata.");
+            _logger.LogError("Error: Failed to deserialize LogMetadata.");
             return false;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error reading input log metadata file: {ex.Message}");
+            _logger.LogError($"Error reading input log metadata file: {ex.Message}");
             _metadata = null;
             return false;
         }

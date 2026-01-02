@@ -1,4 +1,5 @@
 ﻿using CliWrap;
+using Microsoft.Extensions.Logging;
 
 namespace KinectPoseInferencer.Core;
 
@@ -11,10 +12,16 @@ public class MediaPipeProcessManager: IDisposable
     CancellationTokenSource? _forcefulCts;
     readonly TimeSpan _gracefulStopTimeoutSec = TimeSpan.FromSeconds(3);
 
-    public MediaPipeProcessManager(IMediaPipeConfiguration config, string mmfFilePath)
+    readonly ILogger<MediaPipeProcessManager> _logger;
+
+    public MediaPipeProcessManager(
+        IMediaPipeConfiguration config,
+        string mmfFilePath,
+        ILogger<MediaPipeProcessManager> logger)
     {
         _config      = config      ?? throw new ArgumentNullException(nameof(config));
         _mmfFilePath = mmfFilePath ?? throw new ArgumentNullException(nameof(mmfFilePath));
+        _logger      = logger      ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task StartMediapipeProcessAsync(CancellationToken token)
@@ -27,14 +34,14 @@ public class MediaPipeProcessManager: IDisposable
         var exePath = _config.ExecutablePath;
         if (string.IsNullOrWhiteSpace(exePath))
         {
-            Console.Error.WriteLine("MediaPipe Inferencer .exe path is not specified at MediaPipeSettings:ExecutablePath.");
+            _logger.LogError("MediaPipe Inferencer .exe path is not specified at MediaPipeSettings:ExecutablePath.");
             return;
         }
 
         var fullPath = Path.GetFullPath(exePath, AppContext.BaseDirectory);
         if (!File.Exists(fullPath))
         {
-            Console.Error.WriteLine($"MediaPipe Inferencer .exe is not found: {fullPath}");
+            _logger.LogError($"MediaPipe Inferencer .exe is not found: {fullPath}");
             return;
         }
 
