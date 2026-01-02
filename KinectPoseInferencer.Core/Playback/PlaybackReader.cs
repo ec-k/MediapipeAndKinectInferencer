@@ -121,9 +121,9 @@ public class PlaybackReader : IPlaybackReader
         }
     }
 
-    void ProcessCommand()
+    void ProcessCommands()
     {
-        if(_commandQueue.TryDequeue(out var request))
+        while (_commandQueue.TryDequeue(out var request))
         {
             try
             {
@@ -158,7 +158,7 @@ public class PlaybackReader : IPlaybackReader
                 // Drain previous signals
                 while (_loopSignal.CurrentCount > 0) _loopSignal.Wait(0);
                 
-                ProcessCommand();
+                ProcessCommands();
 
                 if (_isEOF && _commandQueue.IsEmpty)
                 {
