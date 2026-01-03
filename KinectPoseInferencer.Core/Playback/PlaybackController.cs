@@ -6,10 +6,17 @@ using ValueTaskSupplement;
 
 namespace KinectPoseInferencer.Core.Playback;
 
+public enum PlaybackState
+{
+    Playing,
+    Pause,
+    Lock,
+}
+
 public class PlaybackController : IPlaybackController
 {
     readonly IPlaybackReader _playbackReader;
-    readonly InputLogReader _logReader;
+    readonly IInputLogReader _logReader;
     readonly RecordDataBroker _broker;
 
     public IPlaybackReader Reader => _playbackReader;
@@ -21,7 +28,6 @@ public class PlaybackController : IPlaybackController
 
     public int TargetFps { get; private set; }
     LogicLooper? _readingLoop;
-    ReactiveProperty<TimeSpan> _playbackElapsedTime = new(TimeSpan.Zero);
     TimeSpan _recordLength = TimeSpan.Zero;
 
     public ReadOnlyReactiveProperty<PlaybackState> State => _state;
@@ -123,7 +129,7 @@ public class PlaybackController : IPlaybackController
                 _terminateLoop = false;
                 return false;
             }
-            if (_playbackElapsedTime.Value > _recordLength) 
+            if (_playbackElapsedTime.Value > _recordLength)
                 _state.Value = PlaybackState.Pause;
             if (_state.Value is not PlaybackState.Playing)
                 return true;
@@ -156,7 +162,9 @@ public class PlaybackController : IPlaybackController
         _state.Value = PlaybackState.Lock;
         _playbackElapsedTime.Value = TimeSpan.Zero;
         await Task.WhenAll(_playbackReader.RewindAsync(),
-                           _logReader.Rewind());
+                           _logReader.RewindAsync());
+
+        Pause();
     }
 
     public async Task SeekAsync(TimeSpan position)

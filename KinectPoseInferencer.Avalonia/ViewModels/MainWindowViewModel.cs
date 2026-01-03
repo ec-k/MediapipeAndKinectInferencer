@@ -48,8 +48,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     readonly int MaxSeekFramesForColorImage = 100;
 
-    int _isRendering = 0;
-
     public ObservableCollection<UIElement> BodyVisualElements { get; } = new();
     public ObservableCollection<string> InputLogEvents { get; } = new();
 
@@ -293,7 +291,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         try
         {
-            IsLoading = true;
             var playbackDesc = new PlaybackDescriptor(VideoFilePath, InputLogFilePath, MetaFilePath);
             _playbackController.Descriptor = playbackDesc;
             await _playbackController.Prepare(token);
@@ -320,10 +317,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         await _playbackController.Rewind();
 
         // Display the first frame
-        if (_playbackController.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
-        {
-            await Task.Run(() => DisplayFirstColorFrame(playback, token), token);
-        }
+        //if (_playbackController.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
+        //{
+        //    await Task.Run(() => DisplayFirstColorFrame(playback, token), token);
+        //}
     }
     partial void OnSeekSliderPositionChanged(double value)
     {

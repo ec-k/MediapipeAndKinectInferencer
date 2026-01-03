@@ -2,7 +2,9 @@
 
 public interface IInputLogReader: IAsyncDisposable
 {
+    public TimeSpan FirstFrameTime { set; }
     Task<bool> LoadLogFile(string filePath);
-    Task Rewind();
+    Task RewindAsync();
+    Task SeekAsync(TimeSpan position);
     bool TryRead(TimeSpan targetTime, out IList<DeviceInputData> results);
 }

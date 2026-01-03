@@ -1,5 +1,4 @@
-﻿using K4AdotNet;
-using K4AdotNet.Sensor;
+﻿using K4AdotNet.Sensor;
 using R3;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
@@ -55,7 +54,10 @@ public class PlaybackReader : IPlaybackReader
             throw new ArgumentNullException(nameof(descriptor.VideoFilePath));
 
         if (_producerLoopTask is not null)
+        {
             await StopProducerLoop();
+            _playback.Value.Dispose();
+        }
 
         await Task.Run(() => _playback.Value = new(descriptor.VideoFilePath), token);
         _playback.Value.SetColorConversion(ImageFormat.ColorBgra32);
@@ -64,7 +66,7 @@ public class PlaybackReader : IPlaybackReader
         _isEOF = false;
         _producerLoopCts?.Dispose();
         _producerLoopCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-        _producerLoopTask = Task.Run(() => ProducerLoop(_producerLoopCts.Token));
+        _producerLoopTask = Task.Run(() => ProducerLoop(_producerLoopCts.Token).ConfigureAwait(false));
     }
 
     public async Task RewindAsync()
@@ -74,8 +76,7 @@ public class PlaybackReader : IPlaybackReader
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _commandQueue.Enqueue(new(Command.Rewind, tcs));
 
-        if(_loopSignal.CurrentCount == 0)
-            _loopSignal.Release();
+        _loopSignal.Release();
 
         await tcs.Task;
     }
@@ -87,8 +88,7 @@ public class PlaybackReader : IPlaybackReader
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _commandQueue.Enqueue(new(Command.Seek, tcs, position));
 
-        if (_loopSignal.CurrentCount == 0)
-            _loopSignal.Release();
+        _loopSignal.Release();
 
         await tcs.Task;
     }
@@ -146,38 +146,58 @@ public class PlaybackReader : IPlaybackReader
         _isEOF = false;
 
         if (Playback.CurrentValue is not null)
+        {
+            _logger.LogInformation($"Seeking to {position}");
             Playback.CurrentValue.SeekTimestamp(position, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
+        }
     }
 
     async Task ProducerLoop(CancellationToken token)
     {
+        Task<bool>? waitWriterTask = null;
+        Task? waitSignalTask = null;
+
         try
         {
             while (!token.IsCancellationRequested)
-            {
-                // Drain previous signals
-                while (_loopSignal.CurrentCount > 0) _loopSignal.Wait(0);
-                
+            {                
                 ProcessCommands();
 
                 if (_isEOF && _commandQueue.IsEmpty)
                 {
                     _logger.LogInformation("Waiting for next command at EOF.");
+                    waitWriterTask = null;
+                    waitSignalTask = null;
                     await _loopSignal.WaitAsync(token);
                     continue;
                 }
 
-                if (!await _frameChannel.Writer.WaitToWriteAsync(token))
-                    break;
+                if (waitWriterTask is null)
+                    waitWriterTask = _frameChannel.Writer.WaitToWriteAsync(token).AsTask();
+                if (waitSignalTask is null)
+                    waitSignalTask = _loopSignal.WaitAsync(token);
+                var completedTask = await Task.WhenAny(waitWriterTask, waitSignalTask);
+
+                if (completedTask == waitSignalTask)
+                {
+                    waitSignalTask = null;
+                    continue;
+                }
+                if (!await waitWriterTask) break;
+                waitWriterTask = null;
 
                 if (!_commandQueue.IsEmpty) continue;   // To process commands alived while waiting, go to the top of this loop.
-
 
                 PlaybackFrame frame = default;
                 try
                 {
                     frame = ReadNextFrame();
-                    if (frame.Capture is null) continue;
+                    if (_isEOF) continue;
+                    if (frame.Capture is null)
+                    {
+                        await Task.Delay(1, token);
+                        continue;
+                    }
 
                     if (!_frameChannel.Writer.TryWrite(frame))
                         frame.Capture?.Dispose();
@@ -186,14 +206,14 @@ public class PlaybackReader : IPlaybackReader
                 {
                     frame.Capture?.Dispose();
                     _logger.LogError($"Producer Error: {ex.Message}");
-                    await Task.Delay(1000, token);
+                    await Task.Delay(100, token);
                 }
             }
         }
         catch (OperationCanceledException ex)
         {
             _logger.LogInformation(ex, "Operation cancelled.");
-    }
+        }
     }
 
     async Task StopProducerLoop()
