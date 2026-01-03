@@ -125,16 +125,12 @@ namespace KinectPoseInferencer.Renderers
                         var jointPositionVector = new Vector3(joint.PositionMm.X, joint.PositionMm.Y, joint.PositionMm.Z);
                         SphereRenderer.Render(jointPositionVector / 1000, radius, bodyColor);
 
-                        try
-                        {
-                            var jointType = (JointType)Enum.ToObject(typeof(JointType), jointId);
-                            var parent = jointType.GetParent();
-                            var parentJoint = skeleton[parent];
-                            var parentJointVector = new Vector3(parentJoint.PositionMm.X, parentJoint.PositionMm.Y, parentJoint.PositionMm.Z);
-                            // Render a bone connecting this joint and its parent as a cylinder.
-                            CylinderRenderer.Render(jointPositionVector / 1000, parentJointVector / 1000, bodyColor);
-                        }
-                        catch { }
+                        var jointType = (JointType)Enum.ToObject(typeof(JointType), jointId);
+                        var parent = jointType.GetParent();
+                        var parentJoint = skeleton[parent];
+                        var parentJointVector = new Vector3(parentJoint.PositionMm.X, parentJoint.PositionMm.Y, parentJoint.PositionMm.Z);
+                        // Render a bone connecting this joint and its parent as a cylinder.
+                        CylinderRenderer.Render(jointPositionVector / 1000, parentJointVector / 1000, bodyColor);
                     }
                 }
             }
