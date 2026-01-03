@@ -155,8 +155,11 @@ public class InputLogReader : IInputLogReader
                     _logger.LogInformation("Input log reached to EOF.");
 
                     waitWriterTask = null;
+
+                    if(waitSignalTask is null)
+                        waitSignalTask = _loopSignal.WaitAsync(token);
+                    await waitSignalTask;
                     waitSignalTask = null;
-                    await _loopSignal.WaitAsync(token);
                 }
                 else
                     ProcessLine(line);

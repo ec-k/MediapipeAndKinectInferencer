@@ -16,13 +16,11 @@ public class PlaybackReader : IPlaybackReader
     public ReadOnlyReactiveProperty<K4AdotNet.Record.Playback> Playback => _playback;
     ReactiveProperty<K4AdotNet.Record.Playback> _playback = new();
 
-    enum Command { None, Seek, Rewind }
-    record struct CommandRequest(
-        Command Type,
+    record struct SeekRequest(
         TaskCompletionSource Tcs,
         TimeSpan? Position = null
         );
-    ConcurrentQueue<CommandRequest> _commandQueue = new();
+    ConcurrentQueue<SeekRequest> _commandQueue = new();
 
     Channel<PlaybackFrame> _frameChannel;
     Task? _producerLoopTask;
@@ -69,28 +67,18 @@ public class PlaybackReader : IPlaybackReader
         _producerLoopTask = Task.Run(() => ProducerLoop(_producerLoopCts.Token).ConfigureAwait(false));
     }
 
-    public async Task RewindAsync()
-    {
-        if (Playback.CurrentValue is null) return;
-
-        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _commandQueue.Enqueue(new(Command.Rewind, tcs));
-
-        _loopSignal.Release();
-
-        await tcs.Task;
-    }
+    public async Task RewindAsync() => await SeekAsync(TimeSpan.Zero);
 
     public async Task SeekAsync(TimeSpan position)
     {
         if (Playback.CurrentValue is null) return;
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _commandQueue.Enqueue(new(Command.Seek, tcs, position));
+        _commandQueue.Enqueue(new(tcs, position));
 
         _loopSignal.Release();
 
-        await tcs.Task;
+        await tcs.Task.ConfigureAwait(false);
     }
 
     public bool TryRead(TimeSpan targetFrameTime, out Capture? capture, out ImuSample? imuSample)
@@ -127,10 +115,10 @@ public class PlaybackReader : IPlaybackReader
         {
             try
             {
-                if (request.Type is Command.Rewind)
-                    ProcessSeekAction(TimeSpan.Zero);
-                if (request.Type is Command.Seek && request.Position.HasValue)
-                    ProcessSeekAction(request.Position.Value);
+                var position = request.Position;
+                if (position.HasValue)
+                    ProcessSeekAction(position.Value);
+
                 request.Tcs.SetResult();
             }
             catch (Exception ex)
@@ -167,8 +155,12 @@ public class PlaybackReader : IPlaybackReader
                 {
                     _logger.LogInformation("Waiting for next command at EOF.");
                     waitWriterTask = null;
+
+                    if (waitSignalTask is null)
+                        waitSignalTask = _loopSignal.WaitAsync(token);
+                    await waitSignalTask;
                     waitSignalTask = null;
-                    await _loopSignal.WaitAsync(token);
+
                     continue;
                 }
 
