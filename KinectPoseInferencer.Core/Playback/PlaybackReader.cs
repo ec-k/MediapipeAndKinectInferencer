@@ -190,7 +190,10 @@ public class PlaybackReader : IPlaybackReader
                 }
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogInformation(ex, "Operation cancelled.");
+    }
     }
 
     async Task StopProducerLoop()
@@ -205,13 +208,13 @@ public class PlaybackReader : IPlaybackReader
                     await _producerLoopTask.WaitAsync(TimeSpan.FromSeconds(_taskCancelTimeoutSec));
                 }
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException ex)
             {
-                // ignore this exception
+                _logger.LogInformation("Operation cancelled{ex}", ex);
             }
             catch (AggregateException ex) when (ex.InnerExceptions.All(e => e is TaskCanceledException))
             {
-                /* ignore this exception */
+                _logger.LogInformation("Task cancelled{ex}", ex);
             }
             catch (Exception ex)
             {

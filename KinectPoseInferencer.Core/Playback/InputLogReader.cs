@@ -141,7 +141,10 @@ public class InputLogReader : IInputLogReader
                 _eventChannel.Writer.TryWrite(inputEvent);
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogInformation("Operation cancelled{ex}", ex);
+        }
     }
 
     async Task StopProducer()
@@ -154,7 +157,10 @@ public class InputLogReader : IInputLogReader
             {
                 await _producerTask;
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException ex)
+            {
+                _logger.LogInformation("Operation cancelled{ex}", ex);
+            }
         }
 
         _cts?.Dispose();

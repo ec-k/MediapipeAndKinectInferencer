@@ -129,9 +129,10 @@ public class KinectDeviceController: IDisposable
                     await Task.Delay(50, token);
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             // Stop successfully on cancel requested
+            _logger.LogInformation("Opration cancelled {ex}", ex);
         }
         catch (Exception ex)
         {

@@ -69,12 +69,14 @@ public class UdpResultReceiver: IDisposable
         {
             if (_socketExceptionCallback is not null)
                 _socketExceptionCallback(e);
+            _logger.LogError("Socket Exception {ex}", e);
             return;
         }
         catch (ObjectDisposedException e)
         {
             if (_objectDisposedExceptionCallback is not null)
                 _objectDisposedExceptionCallback(e);
+            _logger.LogError("Object disposed exception {ex}", e);
             return;
         }
 
