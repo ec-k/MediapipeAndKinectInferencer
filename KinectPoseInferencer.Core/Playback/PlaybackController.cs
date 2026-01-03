@@ -24,9 +24,10 @@ public class PlaybackController : IPlaybackController
     ReactiveProperty<TimeSpan> _playbackElapsedTime = new(TimeSpan.Zero);
     TimeSpan _recordLength = TimeSpan.Zero;
 
+    public ReadOnlyReactiveProperty<PlaybackState> State => _state;
     public ReadOnlyReactiveProperty<TimeSpan> CurrentTime => _playbackElapsedTime;
-    public ReadOnlyReactiveProperty<bool> IsPlaying => _isPlaying;
-    ReactiveProperty<bool> _isPlaying = new(false);
+    ReactiveProperty<PlaybackState> _state = new(PlaybackState.Pause);
+    ReactiveProperty<TimeSpan> _playbackElapsedTime = new(TimeSpan.Zero);
     bool _terminateLoop = false;
 
     DisposableBag _disposables = new();
@@ -34,7 +35,7 @@ public class PlaybackController : IPlaybackController
 
     public PlaybackController(
         IPlaybackReader playbackReader,
-        InputLogReader logReader,
+        IInputLogReader logReader,
         RecordDataBroker broker,
         ILogger<PlaybackController> logger,
         int targetFps = 60)
@@ -58,11 +59,13 @@ public class PlaybackController : IPlaybackController
             || string.IsNullOrEmpty(Descriptor.InputLogFilePath))
             return;
 
+        _state.Value = PlaybackState.Lock;
         await LoadMetaFileAsync(Descriptor.MetadataFilePath);
         await Task.WhenAll(
             _logReader.LoadLogFile(Descriptor.InputLogFilePath),
             _playbackReader.Configure(Descriptor, token)
         );
+        _state.Value = PlaybackState.Pause;
     }
 
     public async Task<bool> LoadMetaFileAsync(string filePath)
@@ -100,9 +103,10 @@ public class PlaybackController : IPlaybackController
 
     public void Play()
     {
-        if (_isPlaying.Value) return;
+        if (_state.Value is not PlaybackState.Pause)
+            return;
 
-        _isPlaying.Value = true;
+        _state.Value = PlaybackState.Playing;
 
         if (_readingLoop is null)
             StartReadingLoop();
@@ -120,8 +124,9 @@ public class PlaybackController : IPlaybackController
                 return false;
             }
             if (_playbackElapsedTime.Value > _recordLength) 
-                _isPlaying.Value = false;
-            if (!_isPlaying.Value) return true;
+                _state.Value = PlaybackState.Pause;
+            if (_state.Value is not PlaybackState.Playing)
+                return true;
 
             _playbackElapsedTime.Value += ctx.ElapsedTimeFromPreviousFrame;
             var kinectAbsoluteTime = _playbackElapsedTime.Value + _firstFrameKinectTime;
@@ -143,13 +148,12 @@ public class PlaybackController : IPlaybackController
 
     public void Pause()
     {
-        _isPlaying.Value = false;
+        _state.Value = PlaybackState.Pause;
     }
 
     public async Task Rewind()
     {
-        Pause();
-
+        _state.Value = PlaybackState.Lock;
         _playbackElapsedTime.Value = TimeSpan.Zero;
         await Task.WhenAll(_playbackReader.RewindAsync(),
                            _logReader.Rewind());
@@ -157,8 +161,12 @@ public class PlaybackController : IPlaybackController
 
     public async Task SeekAsync(TimeSpan position)
     {
+        _state.Value = PlaybackState.Lock;
         _playbackElapsedTime.Value = position;
-        await Task.WhenAll(_playbackReader.SeekAsync(position), _logReader.SeekAsync(position));
+        await Task.WhenAll(_playbackReader.SeekAsync(position),
+                           _logReader.SeekAsync(position));
+
+        Pause();
     }
 
     public async ValueTask DisposeAsync()

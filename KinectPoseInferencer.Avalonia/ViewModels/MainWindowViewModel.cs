@@ -86,8 +86,17 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 PlaybackLength = playback.RecordLength;
             })
             .AddTo(ref _disposables);
-        _playbackController.IsPlaying
-            .Subscribe(isPlaying => PlayPauseIconUnicode = isPlaying ? PauseIconUnicode : PlayIconUnicode)
+        _playbackController.State
+            .Subscribe(state =>
+            {
+                if (state is PlaybackState.Playing)
+                    PlayPauseIconUnicode = PauseIconUnicode;
+                if (state is PlaybackState.Pause)
+                    PlayPauseIconUnicode = PlayIconUnicode;
+
+                IsLoading = state is PlaybackState.Lock;
+
+            })
             .AddTo(ref _disposables);
 
         _kinectDeviceController.IsReading
@@ -303,10 +312,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             _logger.LogError($"Error loading file: {ex.Message}");
         }
-        finally
-        {
-            IsLoading = false;
-        }
     }
 
     [RelayCommand(IncludeCancelCommand = true)]
@@ -381,9 +386,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     public void PlayOrPause()
     {
-        if (_playbackController.IsPlaying.CurrentValue)
+        var state = _playbackController.State.CurrentValue;
+
+        if (state is PlaybackState.Playing)
             _playbackController.Pause();
-        else
+        if(state is PlaybackState.Pause)
             _playbackController.Play();
     }
 

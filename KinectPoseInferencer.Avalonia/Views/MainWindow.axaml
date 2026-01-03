@@ -95,6 +95,7 @@
                                Foreground="White"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
+                               ZIndex="12"
                                IsVisible="{Binding IsLoading}"/>
                 </Grid>
             </Viewbox>
