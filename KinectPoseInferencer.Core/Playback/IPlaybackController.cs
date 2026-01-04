@@ -8,6 +8,7 @@ public interface IPlaybackController: IAsyncDisposable
     PlaybackDescriptor? Descriptor { get; set; }
     ReadOnlyReactiveProperty<PlaybackState> State { get; }
     ReadOnlyReactiveProperty<TimeSpan> CurrentTime { get; }
+    event Action OnEOF;
 
     Task Prepare(CancellationToken token);
     void Play();

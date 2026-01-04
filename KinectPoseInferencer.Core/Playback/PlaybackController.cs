@@ -36,6 +36,8 @@ public class PlaybackController : IPlaybackController
     ReactiveProperty<TimeSpan> _playbackElapsedTime = new(TimeSpan.Zero);
     bool _terminateLoop = false;
 
+    public event Action OnEOF;
+
     DisposableBag _disposables = new();
     readonly ILogger<PlaybackController> _logger;
 
@@ -130,9 +132,15 @@ public class PlaybackController : IPlaybackController
                 return false;
             }
             if (_playbackElapsedTime.Value > _recordLength)
+            {
+                if(_state.Value is PlaybackState.Playing)
+                {
+                    OnEOF?.Invoke();
+                }
                 _state.Value = PlaybackState.Pause;
+            }
             if (_state.Value is not PlaybackState.Playing)
-                return true;
+            return true;
 
             _playbackElapsedTime.Value += ctx.ElapsedTimeFromPreviousFrame;
             var kinectAbsoluteTime = _playbackElapsedTime.Value + _firstFrameKinectTime;
