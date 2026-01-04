@@ -8,7 +8,7 @@ using System.Text.Json;
 
 namespace KinectPoseInferencer.RemoteControl;
 
-public class RemoteControlServer
+public class RemoteControlServer : IDisposable
 {
     readonly HttpListener _listener;
     readonly int _port;
@@ -47,13 +47,21 @@ public class RemoteControlServer
                 while (!ct.IsCancellationRequested)
                 {
                     var context = await _listener.GetContextAsync();
-                    _ = ProcessHttpRequestAsync(context, ct);
+
+                    if (context.Request.IsWebSocketRequest)
+                    {
+                        _ = ProcessWebSocketRequest(context, ct);
+                    }
+                    else
+                    {
+                        _ = ProcessHttpRequestAsync(context, ct);
+                    }
                 }
             }
         }
         catch (Exception ex) when (ex is OperationCanceledException || ex is HttpListenerException)
         {
-            _logger.LogInformation("HttpControlServer is stopping.");
+            _logger.LogInformation("RemoteControlServer is stopping.");
         }
         finally
         {
@@ -179,9 +187,28 @@ public class RemoteControlServer
         _landmarkPresenter.IsKinectEnabled = config.IsKinectEnabled;
     }
 
-    public void Stop()
+    void Stop()
+    {
+        try
+        {
+            if (_listener.IsListening)
+            {
+                _listener.Stop();
+            }
+            _listener.Close();
+            _logger.LogInformation("HttpListener closed.");
+        }
+        catch (ObjectDisposedException ex)
+        {
+            _logger.LogError($"{ex}");
+        }
+    }
+
+    public void Dispose()
     {
         _cts?.Cancel();
-        _listener.Stop();
+        _cts?.Dispose();
+        Stop();
+        _currentClient?.Dispose();
     }
 }

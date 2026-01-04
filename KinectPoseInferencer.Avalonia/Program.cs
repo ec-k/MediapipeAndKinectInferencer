@@ -6,6 +6,7 @@ using KinectPoseInferencer.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.Threading.Tasks;
 using KinectPoseInferencer.Avalonia.Models;
 
 
@@ -23,12 +24,21 @@ internal sealed class Program
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
     // yet and stuff might break.
     [STAThread]
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         AppHost.Host = CreateHostBuilder().Build();
+        AppHost.Host.Start();
 
-        var app = BuildAvaloniaApp()
-            .StartWithClassicDesktopLifetime(args);
+        try
+        {
+            var app = BuildAvaloniaApp()
+                .StartWithClassicDesktopLifetime(args);
+        }
+        finally
+        {
+            await AppHost.Host.StopAsync();
+            AppHost.Host.Dispose();
+        }
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.
