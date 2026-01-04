@@ -15,8 +15,6 @@ public static class ServiceCollectionExtensions
             var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RemoteControlOptions>>().Value;
             return ActivatorUtilities.CreateInstance<RemoteControlServer>(sp, options.Port);
         });
-        services.AddSingleton<PlaybackEventPresenter>();
-
         services.AddHostedService<RemoteControlBackgroundService>();
 
         return services;
