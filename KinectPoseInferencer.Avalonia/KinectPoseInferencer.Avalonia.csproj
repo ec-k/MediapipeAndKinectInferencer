@@ -38,6 +38,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\c#_runtime\KinectPoseInferencer.RemoteControl\KinectPoseInferencer.RemoteControl.csproj" />
     <ProjectReference Include="..\KinectPoseInferencer.Core\KinectPoseInferencer.Core.csproj" />
   </ItemGroup>
 </Project>

@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using KinectPoseInferencer.Renderers;
+using KinectPoseInferencer.RemoteControl;
 using KinectPoseInferencer.Core;
 using KinectPoseInferencer.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,5 +52,6 @@ internal sealed class Program
                 services.AddSingleton<IMediaPipeConfiguration, MediaPipeConfigurationAdapter>();
 
                 services.AddCoreServices(context.Configuration);
+                services.AddRemoteControlServer(context.Configuration);
             });
 }
