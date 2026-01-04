@@ -13,7 +13,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp =>
         {
             var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RemoteControlOptions>>().Value;
-            return ActivatorUtilities.CreateInstance<HttpControlServer>(sp, options.Port);
+            return ActivatorUtilities.CreateInstance<RemoteControlServer>(sp, options.Port);
         });
 
         services.AddHostedService<RemoteControlBackgroundService>();

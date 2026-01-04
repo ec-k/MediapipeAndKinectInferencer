@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace KinectPoseInferencer.RemoteControl;
 
-public class HttpControlServer
+public class RemoteControlServer
 {
     readonly HttpListener _listener;
     readonly int _port;
@@ -15,13 +15,13 @@ public class HttpControlServer
     readonly LandmarkPresenter _landmarkPresenter;
 
     CancellationTokenSource? _cts;
-    ILogger<HttpControlServer> _logger;
+    ILogger<RemoteControlServer> _logger;
 
-    public HttpControlServer(
+    public RemoteControlServer(
         int port,
         IPlaybackController playbackController,
         LandmarkPresenter landmarkPresenter,
-        ILogger<HttpControlServer> logger
+        ILogger<RemoteControlServer> logger
         )
     {
         _port = port;

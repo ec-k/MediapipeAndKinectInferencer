@@ -5,9 +5,9 @@ namespace KinectPoseInferencer.RemoteControl;
 
 public class RemoteControlBackgroundService : BackgroundService
 {
-    readonly HttpControlServer _server;
+    readonly RemoteControlServer _server;
 
-    public RemoteControlBackgroundService(HttpControlServer server)
+    public RemoteControlBackgroundService(RemoteControlServer server)
     {
         _server = server;
     }
