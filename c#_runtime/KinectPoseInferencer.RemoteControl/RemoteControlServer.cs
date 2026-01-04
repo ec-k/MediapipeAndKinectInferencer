@@ -2,6 +2,7 @@
 using KinectPoseInferencer.Core.PoseInference;
 using Microsoft.Extensions.Logging;
 using System.Net;
+using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 
@@ -13,6 +14,7 @@ public class RemoteControlServer
     readonly int _port;
     readonly IPlaybackController _playbackController;
     readonly LandmarkPresenter _landmarkPresenter;
+    WebSocket? _currentClient;
 
     CancellationTokenSource? _cts;
     ILogger<RemoteControlServer> _logger;
@@ -45,7 +47,7 @@ public class RemoteControlServer
                 while (!ct.IsCancellationRequested)
                 {
                     var context = await _listener.GetContextAsync();
-                    _ = ProcessRequestAsync(context);
+                    _ = ProcessHttpRequestAsync(context, ct);
                 }
             }
         }
@@ -59,7 +61,7 @@ public class RemoteControlServer
         }
     }
 
-    async Task ProcessRequestAsync(HttpListenerContext context)
+    async Task ProcessHttpRequestAsync(HttpListenerContext context, CancellationToken ct)
     {
         using var response = context.Response;
 
@@ -81,22 +83,7 @@ public class RemoteControlServer
                 return;
             }
 
-            switch (message)
-            {
-                case SetConfigurationMessage setConfig:
-                    if (setConfig.Config is not null)
-                        Configure(setConfig.Config);
-                    break;
-                case PlayMessage:
-                    _playbackController.Play();
-                    break;
-                case PauseMessage:
-                    _playbackController.Pause();
-                    break;
-                case RewindMessage:
-                    await _playbackController.Rewind();
-                    break;
-            }
+            await ExecuteCommand(message, ct);
 
             response.StatusCode = (int)HttpStatusCode.OK;
             var buffer = Encoding.UTF8.GetBytes("Accepted");
@@ -111,6 +98,79 @@ public class RemoteControlServer
         {
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
             _logger.LogError($"Server Error: {ex.Message}");
+        }
+    }
+
+    public async Task ProcessWebSocketRequest(HttpListenerContext context, CancellationToken ct)
+    {
+        var wsContext = await context.AcceptWebSocketAsync(subProtocol: null);
+        _currentClient = wsContext.WebSocket;
+        _logger.LogInformation("Client connected via WebSocket");
+
+        var buffer = new byte[1024 * 4];
+
+        try
+        {
+            while (_currentClient.State == WebSocketState.Open)
+            {
+                var result = await _currentClient.ReceiveAsync(new ArraySegment<byte>(buffer), ct);
+                if (result.MessageType == WebSocketMessageType.Close) break;
+
+                var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                var message = JsonSerializer.Deserialize<ControlMessage>(json);
+
+                if (message is not null)
+                {
+                    await ExecuteCommand(message, ct);
+
+                    await SendToClientAsync(new
+                    {
+                        Event = "CommandExecuted",
+                        Command = message.GetType().Name,
+                        Timestamp = DateTime.Now
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("WebSocket Error: {ex}", ex);
+        }
+        finally
+        {
+            _currentClient.Dispose();
+            _currentClient = null;
+            _logger.LogInformation("Client disconnected");
+        }
+    }
+
+    public async Task SendToClientAsync<T>(T data)
+    {
+        if (_currentClient?.State == WebSocketState.Open)
+        {
+            var json = JsonSerializer.Serialize(data);
+            var bytes = Encoding.UTF8.GetBytes(json);
+            await _currentClient.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
+        }
+    }
+
+    async Task ExecuteCommand(ControlMessage message, CancellationToken ct)
+    {
+        switch (message)
+        {
+            case SetConfigurationMessage setConfig:
+                if (setConfig.Config is not null)
+                    Configure(setConfig.Config);
+                break;
+            case PlayMessage:
+                _playbackController.Play();
+                break;
+            case PauseMessage:
+                _playbackController.Pause();
+                break;
+            case RewindMessage:
+                await _playbackController.Rewind();
+                break;
         }
     }
 
