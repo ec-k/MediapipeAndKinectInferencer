@@ -19,10 +19,11 @@ public class LandmarkPresenter: IDisposable
     readonly FrameManager _frameManager;
     readonly IPlaybackReader _playbackReader;
     readonly KinectDeviceController _kinectDeviceController;
-    readonly TiltCorrector _tiltCorrector = new();
+    readonly TiltCorrector _tiltCorrector;
 
     readonly IEnumerable<ILandmarkUser> _resultUsers;
-    readonly IEnumerable<ILandmarkFilter> _landmarkFilterChain;
+    readonly Dictionary<int, JointFilterPipeline> _jointFilterPipelines = new();
+    readonly LandmarkFilterFactory _filterFactory;
 
     bool _isKinectEnabled = true;
     public bool IsKinectEnabled
@@ -42,7 +43,7 @@ public class LandmarkPresenter: IDisposable
         KinectInferencer inferencer,
         ResultManager resultManager,
         SkeletonToPoseLandmarksConverter converter,
-        IEnumerable<ILandmarkFilter> landmarkFilterChain,
+        LandmarkFilterFactory filterFactory,
         IEnumerable<ILandmarkUser> resultUsers,
         IPlaybackReader playbackReader,
         KinectDeviceController kinectDeviceController,
@@ -59,8 +60,8 @@ public class LandmarkPresenter: IDisposable
         _playbackReader = playbackReader ?? throw new ArgumentNullException(nameof(playbackReader));
         _kinectDeviceController = kinectDeviceController ?? throw new ArgumentNullException(nameof(kinectDeviceController));
         _tiltCorrector = tiltCorrector ?? throw new ArgumentNullException(nameof(tiltCorrector));
+        _filterFactory = filterFactory ?? throw new ArgumentNullException(nameof(filterFactory));
         _resultUsers = resultUsers;
-        _landmarkFilterChain = landmarkFilterChain;
 
         // Initailize
         _playbackReader.Playback
@@ -119,14 +120,16 @@ public class LandmarkPresenter: IDisposable
         var resultLandmarks = _converter.Convert(result.Skeleton).Landmarks
             .AsValueEnumerable()
             .Where(nullableLandmark => nullableLandmark is Landmark landmark)
-            .Select(landmark =>
+            .Select((landmark, index) =>
             {
-                // Apply filters to landmark
-                return _landmarkFilterChain
-                            .AsValueEnumerable()
-                            .Aggregate(landmark,
-                                (current, filter) => filter.Apply(current, result.Timestamp)
-                            );
+                if(!_jointFilterPipelines.TryGetValue(index, out var pipeline))
+                {
+                    var filters = _filterFactory.CreateFilterStack();
+                    pipeline = new JointFilterPipeline(filters);
+                    _jointFilterPipelines[index] = pipeline;
+                }
+
+                return pipeline.Apply(landmark, result.Timestamp);
             })
             .ToList();
 

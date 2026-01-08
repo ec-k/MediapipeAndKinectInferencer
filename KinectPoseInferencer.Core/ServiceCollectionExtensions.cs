@@ -54,19 +54,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<FrameManager>();
         services.AddSingleton<RecordDataBroker>();
 
-        // Register filter chain
-        services.AddSingleton<ILandmarkFilter, OneEuroFilter>(sp =>
-            new OneEuroFilter(
-                oneEuroFilterSettings.MinCutoff,
-                oneEuroFilterSettings.Slope,
-                oneEuroFilterSettings.DCutoff
-                )
-        );
-        services.AddSingleton<ILandmarkFilter, MilimeterToMeter>();
-        services.AddSingleton<ILandmarkFilter, TiltCorrector>(
-            provider => provider.GetRequiredService<TiltCorrector>()
-            );
-        services.AddSingleton<ILandmarkFilter, TransformCoordinator>();
+        // filters
+        services.AddSingleton(oneEuroFilterSettings);
+        services.AddSingleton<LandmarkFilterFactory>();
+        services.AddSingleton<MilimeterToMeter>();
+        services.AddSingleton<TransformCoordinator>();
 
         // Register result users
         services.AddSingleton<ILandmarkUser>(sp => new LandmarkSender(landmarkSenderEndPoint));
