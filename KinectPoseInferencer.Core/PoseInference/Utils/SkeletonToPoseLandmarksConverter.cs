@@ -1,8 +1,5 @@
 ﻿using HumanLandmarks;
 using K4AdotNet.BodyTracking;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using ZLinq;
 
 
