@@ -1,8 +1,8 @@
 ﻿using K4AdotNet.Sensor;
+using Microsoft.Extensions.Logging;
 using R3;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
-using Microsoft.Extensions.Logging;
 
 namespace KinectPoseInferencer.Core.Playback;
 
@@ -62,9 +62,16 @@ public class PlaybackReader : IPlaybackReader
 
         ClearBuffer();
         _isEOF = false;
+
+        var tcs = new TaskCompletionSource();
+        _commandQueue.Enqueue(new(tcs, TimeSpan.Zero));
+        _loopSignal.Release();
+
         _producerLoopCts?.Dispose();
         _producerLoopCts = CancellationTokenSource.CreateLinkedTokenSource(token);
         _producerLoopTask = Task.Run(() => ProducerLoop(_producerLoopCts.Token).ConfigureAwait(false));
+
+        await tcs.Task.ConfigureAwait(false);
     }
 
     public async Task RewindAsync() => await SeekAsync(TimeSpan.Zero);
@@ -148,7 +155,7 @@ public class PlaybackReader : IPlaybackReader
         try
         {
             while (!token.IsCancellationRequested)
-            {                
+            {
                 ProcessCommands();
 
                 if (_isEOF && _commandQueue.IsEmpty)
@@ -264,6 +271,7 @@ public class PlaybackReader : IPlaybackReader
         }
 
         result.Capture = capture;
+
         if (Playback.CurrentValue.TryGetNextImuSample(out var imuSample))
             result.ImuSample = imuSample;
 
