@@ -33,7 +33,7 @@ public class PlaybackReader : IPlaybackReader
 
     public PlaybackReader(
         ILogger<PlaybackReader> logger,
-        int bufferSize = 10)
+        int bufferSize = 300)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
