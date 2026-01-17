@@ -1,24 +1,24 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using Avalonia.Media.Imaging;
+using Avalonia.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using K4AdotNet;
-using K4AdotNet.Sensor;
 using K4AdotNet.BodyTracking;
 using K4AdotNet.Record;
+using K4AdotNet.Sensor;
 using KinectPoseInferencer.Core;
 using KinectPoseInferencer.Core.InputHook;
 using KinectPoseInferencer.Core.Playback;
+using KinectPoseInferencer.Core.PoseInference;
 using KinectPoseInferencer.Core.Settings;
 using KinectPoseInferencer.Renderers;
+using Microsoft.Extensions.Logging;
 using R3;
 using System;
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using Avalonia.Media.Imaging;
-using Avalonia.Threading;
-using KinectPoseInferencer.Core.PoseInference;
-using Microsoft.Extensions.Logging;
 
 
 namespace KinectPoseInferencer.Avalonia.ViewModels;
@@ -79,9 +79,31 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _playbackController.Reader.Playback
             .Where(playback => playback is not null)
             .Subscribe(playback => {
-                playback.GetCalibration(out var calibration);
-                PointCloud.ComputePointCloudCache(calibration);
-                PlaybackLength = playback.RecordLength;
+                Calibration calibration = default;
+                bool isCalibrationLoaded = false;
+                // Get calibration
+                try
+                {
+                    playback.GetCalibration(out calibration);
+                    isCalibrationLoaded = true;
+                }
+                catch (PlaybackException)
+                {
+                    // Clipped video by k4acut may not have calibration data, but it may have custom calibration stored in tags.
+                    if (playback.TryGetTag("CUSTOM_CALIBRATION_RAW", out var base64))
+                    {
+                        var rawData = Convert.FromBase64String(base64);
+                        playback.GetRecordConfiguration(out var recordConfig);
+                        Calibration.CreateFromRaw(rawData, recordConfig.DepthMode, recordConfig.ColorResolution, out calibration);
+                        isCalibrationLoaded = calibration.IsValid;
+                    }
+                }
+                finally
+                {
+                    if (isCalibrationLoaded)
+                        PointCloud.ComputePointCloudCache(calibration);
+                    PlaybackLength = playback.RecordLength;
+                }
             })
             .AddTo(ref _disposables);
         _playbackController.State

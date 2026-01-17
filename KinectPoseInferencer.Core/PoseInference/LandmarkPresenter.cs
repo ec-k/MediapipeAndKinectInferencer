@@ -1,11 +1,11 @@
-﻿using K4AdotNet.Sensor;
-using R3;
-using ZLinq;
-
-using HumanLandmarks;
+﻿using HumanLandmarks;
+using K4AdotNet.Record;
+using K4AdotNet.Sensor;
 using KinectPoseInferencer.Core.Playback;
 using KinectPoseInferencer.Core.PoseInference.Filters;
 using KinectPoseInferencer.Core.PoseInference.Utils;
+using R3;
+using ZLinq;
 
 
 namespace KinectPoseInferencer.Core.PoseInference;
@@ -68,9 +68,33 @@ public class LandmarkPresenter: IDisposable
             .Where(playback => playback is not null)
             .Subscribe(playback =>
             {
-                playback.GetCalibration(out var calibration);
-                _currentCalibration = calibration;
-                Configure();
+                Calibration calibration = default;
+                bool isCalibrationLoaded = false;
+                // Get calibration
+                try
+                {
+                    playback.GetCalibration(out calibration);
+                    isCalibrationLoaded = true;
+                }
+                catch (PlaybackException)
+                {
+                    // Clipped video by k4acut may not have calibration data, but it may have custom calibration stored in tags.
+                    if (playback.TryGetTag("CUSTOM_CALIBRATION_RAW", out var base64))
+                    {
+                        var rawData = Convert.FromBase64String(base64);
+                        playback.GetRecordConfiguration(out var recordConfig);
+                        Calibration.CreateFromRaw(rawData, recordConfig.DepthMode, recordConfig.ColorResolution, out calibration);
+                        isCalibrationLoaded = calibration.IsValid;
+                    }
+                }
+                finally
+                {
+                    if (isCalibrationLoaded)
+                    {
+                        _currentCalibration = calibration;
+                        Configure();
+                    }
+                }
             })
             .AddTo(ref _disposables);
         _kinectDeviceController.KinectDevice
