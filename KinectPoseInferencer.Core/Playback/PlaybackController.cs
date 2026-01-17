@@ -25,6 +25,7 @@ public class PlaybackController : IPlaybackController
     LogMetadata? _metadata;
     TimeSpan _firstFrameKinectTime = TimeSpan.Zero;
     TimeSpan _firstFrameSystemTime = TimeSpan.Zero;
+    TimeSpan _kinectToSystemTimestampOffset = TimeSpan.Zero;
 
     public int TargetFps { get; private set; }
     LogicLooper? _readingLoop;
@@ -57,6 +58,15 @@ public class PlaybackController : IPlaybackController
         _playbackReader.Playback
             .Where(playback => playback is not null)
             .Subscribe(playback => _recordLength = playback.RecordLength)
+            .AddTo(ref _disposables);
+        _playbackReader.InitialDeviceTimestamp
+            .Where(ts => ts != TimeSpan.Zero)
+            .Subscribe(ts =>
+            {
+                _firstFrameKinectTime = ts;
+                _firstFrameSystemTime = ts + _kinectToSystemTimestampOffset;
+                _logReader.FirstFrameTime = _firstFrameSystemTime;
+            })
             .AddTo(ref _disposables);
     }
 
@@ -91,10 +101,7 @@ public class PlaybackController : IPlaybackController
 
             if (_metadata is not null)
             {
-                _firstFrameKinectTime = _metadata.FirstFrameKinectDeviceTime;
-                _firstFrameSystemTime = _metadata.FirstFrameSystemTime;
-
-                _logReader.FirstFrameTime = _firstFrameSystemTime;
+                _kinectToSystemTimestampOffset = _metadata.FirstFrameSystemTime - _metadata.FirstFrameKinectDeviceTime;
                 return true;
             }
 

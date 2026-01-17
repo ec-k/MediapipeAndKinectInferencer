@@ -14,7 +14,9 @@ public record struct PlaybackFrame(
 public class PlaybackReader : IPlaybackReader
 {
     public ReadOnlyReactiveProperty<K4AdotNet.Record.Playback> Playback => _playback;
+    public ReadOnlyReactiveProperty<TimeSpan> InitialDeviceTimestamp => _initialDeviceTimastamp;
     ReactiveProperty<K4AdotNet.Record.Playback> _playback = new();
+    ReactiveProperty<TimeSpan> _initialDeviceTimastamp = new();
 
     record struct SeekRequest(
         TaskCompletionSource Tcs,
@@ -57,8 +59,7 @@ public class PlaybackReader : IPlaybackReader
             _playback.Value.Dispose();
         }
 
-        await Task.Run(() => _playback.Value = new(descriptor.VideoFilePath), token);
-        _playback.Value.SetColorConversion(ImageFormat.ColorBgra32);
+        await Task.Run(() => LoadVideo(descriptor.VideoFilePath), token);
 
         ClearBuffer();
         _isEOF = false;
@@ -72,6 +73,22 @@ public class PlaybackReader : IPlaybackReader
         _producerLoopTask = Task.Run(() => ProducerLoop(_producerLoopCts.Token).ConfigureAwait(false));
 
         await tcs.Task.ConfigureAwait(false);
+    }
+
+    void LoadVideo(string videoFilePath)
+    {
+        _playback.Value = new(videoFilePath);
+        _playback.Value.SetColorConversion(ImageFormat.ColorBgra32);
+        var playback = _playback.Value;
+
+        if (playback.TryGetNextCapture(out var capture))
+        {
+            using (capture)
+            {
+                _initialDeviceTimastamp.Value = capture.DepthImage?.DeviceTimestamp ?? capture.ColorImage?.DeviceTimestamp ?? TimeSpan.Zero;
+            }
+            playback.SeekTimestamp(TimeSpan.Zero, K4AdotNet.Record.PlaybackSeekOrigin.Begin);
+        }
     }
 
     public async Task RewindAsync() => await SeekAsync(TimeSpan.Zero);
