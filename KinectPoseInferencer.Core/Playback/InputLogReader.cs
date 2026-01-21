@@ -171,20 +171,31 @@ public class InputLogReader : IInputLogReader
         }
     }
 
-    void ProcessLine(string? line)
+    DeviceInputData? TryParseLine(string? line)
     {
-        if (string.IsNullOrWhiteSpace(line)) return;
+        if (string.IsNullOrWhiteSpace(line)) return null;
+
+        // Trim BOM and whitespace from the line for robustness
+        line = line.TrimStart('\uFEFF').Trim();
+        if (line.Length == 0 || line[0] != '{') return null;
+
         try
         {
-            var inputEvent = JsonSerializer.Deserialize<DeviceInputData>(line);
-            if (inputEvent?.Data is not null && inputEvent.Timestamp >= FirstFrameTime)
-            {
-                _eventChannel!.Writer.TryWrite(inputEvent);
-            }
+            return JsonSerializer.Deserialize<DeviceInputData>(line);
         }
-        catch (Exception ex)
+        catch (JsonException ex)
         {
-            _logger.LogWarning($"Failed to parse JSON: {ex.Message}");
+            _logger.LogWarning("Failed to parse JSON: {Message}", ex.Message);
+            return null;
+        }
+    }
+
+    void ProcessLine(string? line)
+    {
+        var inputEvent = TryParseLine(line);
+        if (inputEvent?.Data is not null && inputEvent.Timestamp >= FirstFrameTime)
+        {
+            _eventChannel!.Writer.TryWrite(inputEvent);
         }
     }
 
@@ -202,19 +213,11 @@ public class InputLogReader : IInputLogReader
             var line = _reader.ReadLine();
             if (line is null) break;
 
-            try
+            var inputEvent = TryParseLine(line);
+            if (inputEvent is not null && inputEvent.Timestamp >= targetTime)
             {
-                var inputEvent = JsonSerializer.Deserialize<DeviceInputData>(line);
-                if (inputEvent is not null && inputEvent.Timestamp >= targetTime)
-                {
-                    _eventChannel.Writer.TryWrite(inputEvent);
-                    break;
-                }
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogError("Json Exception was thown at ExecuteSeek {ex}", ex);
-                continue;
+                _eventChannel.Writer.TryWrite(inputEvent);
+                break;
             }
         }
     }
