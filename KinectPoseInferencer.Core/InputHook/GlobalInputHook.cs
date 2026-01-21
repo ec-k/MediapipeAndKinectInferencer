@@ -1,4 +1,3 @@
-using System.Windows;
 using System.Diagnostics;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
@@ -138,14 +137,10 @@ public static class GlobalInputHook
             _eventReady.WaitOne();
             _eventReady.Reset();
 
-            // Invoke events in UI thread to make UI related operations safer.
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                while (_keyboardEventsQueue.TryDequeue(out var eventData))
-                    OnKeyboardEvent?.Invoke(eventData);
-                while (_mouseEventsQueue.TryDequeue(out var eventData))
-                    OnMouseEvent?.Invoke(eventData);
-            });
+            while (_keyboardEventsQueue.TryDequeue(out var eventData))
+                OnKeyboardEvent?.Invoke(eventData);
+            while (_mouseEventsQueue.TryDequeue(out var eventData))
+                OnMouseEvent?.Invoke(eventData);
         }
     }
 
