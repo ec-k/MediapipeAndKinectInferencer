@@ -1,4 +1,5 @@
-﻿using K4AdotNet.Sensor;
+﻿using K4AdotNet.Record;
+using K4AdotNet.Sensor;
 using Microsoft.Extensions.Logging;
 using R3;
 using System.Collections.Concurrent;
@@ -122,10 +123,19 @@ public class PlaybackReader : IPlaybackReader
 
         try
         {
-            capture   = frame.Capture?.DuplicateReference();
+            var frameCapture = frame.Capture;
+            if (frameCapture is null || frameCapture.DepthImage is null)
+                return false;
+
+            capture   = frameCapture.DuplicateReference();
             imuSample = frame.ImuSample;
 
             return true;
+        }
+        catch (ObjectDisposedException ex)
+        {
+            _logger.LogWarning("Capture already disposed in TryRead: {Message}", ex.Message);
+            return false;
         }
         finally
         {
@@ -268,29 +278,41 @@ public class PlaybackReader : IPlaybackReader
     PlaybackFrame ReadNextFrame()
     {
         var result = new PlaybackFrame();
+        var playback = Playback?.CurrentValue;
 
-        if (Playback?.CurrentValue is null)
+        if (playback is null)
             return result;
 
-        var waitResult = Playback.CurrentValue.TryGetNextCapture(out var capture);
-
-        if (!waitResult)
+        Capture? capture = null;
+        try
         {
-            _logger.LogInformation("Playback reached end of file or failed to get a capture.");
-            _isEOF = true;
-            return result;
+            var waitResult = playback.TryGetNextCapture(out capture);
+
+            if (!waitResult)
+            {
+                _logger.LogInformation("Playback reached end of file or failed to get a capture.");
+                _isEOF = true;
+                return result;
+            }
+
+            if (capture?.DepthImage is null)
+            {
+                capture?.Dispose();
+                return result;
+            }
+
+            result.Capture = capture;
+            capture = null; // Transfer ownership to result
+
+            if (playback.TryGetNextImuSample(out var imuSample))
+                result.ImuSample = imuSample;
         }
-
-        if (capture?.DepthImage is null)
+        catch (PlaybackException ex)
         {
+            _logger.LogWarning("PlaybackException in ReadNextFrame: {Message}", ex.Message);
             capture?.Dispose();
-            return result;
+            _isEOF = true;
         }
-
-        result.Capture = capture;
-
-        if (Playback.CurrentValue.TryGetNextImuSample(out var imuSample))
-            result.ImuSample = imuSample;
 
         return result;
     }
@@ -309,7 +331,9 @@ public class PlaybackReader : IPlaybackReader
     {
         await StopProducerLoop();
 
-        Playback.Dispose();
+        ClearBuffer();
+        _playback.Value?.Dispose();
+        _playback.Dispose();
         _producerLoopCts.Dispose();
     }
 }
