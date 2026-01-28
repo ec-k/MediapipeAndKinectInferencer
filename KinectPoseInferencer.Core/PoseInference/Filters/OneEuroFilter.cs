@@ -6,61 +6,32 @@ namespace KinectPoseInferencer.Core.PoseInference.Filters;
 
 internal class OneEuroFilter : ILandmarkFilter
 {
-    float _minCutoff;
-    float _slope;
-    float _dCutoff;
-    float _prevTime;
-    SingleExponentialSmoothingFilter _xFilter;
-    SingleExponentialSmoothingFilter _dxFilter;
-
-    bool _isFirst = true;
+    readonly PositionOneEuroFilter _positionFilter;
+    readonly RotationOneEuroFilter _rotationFilter;
 
     internal OneEuroFilter(float minCutoff, float slope, float dCutoff)
+        : this(minCutoff, slope, dCutoff, minCutoff, slope, dCutoff)
     {
-        _minCutoff = minCutoff;
-        _slope = slope;
-        _dCutoff = dCutoff;
-        _xFilter = new();
-        _dxFilter = new();
+    }
+
+    internal OneEuroFilter(
+        float positionMinCutoff, float positionSlope, float positionDCutoff,
+        float rotationMinCutoff, float rotationSlope, float rotationDCutoff)
+    {
+        _positionFilter = new PositionOneEuroFilter(positionMinCutoff, positionSlope, positionDCutoff);
+        _rotationFilter = new RotationOneEuroFilter(rotationMinCutoff, rotationSlope, rotationDCutoff);
     }
 
     public Landmark Apply(in Landmark current, float timestamp)
     {
-        var result = current.Clone();
+        var filteredPosition = _positionFilter.Apply(current.Position.ToVector3(), timestamp);
+        var filteredRotation = _rotationFilter.Apply(current.Rotation.ToQuaternion(), timestamp);
 
-        var dt = timestamp - _prevTime;
-        if (dt <= 1e-5f) return result; // Do nothing if the time difference is too small.
-
-        var updateRate = 1f / dt;
-        var dx = new Landmark()
+        return new Landmark
         {
-            Position = Vector3.Zero.ToPosition(),
-            Rotation = Quaternion.Identity.ToRotation(),
-            Confidence = 1f
+            Position = filteredPosition.ToPosition(),
+            Rotation = filteredRotation.ToRotation(),
+            Confidence = current.Confidence
         };
-
-        if (_isFirst || _xFilter.PrevResult is null)
-        {
-            _prevTime = timestamp;
-            _isFirst = false;
-        }
-        else
-        {
-            dx = result.Sub(_xFilter.PrevResult);
-            dx.Position = dx.Position!.Multiply(updateRate);
-        }
-
-        var edx = _dxFilter.Apply(dx, Alpha(updateRate, _dCutoff));
-        var cutoff = _minCutoff + _slope * edx.Position.ToVector3().Magnitude();
-        result = _xFilter.Apply(result, Alpha(updateRate, cutoff));
-
-        _prevTime = timestamp;
-        return result;
-    }
-
-    float Alpha(float updateRate, float cutoffFrequency)
-    {
-        var timeConstant = 1f / (2 * MathF.PI * cutoffFrequency);
-        return 1f / (1f + timeConstant * updateRate);
     }
 }
