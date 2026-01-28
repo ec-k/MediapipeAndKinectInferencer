@@ -23,12 +23,14 @@ public class LandmarkFilterFactory
     {
         return new List<ILandmarkFilter>
         {
-            new JointBasisCorrector(jointIndex),
+            _mmToMeter,
             _tiltCorrector,
-            _transformCoordinator,
 
             // Each joint must have its own filter instances.
-            new OneEuroFilter(_oneEuroSettings.MinCutoff, _oneEuroSettings.Slope, _oneEuroSettings.DCutoff)
+            new JointBasisCorrector(jointIndex),
+            new OneEuroFilter(_oneEuroSettings.MinCutoff, _oneEuroSettings.Slope, _oneEuroSettings.DCutoff),
+
+            _transformCoordinator,
         };
     }
 }
