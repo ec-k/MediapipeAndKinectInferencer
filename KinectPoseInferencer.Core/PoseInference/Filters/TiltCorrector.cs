@@ -41,8 +41,11 @@ public class TiltCorrector: ILandmarkFilter
 
     public Landmark Apply(in Landmark landmark, float timestamp)
     {
-        var pos = new Vector3((float)landmark.Position.X, (float)landmark.Position.Y, (float)landmark.Position.Z);
+        var pos = landmark.Position.ToVector3();
         var convertedPos = Vector3.Transform(pos, _inversedCameraTiltRotation);
+
+        var rot = landmark.Rotation.ToQuaternion();
+        var convertedRot = _inversedCameraTiltRotation * rot;
 
         return new Landmark
         {
@@ -52,7 +55,7 @@ public class TiltCorrector: ILandmarkFilter
                 Y = convertedPos.Y,
                 Z = convertedPos.Z
             },
-            Rotation = landmark.Rotation,
+            Rotation = convertedRot.ToRotation(),
             Confidence = landmark.Confidence
         };
     }
