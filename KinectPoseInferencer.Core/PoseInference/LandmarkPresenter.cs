@@ -148,7 +148,7 @@ public class LandmarkPresenter: IDisposable
             {
                 if(!_jointFilterPipelines.TryGetValue(index, out var pipeline))
                 {
-                    var filters = _filterFactory.CreateFilterStack();
+                    var filters = _filterFactory.CreateFilterStack(index);
                     pipeline = new JointFilterPipeline(filters);
                     _jointFilterPipelines[index] = pipeline;
                 }

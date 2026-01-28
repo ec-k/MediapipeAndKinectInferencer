@@ -19,11 +19,11 @@ public class LandmarkFilterFactory
         _transformCoordinator = transformCoordinator;
     }
 
-    public IEnumerable<ILandmarkFilter> CreateFilterStack()
+    public IEnumerable<ILandmarkFilter> CreateFilterStack(int jointIndex)
     {
         return new List<ILandmarkFilter>
         {
-            _mmToMeter,
+            new JointBasisCorrector(jointIndex),
             _tiltCorrector,
             _transformCoordinator,
 
