@@ -14,44 +14,55 @@ public class KinectInferencer
     public ReadOnlyReactiveProperty<KinectInferenceResult> Result => _result;
     ReactiveProperty<KinectInferenceResult> _result = new(new(new Skeleton(), 0f));
 
+    readonly object _lock = new();
     Tracker? _tracker;
 
     public void Configure(Calibration calibration)
     {
-        // Initialize the tracker
-        _tracker?.Dispose(); // Prevent duplicated initialization.
-        var trackerConfig = new TrackerConfiguration()
+        lock (_lock)
         {
-            SensorOrientation = SensorOrientation.Default,
-            ProcessingMode = TrackerProcessingMode.Gpu,
-        };
-        _tracker = new(calibration, trackerConfig);
+            // Initialize the tracker
+            _tracker?.Dispose(); // Prevent duplicated initialization.
+            var trackerConfig = new TrackerConfiguration()
+            {
+                SensorOrientation = SensorOrientation.Default,
+                ProcessingMode = TrackerProcessingMode.Gpu,
+            };
+            _tracker = new(calibration, trackerConfig);
+        }
     }
 
     public bool TryEnqueueData(Capture capture)
     {
-        if (capture is { DepthImage: not null, IRImage: not null })
+        if (capture is not { DepthImage: not null, IRImage: not null })
+            return false;
+
+        lock (_lock)
         {
-            _tracker?.EnqueueCapture(capture);
+            if (_tracker is null) return false;
+            // EnqueueCapture is asynchronous. Pass a duplicated reference so the SDK
+            // can manage its own copy and the caller can safely dispose the original.
+            _tracker.EnqueueCapture(capture.DuplicateReference());
             return true;
         }
-        else
-            return false;
     }
 
     public BodyFrame? ProcessFrame()
     {
-        if (_tracker is null) return null;
-
-        if (!_tracker.TryPopResult(out var frame))
-            return null;
-
-        using (frame)
+        lock (_lock)
         {
-            var result = Inference(frame);
-            if (result is not null)
-                _result.Value = result;
-            return frame.DuplicateReference();
+            if (_tracker is null) return null;
+
+            if (!_tracker.TryPopResult(out var frame))
+                return null;
+
+            using (frame)
+            {
+                var result = Inference(frame);
+                if (result is not null)
+                    _result.Value = result;
+                return frame.DuplicateReference();
+            }
         }
     }
 
