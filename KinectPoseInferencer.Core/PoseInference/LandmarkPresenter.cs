@@ -113,7 +113,10 @@ public class LandmarkPresenter: IDisposable
         _recordDataBroker.Capture
             .Where(capture => capture is not null)
             .Subscribe(capture => {
-                if (!_inferencer.TryEnqueueData(capture)) return;
+                // DuplicateReference first to avoid race condition with SetCapture disposing the original
+                using var captureRef = capture?.DuplicateReference();
+                if (captureRef is null) return;
+                if (!_inferencer.TryEnqueueData(captureRef)) return;
 
                 using var frame = _inferencer.ProcessFrame();
                 if (frame is null) return;
