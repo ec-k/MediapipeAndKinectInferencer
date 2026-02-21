@@ -109,9 +109,6 @@ public class LandmarkPresenter : IDisposable
                     user.Process(_resultManager.Result);
             })
             .AddTo(ref _disposables);
-
-        // TEMP: Disabled LatestFrame subscription to eliminate BodyFrame lifecycle issues
-        // BodyFrame is no longer distributed - only skeleton data via KinectInferenceResult
     }
 
     void LoadCalibrationFromPlayback(K4APlayback playback)

@@ -105,9 +105,6 @@ namespace KinectPoseInferencer.Renderers
                 PointCloudRenderer.View = view;
                 PointCloudRenderer.Projection = proj;
 
-                PointCloud.ComputePointCloud(lastFrame.Capture.DepthImage, ref pointCloud);
-                PointCloudRenderer.Render(pointCloud, new Vector4(1, 1, 1, 1));
-
                 for (uint i = 0; i < lastFrame.BodyCount; ++i)
                 {
                     Skeleton skeleton;

@@ -17,25 +17,21 @@ public class RecordDataBroker : IDisposable
     ReactiveProperty<ImuSample> _imu = new();
 
     /// <summary>
-    /// Assign duplicated reference of the given capture to the broker.
+    /// Assign capture to the broker.
     /// </summary>
     /// <param name="capture"></param>
     public void SetCapture(Capture capture)
     {
-        // Dispose existing capture if any
-        _capture.CurrentValue?.Dispose();
-        _capture.Value = capture.DuplicateReference();
+        _capture.Value = capture;
     }
 
     /// <summary>
-    /// Assign duplicated reference of the given body frame to the broker.
+    /// Assign body frame to the broker.
     /// </summary>
     /// <param name="bodyFrame"></param>
     public void SetBodyFrame(BodyFrame bodyFrame)
     {
-        // Dispose existing body frame if any
-        _frame.CurrentValue?.Dispose();
-        _frame.Value = bodyFrame.DuplicateReference();
+        _frame.Value = bodyFrame;
     }
 
     public void SetImu(ImuSample imuSample)
