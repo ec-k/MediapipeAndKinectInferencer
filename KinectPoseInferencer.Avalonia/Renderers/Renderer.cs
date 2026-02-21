@@ -1,12 +1,12 @@
-﻿// Copyright(c) Microsoft Corporation. All rights reserved.
+// Copyright(c) Microsoft Corporation. All rights reserved.
 // Released under the MIT license
 // https://github.com/microsoft/Azure-Kinect-Samples/blob/master/LICENSE
 
 using K4AdotNet.BodyTracking;
+using KinectPoseInferencer.Core;
 using OpenGL;
 using OpenGL.CoreUI;
 using System;
-using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
 
@@ -18,12 +18,11 @@ namespace KinectPoseInferencer.Renderers
         private CylinderRenderer CylinderRenderer;
         private PointCloudRenderer PointCloudRenderer;
 
-        private readonly Core.FrameManager visualizerData;
-        private List<Vertex> pointCloud = null;
+        private readonly FrameManager _frameManager;
 
-        public Renderer(Core.FrameManager visualizerData)
+        public Renderer(FrameManager frameManager)
         {
-            this.visualizerData = visualizerData;
+            _frameManager = frameManager;
         }
 
         public bool IsActive { get; private set; }
@@ -80,69 +79,53 @@ namespace KinectPoseInferencer.Renderers
 
         private void NativeWindow_Render(object sender, NativeWindowEventArgs e)
         {
-            using (var lastFrame = visualizerData.TakeFrameWithOwnership())
-            {
-                if (lastFrame == null)
-                {
-                    return;
-                }
-
-                NativeWindow nativeWindow = (NativeWindow)sender;
-
-                Gl.Viewport(0, 0, (int)nativeWindow.Width, (int)nativeWindow.Height);
-                Gl.Clear(ClearBufferMask.ColorBufferBit);
-
-                // Update model/view/projective matrices in shader
-                var proj = Matrix4x4.CreatePerspectiveFieldOfView(ToRadians(65.0f), (float)nativeWindow.Width / nativeWindow.Height, 0.1f, 150.0f);
-                var view = Matrix4x4.CreateLookAt(Vector3.Zero, Vector3.UnitZ, -Vector3.UnitY);
-
-                SphereRenderer.View = view;
-                SphereRenderer.Projection = proj;
-
-                CylinderRenderer.View = view;
-                CylinderRenderer.Projection = proj;
-
-                PointCloudRenderer.View = view;
-                PointCloudRenderer.Projection = proj;
-
-                for (uint i = 0; i < lastFrame.BodyCount; ++i)
-                {
-                    Skeleton skeleton;
-                    lastFrame.GetBodySkeleton((int)i, out skeleton);
-                    var bodyId = lastFrame.GetBodyId((int)i);
-                    var bodyColor = BodyColors.GetColorAsVector((uint)bodyId.Value);
-
-                    var tmpArr = Enum.GetValues(typeof(JointType));
-                    for (int jointId = 0; jointId < tmpArr.Length; ++jointId)
-                    {
-                        var joint = skeleton[jointId];
-
-                        // Render the joint as a sphere.
-                        const float radius = 0.024f;
-                        var jointPositionVector = new Vector3(joint.PositionMm.X, joint.PositionMm.Y, joint.PositionMm.Z);
-                        SphereRenderer.Render(jointPositionVector / 1000, radius, bodyColor);
-
-                        var jointType = (JointType)Enum.ToObject(typeof(JointType), jointId);
-                        var parent = jointType.GetParent();
-                        var parentJoint = skeleton[parent];
-                        var parentJointVector = new Vector3(parentJoint.PositionMm.X, parentJoint.PositionMm.Y, parentJoint.PositionMm.Z);
-                        // Render a bone connecting this joint and its parent as a cylinder.
-                        CylinderRenderer.Render(jointPositionVector / 1000, parentJointVector / 1000, bodyColor);
-                    }
-                }
-            }
-        }
-
-        void RenderColorImage(object sender, NativeWindowEventArgs e)
-        {
-            using var lastFrame = visualizerData.TakeFrameWithOwnership();
-            if (lastFrame == null)
+            var skeletons = _frameManager.TakeSkeletons();
+            if (skeletons == null || skeletons.Length == 0)
             {
                 return;
             }
+
             NativeWindow nativeWindow = (NativeWindow)sender;
+
             Gl.Viewport(0, 0, (int)nativeWindow.Width, (int)nativeWindow.Height);
             Gl.Clear(ClearBufferMask.ColorBufferBit);
+
+            // Update model/view/projective matrices in shader
+            var proj = Matrix4x4.CreatePerspectiveFieldOfView(ToRadians(65.0f), (float)nativeWindow.Width / nativeWindow.Height, 0.1f, 150.0f);
+            var view = Matrix4x4.CreateLookAt(Vector3.Zero, Vector3.UnitZ, -Vector3.UnitY);
+
+            SphereRenderer.View = view;
+            SphereRenderer.Projection = proj;
+
+            CylinderRenderer.View = view;
+            CylinderRenderer.Projection = proj;
+
+            PointCloudRenderer.View = view;
+            PointCloudRenderer.Projection = proj;
+
+            foreach (var skeletonData in skeletons)
+            {
+                var skeleton = skeletonData.Skeleton;
+                var bodyColor = BodyColors.GetColorAsVector((uint)skeletonData.BodyId);
+
+                var tmpArr = Enum.GetValues(typeof(JointType));
+                for (int jointId = 0; jointId < tmpArr.Length; ++jointId)
+                {
+                    var joint = skeleton[jointId];
+
+                    // Render the joint as a sphere.
+                    const float radius = 0.024f;
+                    var jointPositionVector = new Vector3(joint.PositionMm.X, joint.PositionMm.Y, joint.PositionMm.Z);
+                    SphereRenderer.Render(jointPositionVector / 1000, radius, bodyColor);
+
+                    var jointType = (JointType)Enum.ToObject(typeof(JointType), jointId);
+                    var parent = jointType.GetParent();
+                    var parentJoint = skeleton[parent];
+                    var parentJointVector = new Vector3(parentJoint.PositionMm.X, parentJoint.PositionMm.Y, parentJoint.PositionMm.Z);
+                    // Render a bone connecting this joint and its parent as a cylinder.
+                    CylinderRenderer.Render(jointPositionVector / 1000, parentJointVector / 1000, bodyColor);
+                }
+            }
         }
 
         private void CreateResources()

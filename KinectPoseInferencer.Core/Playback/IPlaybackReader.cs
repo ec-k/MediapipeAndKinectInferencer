@@ -1,11 +1,12 @@
-﻿using R3;
+using R3;
 using K4AdotNet.Sensor;
+using K4APlayback = K4AdotNet.Record.Playback;
 
 namespace KinectPoseInferencer.Core.Playback;
 
 public interface IPlaybackReader: IAsyncDisposable
 {
-    ReadOnlyReactiveProperty<K4AdotNet.Record.Playback> Playback { get; }
+    ReadOnlyReactiveProperty<K4APlayback?> Playback { get; }
     ReadOnlyReactiveProperty<TimeSpan> InitialDeviceTimestamp { get; }
 
     Task Configure(PlaybackDescriptor descriptor, CancellationToken token);

@@ -173,6 +173,10 @@ public class PlaybackController : IPlaybackController
             {
                 if (capture is not null)
                 {
+                    // Duplicate reference for UI display before disposing
+                    var captureForUi = capture.DuplicateReference();
+                    _broker.SetCapture(captureForUi);
+
                     // Capture ownership: we own it, enqueue to tracker, then dispose immediately.
                     // Tracker makes internal copy, so we can safely dispose here.
                     _inferencer.TryEnqueueData(capture);

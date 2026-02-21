@@ -6,9 +6,15 @@ using K4ATimeout = K4AdotNet.Timeout;
 namespace KinectPoseInferencer.Core.PoseInference;
 
 public record KinectInferenceResult(
-    Skeleton Skeleton,
+    SkeletonData[] Bodies,
     float Timestamp
-    );
+    )
+{
+    /// <summary>
+    /// First skeleton for backward compatibility.
+    /// </summary>
+    public Skeleton Skeleton => Bodies.Length > 0 ? Bodies[0].Skeleton : default;
+};
 
 /// <summary>
 /// Kinect body tracking inferencer - single thread model.
@@ -141,12 +147,16 @@ public class KinectInferencer : IDisposable
         if (frame.BodyCount > 0)
         {
             var timestamp = (float)frame.DeviceTimestamp.TotalSeconds;
-            frame.GetBodySkeleton(0, out var skeleton);
+            var bodies = new SkeletonData[frame.BodyCount];
 
-            if (skeleton is Skeleton s)
+            for (int i = 0; i < frame.BodyCount; i++)
             {
-                _result.Value = new KinectInferenceResult(s, timestamp);
+                frame.GetBodySkeleton(i, out var skeleton);
+                var bodyId = frame.GetBodyId(i);
+                bodies[i] = new SkeletonData(skeleton, bodyId.Value);
             }
+
+            _result.Value = new KinectInferenceResult(bodies, timestamp);
         }
     }
 

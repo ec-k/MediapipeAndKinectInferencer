@@ -1,44 +1,35 @@
-﻿// Copyright(c) Microsoft Corporation. All rights reserved.
-// Released under the MIT license
-// https://github.com/microsoft/Azure-Kinect-Samples/blob/master/LICENSE
+namespace KinectPoseInferencer.Core;
 
-using K4AdotNet.BodyTracking;
-
-namespace KinectPoseInferencer.Core
+/// <summary>
+/// Thread-safe manager for skeleton data.
+/// Replaces the previous BodyFrame-based FrameManager.
+/// </summary>
+public class FrameManager
 {
-    public class FrameManager : IDisposable
+    private SkeletonData[]? _skeletons;
+    private readonly object _lock = new();
+
+    /// <summary>
+    /// Set skeleton data. Thread-safe.
+    /// </summary>
+    public void SetSkeletons(SkeletonData[] skeletons)
     {
-        private BodyFrame frame;
-
-        public BodyFrame Frame
+        lock (_lock)
         {
-            set
-            {
-                lock (this)
-                {
-                    frame?.Dispose();
-                    frame = value;
-                }
-            }
+            _skeletons = skeletons;
         }
+    }
 
-        public BodyFrame TakeFrameWithOwnership()
+    /// <summary>
+    /// Take skeleton data. Returns null if no data available.
+    /// </summary>
+    public SkeletonData[]? TakeSkeletons()
+    {
+        lock (_lock)
         {
-            lock (this)
-            {
-                var result = frame;
-                frame = null;
-                return result;
-            }
-        }
-
-        public void Dispose()
-        {
-            lock (this)
-            {
-                frame?.Dispose();
-                frame = null;
-            }
+            var result = _skeletons;
+            _skeletons = null;
+            return result;
         }
     }
 }

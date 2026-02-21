@@ -102,6 +102,9 @@ public class LandmarkPresenter : IDisposable
             .Where(result => result is not null)
             .Subscribe(result =>
             {
+                // Pass skeleton data to FrameManager for rendering
+                _frameManager.SetSkeletons(result!.Bodies);
+
                 if (_isKinectEnabled)
                     ProcessResult(result!);
 
