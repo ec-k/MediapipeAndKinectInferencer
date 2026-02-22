@@ -1,4 +1,5 @@
-﻿using Cysharp.Threading;
+using Cysharp.Threading;
+using KinectPoseInferencer.Core.PoseInference;
 using Microsoft.Extensions.Logging;
 using R3;
 using System.Text.Json;
@@ -18,6 +19,7 @@ public class PlaybackController : IPlaybackController
     readonly IPlaybackReader _playbackReader;
     readonly IInputLogReader _logReader;
     readonly RecordDataBroker _broker;
+    readonly KinectInferencer _inferencer;
 
     public IPlaybackReader Reader => _playbackReader;
     public PlaybackDescriptor? Descriptor { get; set; }
@@ -37,7 +39,8 @@ public class PlaybackController : IPlaybackController
     ReactiveProperty<TimeSpan> _playbackElapsedTime = new(TimeSpan.Zero);
     bool _terminateLoop = false;
 
-    public event Action OnEOF;
+    public event Action? OnEOF;
+    public event Action? OnSeek;
 
     DisposableBag _disposables = new();
     readonly ILogger<PlaybackController> _logger;
@@ -47,17 +50,19 @@ public class PlaybackController : IPlaybackController
         IInputLogReader logReader,
         RecordDataBroker broker,
         ILogger<PlaybackController> logger,
+        KinectInferencer inferencer,
         int targetFps = 60)
     {
         _playbackReader = playbackReader ?? throw new ArgumentNullException(nameof(playbackReader));
         _logReader = logReader ?? throw new ArgumentNullException(nameof(logReader));
         _broker = broker ?? throw new ArgumentNullException(nameof(broker));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _inferencer = inferencer ?? throw new ArgumentNullException(nameof(inferencer));
         TargetFps = targetFps;
 
         _playbackReader.Playback
             .Where(playback => playback is not null)
-            .Subscribe(playback => _recordLength = playback.RecordLength)
+            .Subscribe(playback => _recordLength = playback!.RecordLength)
             .AddTo(ref _disposables);
         _playbackReader.InitialDeviceTimestamp
             .Where(ts => ts != TimeSpan.Zero)
@@ -90,7 +95,7 @@ public class PlaybackController : IPlaybackController
     {
         if (!File.Exists(filePath))
         {
-            _logger.LogInformation($"Error: Input log metadata file not found at {filePath}");
+            _logger.LogInformation("Error: Input log metadata file not found at {FilePath}", filePath);
             return false;
         }
 
@@ -110,7 +115,7 @@ public class PlaybackController : IPlaybackController
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error reading input log metadata file: {ex.Message}");
+            _logger.LogError("Error reading input log metadata file: {Message}", ex.Message);
             _metadata = null;
             return false;
         }
@@ -140,22 +145,46 @@ public class PlaybackController : IPlaybackController
             }
             if (_playbackElapsedTime.Value > _recordLength)
             {
-                if(_state.Value is PlaybackState.Playing)
+                if (_state.Value is PlaybackState.Playing)
                 {
+                    // Process remaining frames in queue before EOF
+                    _inferencer.ProcessQueueTail();
                     OnEOF?.Invoke();
                 }
                 _state.Value = PlaybackState.Pause;
             }
             if (_state.Value is not PlaybackState.Playing)
-            return true;
+                return true;
 
             _playbackElapsedTime.Value += ctx.ElapsedTimeFromPreviousFrame;
             var kinectAbsoluteTime = _playbackElapsedTime.Value + _firstFrameKinectTime;
             var systemAbsoluteTime = _playbackElapsedTime.Value + _firstFrameSystemTime;
 
+            // Ensure Tracker is initialized on this thread (LogicLooper thread)
+            _inferencer.EnsureInitialized();
+
+            // Single-thread model: if queue is full, pop first (like SingleThreadProcessor sample)
+            if (_inferencer.QueueSize == K4AdotNet.BodyTracking.Tracker.MaxQueueSize)
+            {
+                _inferencer.TryProcessFrame(wait: true);
+            }
+
             if (_playbackReader.TryRead(kinectAbsoluteTime, out var capture, out var imuSample))
             {
-                if (capture is not null) _broker.SetCapture(capture);
+                if (capture is not null)
+                {
+                    // Duplicate reference for UI display before disposing
+                    var captureForUi = capture.DuplicateReference();
+                    _broker.SetCapture(captureForUi);
+
+                    // Capture ownership: we own it, enqueue to tracker, then dispose immediately.
+                    // Tracker makes internal copy, so we can safely dispose here.
+                    _inferencer.TryEnqueueData(capture);
+                    capture.Dispose();
+
+                    // Single-thread model: try to pop result immediately (non-blocking)
+                    _inferencer.TryProcessFrame(wait: false);
+                }
                 if (imuSample.HasValue) _broker.SetImu(imuSample.Value);
             }
             _logReader.TryRead(systemAbsoluteTime, out var deviceInputs);
@@ -175,6 +204,7 @@ public class PlaybackController : IPlaybackController
     public async Task Rewind()
     {
         _state.Value = PlaybackState.Lock;
+        OnSeek?.Invoke();
         _playbackElapsedTime.Value = TimeSpan.Zero;
         await Task.WhenAll(_playbackReader.RewindAsync(),
                            _logReader.RewindAsync());
@@ -185,6 +215,7 @@ public class PlaybackController : IPlaybackController
     public async Task SeekAsync(TimeSpan position)
     {
         _state.Value = PlaybackState.Lock;
+        OnSeek?.Invoke();
         _playbackElapsedTime.Value = position;
         await Task.WhenAll(_playbackReader.SeekAsync(position),
                            _logReader.SeekAsync(position));

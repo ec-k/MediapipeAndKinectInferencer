@@ -166,21 +166,23 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             // Handle cancellation
             Console.WriteLine("DisplayFirstColorFrame was cancelled.");
         }
-        finally
-        {
-            playback?.SeekTimestamp(new Microseconds64(0), PlaybackSeekOrigin.Begin);
-        }
     }
 
     void DisplayCapture(Capture capture)
     {
-        if (capture?.ColorImage is null) return;
-
-        if(Interlocked.CompareExchange(ref _isRendering, 1, 0) == 1)
+        // DuplicateReference first to avoid race condition with SetCapture disposing the original
+        var captureForUi = capture?.DuplicateReference();
+        if (captureForUi?.ColorImage is not Image colorImage)
+        {
+            captureForUi?.Dispose();
             return;
+        }
 
-        var captureForUi = capture.DuplicateReference();
-        if (captureForUi?.ColorImage is not Image colorImage) return;
+        if (Interlocked.CompareExchange(ref _isRendering, 1, 0) == 1)
+        {
+            captureForUi?.Dispose();
+            return;
+        }
 
         var width  = colorImage.WidthPixels;
         var height = colorImage.HeightPixels;

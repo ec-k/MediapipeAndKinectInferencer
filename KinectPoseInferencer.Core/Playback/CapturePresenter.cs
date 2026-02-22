@@ -16,10 +16,13 @@ public class CapturePresenter
         if (imageWriter is null) throw new ArgumentNullException(nameof(imageWriter));
 
         _broker.Capture
-            .Where(capture => capture is not null && capture.ColorImage is not null)
+            .Where(capture => capture is not null)
             .Subscribe(capture =>
             {
-                imageWriter.WriteImage(capture.DuplicateReference().ColorImage!);
+                // DuplicateReference first to avoid race condition with SetCapture disposing the original
+                using var captureRef = capture?.DuplicateReference();
+                if (captureRef?.ColorImage is null) return;
+                imageWriter.WriteImage(captureRef.ColorImage);
             });
     }
 }

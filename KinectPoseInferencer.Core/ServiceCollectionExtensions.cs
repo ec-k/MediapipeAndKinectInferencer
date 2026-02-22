@@ -78,6 +78,7 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<InputLogReader>(),
                 sp.GetRequiredService<RecordDataBroker>(),
                 sp.GetRequiredService<ILogger<PlaybackController>>(),
+                sp.GetRequiredService<KinectInferencer>(),
                 appFps)
         );
         services.AddSingleton<IPlaybackReader, PlaybackReader>();
