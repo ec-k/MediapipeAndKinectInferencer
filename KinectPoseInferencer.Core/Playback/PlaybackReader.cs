@@ -91,11 +91,8 @@ public class PlaybackReader : IPlaybackReader
             if (!playback.TryGetNextCapture(out var cap))
                 return false;
 
-            if (cap?.DepthImage is null)
-            {
-                cap?.Dispose();
+            if (cap is null)
                 return false;
-            }
 
             capture = cap;
 

@@ -173,17 +173,19 @@ public class PlaybackController : IPlaybackController
             {
                 if (capture is not null)
                 {
-                    // Duplicate reference for UI display before disposing
+                    // Always send to UI for color image display
                     var captureForUi = capture.DuplicateReference();
                     _broker.SetCapture(captureForUi);
 
-                    // Capture ownership: we own it, enqueue to tracker, then dispose immediately.
-                    // Tracker makes internal copy, so we can safely dispose here.
-                    _inferencer.TryEnqueueData(capture);
-                    capture.Dispose();
+                    // Only enqueue to tracker if DepthImage is available
+                    if (capture.DepthImage is not null)
+                    {
+                        _inferencer.TryEnqueueData(capture);
+                        // Single-thread model: try to pop result immediately (non-blocking)
+                        _inferencer.TryProcessFrame(wait: false);
+                    }
 
-                    // Single-thread model: try to pop result immediately (non-blocking)
-                    _inferencer.TryProcessFrame(wait: false);
+                    capture.Dispose();
                 }
                 if (imuSample.HasValue) _broker.SetImu(imuSample.Value);
             }
