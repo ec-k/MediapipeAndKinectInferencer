@@ -88,6 +88,14 @@ public class PlaybackController : IPlaybackController
             _logReader.LoadLogFile(Descriptor.InputLogFilePath),
             _playbackReader.Configure(Descriptor, token)
         );
+
+        // Start loop early to initialize Tracker before Play()
+        if (_readingLoop is null)
+            StartReadingLoop();
+
+        // Wait for Tracker initialization to complete
+        await _inferencer.WaitForInitializationAsync();
+
         _state.Value = PlaybackState.Pause;
     }
 
@@ -143,6 +151,11 @@ public class PlaybackController : IPlaybackController
                 _terminateLoop = false;
                 return false;
             }
+
+            // Ensure Tracker is initialized on this thread (LogicLooper thread)
+            // This runs even when paused, so initialization completes before Play()
+            _inferencer.EnsureInitialized();
+
             if (_playbackElapsedTime.Value > _recordLength)
             {
                 if (_state.Value is PlaybackState.Playing)
@@ -160,10 +173,7 @@ public class PlaybackController : IPlaybackController
             var kinectAbsoluteTime = _playbackElapsedTime.Value + _firstFrameKinectTime;
             var systemAbsoluteTime = _playbackElapsedTime.Value + _firstFrameSystemTime;
 
-            // Ensure Tracker is initialized on this thread (LogicLooper thread)
-            _inferencer.EnsureInitialized();
-
-            // Single-thread model: if queue is full, pop first (like SingleThreadProcessor sample)
+            // Single-thread model: if queue is full, pop first
             if (_inferencer.QueueSize == K4AdotNet.BodyTracking.Tracker.MaxQueueSize)
             {
                 _inferencer.TryProcessFrame(wait: true);
@@ -173,7 +183,7 @@ public class PlaybackController : IPlaybackController
             {
                 if (capture is not null)
                 {
-                    // Always send to UI for color image display
+                    // Send to UI for color image display
                     var captureForUi = capture.DuplicateReference();
                     _broker.SetCapture(captureForUi);
 

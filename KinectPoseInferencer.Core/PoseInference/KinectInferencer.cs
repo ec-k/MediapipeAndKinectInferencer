@@ -32,6 +32,7 @@ public class KinectInferencer : IDisposable
     Calibration? _pendingCalibration;
     Calibration? _currentCalibration;
     bool _needsInitialization = false;
+    TaskCompletionSource? _initializationTcs;
 
     public int QueueSize => _tracker?.QueueSize ?? 0;
     public bool IsInitialized => _tracker is not null;
@@ -44,6 +45,16 @@ public class KinectInferencer : IDisposable
     {
         _pendingCalibration = calibration;
         _needsInitialization = true;
+        _initializationTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+
+    /// <summary>
+    /// Wait for Tracker initialization to complete.
+    /// Call this after SetCalibration and after starting the thread that calls EnsureInitialized.
+    /// </summary>
+    public Task WaitForInitializationAsync()
+    {
+        return _initializationTcs?.Task ?? Task.CompletedTask;
     }
 
     /// <summary>
@@ -66,6 +77,8 @@ public class KinectInferencer : IDisposable
         };
         _tracker = new Tracker(calibration, trackerConfig);
         _needsInitialization = false;
+
+        _initializationTcs?.TrySetResult();
     }
 
     /// <summary>
