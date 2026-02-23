@@ -66,13 +66,21 @@ public class LandmarkPresenter : IDisposable
         _filterFactory = filterFactory ?? throw new ArgumentNullException(nameof(filterFactory));
         _resultUsers = resultUsers;
 
-        // Reset tracker on seek/rewind to clear internal queue
-        _playbackController.OnSeek += () => _inferencer.Reset();
+        // Reset tracker and filters on seek/rewind to clear internal queue and filter state
+        _playbackController.OnSeek += () =>
+        {
+            _inferencer.Reset();
+            _jointFilterPipelines.Clear();
+        };
 
-        // Initialize calibration from playback
+        // Initialize calibration from playback (also reset filters for new file)
         _playbackReader.Playback
             .Where(playback => playback is not null)
-            .Subscribe(playback => LoadCalibrationFromPlayback(playback!))
+            .Subscribe(playback =>
+            {
+                _jointFilterPipelines.Clear();
+                LoadCalibrationFromPlayback(playback!);
+            })
             .AddTo(ref _disposables);
 
         // Initialize calibration from live device
