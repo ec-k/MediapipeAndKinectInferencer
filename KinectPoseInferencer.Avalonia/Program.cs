@@ -8,7 +8,6 @@ using Microsoft.Extensions.Hosting;
 using System;
 using System.Threading.Tasks;
 using KinectPoseInferencer.Avalonia.Models;
-using Microsoft.Extensions.Logging;
 
 namespace KinectPoseInferencer.Avalonia;
 
@@ -35,25 +34,11 @@ internal sealed class Program
         }
         finally
         {
-            var logger = AppHost.Host.Services.GetRequiredService<ILogger<Program>>();
-
-            // Stop MediaPipe process before force exit
             var mediapipe = AppHost.Host.Services.GetService<MediaPipeProcessManager>();
             mediapipe?.StopProcess();
 
-            // Force exit after timeout if Host.StopAsync hangs
-            using var forceExitTimer = new System.Threading.Timer(
-                _ => Environment.Exit(0), null, 2000, System.Threading.Timeout.Infinite);
-
-            try
-            {
-                await AppHost.Host.StopAsync(TimeSpan.FromSeconds(1));
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Host.StopAsync did not complete gracefully");
-            }
-
+            // ConfigureAwait(false) is required to avoid deadlock after Avalonia UI thread exits
+            await AppHost.Host.StopAsync(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
             AppHost.Host.Dispose();
         }
     }

@@ -187,7 +187,7 @@ public class RemoteControlServer : IDisposable
         _landmarkPresenter.IsKinectEnabled = config.IsKinectEnabled;
     }
 
-    void Stop()
+    public void Stop()
     {
         try
         {
