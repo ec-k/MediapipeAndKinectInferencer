@@ -4,10 +4,12 @@ using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using KinectPoseInferencer.Avalonia.ViewModels;
 using KinectPoseInferencer.Avalonia.Views;
+using KinectPoseInferencer.Avalonia.Models;
 using KinectPoseInferencer.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -36,8 +38,12 @@ namespace KinectPoseInferencer.Avalonia
             {
                 var lifetime = services.GetRequiredService<IHostApplicationLifetime>();
 
-                var renderer = services.GetRequiredService<Renderers.Renderer>();
-                renderer.StartVisualizationThread();
+                var viewSettings = services.GetRequiredService<IOptions<ViewSettings>>().Value;
+                if (viewSettings.EnableSkeletonVisualization)
+                {
+                    var renderer = services.GetRequiredService<Renderers.Renderer>();
+                    renderer.StartVisualizationThread();
+                }
 
                 var mediapipe = services.GetRequiredService<MediaPipeProcessManager>();
                 lifetime.ApplicationStopping.Register(mediapipe.StopProcess);

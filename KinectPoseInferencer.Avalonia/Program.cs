@@ -61,6 +61,8 @@ internal sealed class Program
                 services.Configure<MediaPipeSettings>(context.Configuration.GetSection("MediaPipeSettings"));
                 services.AddSingleton<IMediaPipeConfiguration, MediaPipeConfigurationAdapter>();
 
+                services.Configure<ViewSettings>(context.Configuration.GetSection("ViewSettings"));
+
                 services.AddCoreServices(context.Configuration);
                 services.AddRemoteControlServer(context.Configuration);
             });
