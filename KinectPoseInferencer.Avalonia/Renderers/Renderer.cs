@@ -19,6 +19,8 @@ namespace KinectPoseInferencer.Renderers
         private PointCloudRenderer PointCloudRenderer;
 
         private readonly FrameManager _frameManager;
+        private NativeWindow? _nativeWindow;
+        private readonly object _lock = new();
 
         public Renderer(FrameManager frameManager)
         {
@@ -32,6 +34,10 @@ namespace KinectPoseInferencer.Renderers
             Task.Run(() =>
             {
                 using NativeWindow nativeWindow = NativeWindow.Create();
+                lock (_lock)
+                {
+                    _nativeWindow = nativeWindow;
+                }
                 IsActive = true;
                 nativeWindow.ContextCreated += NativeWindow_ContextCreated;
                 nativeWindow.Render += NativeWindow_Render;
@@ -55,7 +61,24 @@ namespace KinectPoseInferencer.Renderers
 
                 nativeWindow.Show();
                 nativeWindow.Run();
+
+                lock (_lock)
+                {
+                    _nativeWindow = null;
+                }
             });
+        }
+
+        public void Stop()
+        {
+            lock (_lock)
+            {
+                if (_nativeWindow is not null)
+                {
+                    _nativeWindow.Stop();
+                    IsActive = false;
+                }
+            }
         }
 
         private void NativeWindow_ContextCreated(object sender, NativeWindowEventArgs e)

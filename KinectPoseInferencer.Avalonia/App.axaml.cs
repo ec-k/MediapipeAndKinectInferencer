@@ -39,9 +39,10 @@ namespace KinectPoseInferencer.Avalonia
                 var lifetime = services.GetRequiredService<IHostApplicationLifetime>();
 
                 var viewSettings = services.GetRequiredService<IOptions<ViewSettings>>().Value;
+                Renderers.Renderer? renderer = null;
                 if (viewSettings.EnableSkeletonVisualization)
                 {
-                    var renderer = services.GetRequiredService<Renderers.Renderer>();
+                    renderer = services.GetRequiredService<Renderers.Renderer>();
                     renderer.StartVisualizationThread();
                 }
 
@@ -59,7 +60,10 @@ namespace KinectPoseInferencer.Avalonia
                     }
                 });
 
-                // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
+                // Stop renderer when application exits
+                desktop.Exit += (sender, args) => renderer?.Stop();
+
+                // Avoid duplicate validations from both Avalonia and the CommunityToolkit.
                 // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
                 DisableAvaloniaDataAnnotationValidation();
                 desktop.MainWindow = new MainWindow
