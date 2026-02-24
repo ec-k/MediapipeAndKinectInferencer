@@ -1,4 +1,6 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using System;
 
@@ -52,6 +54,17 @@ namespace KinectPoseInferencer.Avalonia.Views
             base.OnClosed(e);
 
             VideoWindowBorder.SizeChanged -= OnVideoWindowSizeChanged;
+
+            if (DataContext is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+
+            // Explicitly shutdown the application
+            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                desktop.Shutdown();
+            }
         }
     }
 }
