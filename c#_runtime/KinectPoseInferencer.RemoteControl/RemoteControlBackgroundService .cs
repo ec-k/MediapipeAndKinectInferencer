@@ -24,6 +24,7 @@ public class RemoteControlBackgroundService : BackgroundService
         await _server.StartAsync(stoppingToken);
     }
 
+            _logger.LogWarning("StopAsync timed out after 1 second");
     async void NotifyPlaybackEnds()
     {
         await _server.SendToClientAsync("This playback reached to end.");
