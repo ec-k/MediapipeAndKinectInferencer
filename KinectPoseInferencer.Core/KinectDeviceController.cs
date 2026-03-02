@@ -1,12 +1,9 @@
-﻿using K4AdotNet.Sensor;
+﻿using K4AdotNet.BodyTracking;
+using K4AdotNet.Sensor;
+using KinectPoseInferencer.Core.PoseInference;
 using Microsoft.Extensions.Logging;
 using R3;
-using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 
 namespace KinectPoseInferencer.Core;
@@ -17,6 +14,7 @@ public class KinectDeviceController: IDisposable
     ConcurrentQueue<Command> _commandQueue = new();
 
     readonly RecordDataBroker _dataBroker;
+    readonly KinectInferencer _inferencer;
 
     public ReadOnlyReactiveProperty<Device> KinectDevice => _kinectDevice;
     public ReadOnlyReactiveProperty<bool> IsReading => _isReading;
@@ -33,17 +31,19 @@ public class KinectDeviceController: IDisposable
     };
 
     readonly int _captureTimeoutMs = 100;
-    readonly int _taskCancelTimeoutSec = 2;
-    Task? _readingLoop = null;
-    CancellationTokenSource? _cts = null;
+    readonly int _loopStopTimeoutSec = 2;
+    Thread? _readingThread = null;
+    volatile bool _stopRequested = false;
     DisposableBag _disposables = new();
     readonly ILogger<KinectDeviceController> _logger;
 
     public KinectDeviceController(
         RecordDataBroker dataBroker,
+        KinectInferencer inferencer,
         ILogger<KinectDeviceController> logger)
     {
         _dataBroker = dataBroker ?? throw new ArgumentNullException(nameof(dataBroker));
+        _inferencer = inferencer ?? throw new ArgumentNullException(nameof(inferencer));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -99,22 +99,37 @@ public class KinectDeviceController: IDisposable
     {
         if (DeviceConfig is not DeviceConfiguration    config
             || KinectDevice.CurrentValue is not Device device
-            || _readingLoop is not null) 
+            || _readingThread is not null)
             return;
 
         device.StartCameras(config);
         device.StartImu();
 
-        _cts = new();
+        // Set calibration for inferencer (will be initialized on reading thread)
+        var calibration = GetCalibration();
+        if (calibration.HasValue)
+            _inferencer.SetCalibration(calibration.Value);
+
+        _stopRequested = false;
         _isReading.Value = true;
-        _readingLoop = Task.Run(() => ReadingLoop(_cts.Token), _cts.Token);
+
+        // Use dedicated thread for CUDA thread affinity
+        _readingThread = new Thread(ReadingLoop)
+        {
+            IsBackground = true,
+            Name = "KinectDeviceController.ReadingLoop"
+        };
+        _readingThread.Start();
     }
 
-    async Task ReadingLoop(CancellationToken token)
+    void ReadingLoop()
     {
+        // Initialize Tracker on this thread (CUDA context affinity)
+        _inferencer.EnsureInitialized();
+
         try
         {
-            while (!token.IsCancellationRequested)
+            while (!_stopRequested)
             {
                 var shouldStop = ProcessCommand();
                 if (shouldStop)
@@ -123,20 +138,16 @@ public class KinectDeviceController: IDisposable
                 if (IsReading.CurrentValue)
                 {
                     GetKinectData();
-                    await Task.Yield();
                 }
                 else
-                    await Task.Delay(50, token);
+                {
+                    Thread.Sleep(50);
+                }
             }
-        }
-        catch (OperationCanceledException ex)
-        {
-            // Stop successfully on cancel requested
-            _logger.LogInformation("Opration cancelled {ex}", ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error in ReadingLoop: {ex}");
+            _logger.LogError("Error in ReadingLoop: {Message}", ex.Message);
         }
         finally
         {
@@ -149,54 +160,57 @@ public class KinectDeviceController: IDisposable
     {
         var device = KinectDevice.CurrentValue;
 
-        if(device.TryGetImuSample(out var imu, _captureTimeoutMs))
+        if (device.TryGetImuSample(out var imu, _captureTimeoutMs))
         {
             _dataBroker.SetImu(imu);
+        }
+
+        // Single-thread model: if queue is full, pop first
+        if (_inferencer.QueueSize == Tracker.MaxQueueSize)
+        {
+            _inferencer.TryProcessFrame(wait: true);
         }
 
         if (device.TryGetCapture(out var capture, _captureTimeoutMs))
         {
             using (capture)
             {
-                _dataBroker.SetCapture(capture);
+                // Send to UI for color image display
+                var captureForUi = capture.DuplicateReference();
+                _dataBroker.SetCapture(captureForUi);
+
+                // Only enqueue to tracker if DepthImage is available
+                if (capture.DepthImage is not null)
+                {
+                    _inferencer.TryEnqueueData(capture);
+                    // Single-thread model: try to pop result immediately (non-blocking)
+                    _inferencer.TryProcessFrame(wait: false);
+                }
             }
         }
     }
 
-    async Task StopLoopAsync()
+    void StopReadingThread()
     {
-        if (_cts is null || _readingLoop is null) return;
+        if (_readingThread is null) return;
 
         _commandQueue.Enqueue(Command.Stop);
-        _cts.Cancel();
+        _stopRequested = true;
 
-        try
+        if (_readingThread.IsAlive)
         {
-            await _readingLoop.WaitAsync(TimeSpan.FromSeconds(_taskCancelTimeoutSec));
+            if (!_readingThread.Join(TimeSpan.FromSeconds(_loopStopTimeoutSec)))
+            {
+                _logger.LogWarning("ReadingThread did not terminate gracefully within timeout");
+            }
         }
-        catch (OperationCanceledException)
-        {
-            // ignore this exception
-        }
-        catch (AggregateException ex) when (ex.InnerExceptions.All(e => e is TaskCanceledException))
-        {
-            /* ignore this exception */
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Warning: ReadingLoop did not terminate gracefully within timeout. Error: {ex.Message}");
-        }
-        finally
-        {
-            _readingLoop = null;
-            _cts.Dispose();
-            _cts = null;
-        }
+
+        _readingThread = null;
     }
 
     public void Dispose()
     {
-        StopLoopAsync().GetAwaiter().GetResult();
+        StopReadingThread();
 
         _disposables.Dispose();
         _kinectDevice?.Dispose();
