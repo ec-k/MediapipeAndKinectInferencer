@@ -1,5 +1,7 @@
 using K4AdotNet.BodyTracking;
 using K4AdotNet.Sensor;
+using KinectPoseInferencer.Core.Settings;
+using Microsoft.Extensions.Options;
 using R3;
 using K4ATimeout = K4AdotNet.Timeout;
 
@@ -27,8 +29,14 @@ public class KinectInferencer : IDisposable
     public ReadOnlyReactiveProperty<KinectInferenceResult?> Result => _result;
 
     readonly ReactiveProperty<KinectInferenceResult?> _result = new();
+    readonly KinectTrackerSettings _settings;
 
     Tracker? _tracker;
+
+    public KinectInferencer(IOptions<KinectTrackerSettings> settings)
+    {
+        _settings = settings.Value;
+    }
     Calibration? _pendingCalibration;
     Calibration? _currentCalibration;
     bool _needsInitialization = false;
@@ -74,6 +82,7 @@ public class KinectInferencer : IDisposable
         {
             SensorOrientation = SensorOrientation.Default,
             ProcessingMode = TrackerProcessingMode.Gpu,
+            GpuDeviceId = _settings.GpuDeviceId,
         };
         _tracker = new Tracker(calibration, trackerConfig);
         _needsInitialization = false;

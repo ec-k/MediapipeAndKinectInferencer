@@ -30,6 +30,7 @@ public static class ServiceCollectionExtensions
         var mmfFilePath               = CreateMmfFile(settings.MmfFileName, logger);
 
         // inferencer
+        services.Configure<KinectTrackerSettings>(configuration.GetSection("KinectTracker"));
         services.AddSingleton<KinectInferencer>();
         // result managers
         services.AddSingleton(sp =>
