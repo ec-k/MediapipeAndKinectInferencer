@@ -43,6 +43,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty] WriteableBitmap? _colorBitmap;
     [ObservableProperty] OperationMode _selectedMode = OperationMode.Playback;
     [ObservableProperty] bool _isPlaybackMode = true;
+    [ObservableProperty] string _secondaryButtonIconUnicode = RewindIconUnicode;
 
     [ObservableProperty] bool _isLoading = false;
     [ObservableProperty] TimeSpan _playbackLength;
@@ -52,6 +53,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     bool _isInternalUpdating = false;
     const string PlayIconUnicode = "\uE768";
     const string PauseIconUnicode = "\uE769";
+    const string RewindIconUnicode = "\uE892";
+    const string StopIconUnicode = "\uE71A";
 
     readonly int MaxSeekFramesForColorImage = 100;
 
@@ -144,6 +147,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             if (e.PropertyName == nameof(SelectedMode))
             {
                 IsPlaybackMode = SelectedMode == OperationMode.Playback;
+                SecondaryButtonIconUnicode = IsPlaybackMode ? RewindIconUnicode : StopIconUnicode;
 
                 if (SelectedMode == OperationMode.Playback)
                 {
@@ -365,15 +369,31 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand(IncludeCancelCommand = true)]
-    async Task Rewind(CancellationToken token)
+    async Task SecondaryButton(CancellationToken token)
     {
-        await _playbackController.Rewind();
+        if (SelectedMode == OperationMode.Playback)
+        {
+            await _playbackController.Rewind();
+        }
+        else
+        {
+            DeviceStop();
+        }
+    }
 
-        // Display the first frame
-        //if (_playbackController.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
-        //{
-        //    await Task.Run(() => DisplayFirstColorFrame(playback, token), token);
-        //}
+    void DeviceStop()
+    {
+        if (_kinectDeviceController.KinectDevice.CurrentValue is not null)
+        {
+            _kinectDeviceController.Pause();
+            _kinectDeviceController.Dispose();
+
+            if (GlobalInputHook.IsHookActive)
+            {
+                GlobalInputHook.StopProcessingEvents();
+                GlobalInputHook.StopHooks();
+            }
+        }
     }
     partial void OnSeekSliderPositionChanged(double value)
     {

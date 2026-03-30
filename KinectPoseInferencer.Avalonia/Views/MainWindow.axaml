@@ -153,11 +153,10 @@
 
         <StackPanel Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
 
-            <!-- Stop / Rewind Button -->
-            <Button Command="{Binding RewindCommand}" Width="80" Height="60" Margin="0,0,20,0">
-                <!-- Rewind Icon -->
+            <!-- Rewind (Playback) / Stop (Device) Button -->
+            <Button Command="{Binding SecondaryButtonCommand}" Width="80" Height="60" Margin="0,0,20,0">
                 <Grid>
-                    <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xE892;"/>
+                    <TextBlock FontFamily="Segoe Fluent Icons" Text="{Binding SecondaryButtonIconUnicode}"/>
                 </Grid>
             </Button>
 
