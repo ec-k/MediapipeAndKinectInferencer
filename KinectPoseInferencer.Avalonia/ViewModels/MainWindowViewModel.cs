@@ -23,6 +23,12 @@ using System.Windows;
 
 namespace KinectPoseInferencer.Avalonia.ViewModels;
 
+public enum OperationMode
+{
+    Playback,
+    Device
+}
+
 public partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
     readonly IPlaybackController _playbackController;
@@ -30,12 +36,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     readonly SettingsManager _settingsManager;
 
     [ObservableProperty] string _playPauseIconUnicode = PlayIconUnicode;
-    [ObservableProperty] string _kinectPlayPauseIconUnicode = PlayIconUnicode;
     [ObservableProperty] string _videoFilePath = "";
     [ObservableProperty] string _inputLogFilePath = "";
     [ObservableProperty] string _metaFilePath = "";
     [ObservableProperty] bool _isKinectInferenceEnabled = true;
     [ObservableProperty] WriteableBitmap? _colorBitmap;
+    [ObservableProperty] OperationMode _selectedMode = OperationMode.Playback;
 
     [ObservableProperty] bool _isLoading = false;
     [ObservableProperty] TimeSpan _playbackLength;
@@ -109,19 +115,45 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _playbackController.State
             .Subscribe(state =>
             {
-                if (state is PlaybackState.Playing)
-                    PlayPauseIconUnicode = PauseIconUnicode;
-                if (state is PlaybackState.Pause)
-                    PlayPauseIconUnicode = PlayIconUnicode;
-
                 IsLoading = state is PlaybackState.Lock;
 
+                // Update play/pause icon only if Playback mode is selected
+                if (SelectedMode == OperationMode.Playback)
+                {
+                    if (state is PlaybackState.Playing)
+                        PlayPauseIconUnicode = PauseIconUnicode;
+                    if (state is PlaybackState.Pause)
+                        PlayPauseIconUnicode = PlayIconUnicode;
+                }
             })
             .AddTo(ref _disposables);
 
         _kinectDeviceController.IsReading
-            .Subscribe(isReading => KinectPlayPauseIconUnicode = isReading ? PauseIconUnicode : PlayIconUnicode)
+            .Subscribe(isReading =>
+            {
+                // Update play/pause icon only if Device mode is selected
+                if (SelectedMode == OperationMode.Device)
+                    PlayPauseIconUnicode = isReading ? PauseIconUnicode : PlayIconUnicode;
+            })
             .AddTo(ref _disposables);
+
+        // Update icon when mode changes
+        this.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SelectedMode))
+            {
+                if (SelectedMode == OperationMode.Playback)
+                {
+                    var state = _playbackController.State.CurrentValue;
+                    PlayPauseIconUnicode = state is PlaybackState.Playing ? PauseIconUnicode : PlayIconUnicode;
+                }
+                else
+                {
+                    var isReading = _kinectDeviceController.IsReading.CurrentValue;
+                    PlayPauseIconUnicode = isReading ? PauseIconUnicode : PlayIconUnicode;
+                }
+            }
+        };
 
         _playbackController.CurrentTime
             .Subscribe(time =>
@@ -354,7 +386,29 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
 
     [RelayCommand]
-    public void KinectPlayOrPause()
+    public void PlayOrPause()
+    {
+        if (SelectedMode == OperationMode.Playback)
+        {
+            PlaybackPlayOrPause();
+        }
+        else
+        {
+            DevicePlayOrPause();
+        }
+    }
+
+    void PlaybackPlayOrPause()
+    {
+        var state = _playbackController.State.CurrentValue;
+
+        if (state is PlaybackState.Playing)
+            _playbackController.Pause();
+        if (state is PlaybackState.Pause)
+            _playbackController.Play();
+    }
+
+    void DevicePlayOrPause()
     {
         if (_kinectDeviceController.KinectDevice.CurrentValue is null)
         {
@@ -396,17 +450,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 GlobalInputHook.StopHooks();
             }
         }
-    }
-
-    [RelayCommand]
-    public void PlayOrPause()
-    {
-        var state = _playbackController.State.CurrentValue;
-
-        if (state is PlaybackState.Playing)
-            _playbackController.Pause();
-        if(state is PlaybackState.Pause)
-            _playbackController.Play();
     }
 
     public void Dispose()
