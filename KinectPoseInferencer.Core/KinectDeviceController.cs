@@ -151,6 +151,8 @@ public class KinectDeviceController: IDisposable
         }
         finally
         {
+            while(_commandQueue.TryDequeue(out _)) { }  // Drain remaining commands
+
             KinectDevice.CurrentValue?.StopCameras();
             KinectDevice.CurrentValue?.StopImu();
         }
