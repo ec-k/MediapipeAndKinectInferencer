@@ -57,13 +57,13 @@
                 </Style>
             </StackPanel.Styles>
 
-            <Grid>
+            <!-- File input fields (Playback mode only) -->
+            <Grid IsVisible="{Binding IsPlaybackMode}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -82,10 +82,13 @@
                 <Button Grid.Row="3" Grid.Column="0" Command="{Binding LoadFilesCommand}" HorizontalAlignment="Left" Width="80">
                     <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xED25;" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                 </Button>
-
-                <CheckBox Grid.Row="4" Grid.Column="0" IsChecked="{Binding IsKinectInferenceEnabled}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                <TextBlock Grid.Row="4" Grid.Column="1" VerticalAlignment="Bottom" Margin="0,0,10,5">Inference Body by Kinect</TextBlock>
             </Grid>
+
+            <!-- Kinect inference option -->
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                <CheckBox IsChecked="{Binding IsKinectInferenceEnabled}" VerticalAlignment="Center"/>
+                <TextBlock VerticalAlignment="Center" Margin="5,0,0,0">Inference Body by Kinect</TextBlock>
+            </StackPanel>
         </StackPanel>
 
         <!-- Input Log Display -->

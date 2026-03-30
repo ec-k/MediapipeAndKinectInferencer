@@ -42,6 +42,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty] bool _isKinectInferenceEnabled = true;
     [ObservableProperty] WriteableBitmap? _colorBitmap;
     [ObservableProperty] OperationMode _selectedMode = OperationMode.Playback;
+    [ObservableProperty] bool _isPlaybackMode = true;
 
     [ObservableProperty] bool _isLoading = false;
     [ObservableProperty] TimeSpan _playbackLength;
@@ -137,11 +138,13 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             })
             .AddTo(ref _disposables);
 
-        // Update icon when mode changes
+        // Update icon and mode flags when mode changes
         this.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(SelectedMode))
             {
+                IsPlaybackMode = SelectedMode == OperationMode.Playback;
+
                 if (SelectedMode == OperationMode.Playback)
                 {
                     var state = _playbackController.State.CurrentValue;
