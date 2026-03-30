@@ -208,11 +208,25 @@ public class KinectDeviceController: IDisposable
         _readingThread = null;
     }
 
-    public void Dispose()
+    /// <summary>
+    /// Closes the device and stops reading, but keeps the controller reusable.
+    /// Call Open() and StartCamera() to restart.
+    /// </summary>
+    public void Close()
     {
         StopReadingThread();
 
+        _kinectDevice.Value?.Dispose();
+        _kinectDevice.Value = null!;
+        _isReading.Value = false;
+    }
+
+    public void Dispose()
+    {
+        Close();
+
         _disposables.Dispose();
-        _kinectDevice?.Dispose();
+        _kinectDevice.Dispose();
+        _isReading.Dispose();
     }
 }

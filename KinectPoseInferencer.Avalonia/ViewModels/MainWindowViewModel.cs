@@ -386,7 +386,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         if (_kinectDeviceController.KinectDevice.CurrentValue is not null)
         {
             _kinectDeviceController.Pause();
-            _kinectDeviceController.Dispose();
+            _kinectDeviceController.Close();
 
             if (GlobalInputHook.IsHookActive)
             {
