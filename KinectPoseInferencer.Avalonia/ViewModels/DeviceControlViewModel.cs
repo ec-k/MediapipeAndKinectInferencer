@@ -63,7 +63,7 @@ public class DeviceControlViewModel : ViewModelBase,
         if (_kinectDeviceController.KinectDevice.CurrentValue is not null)
         {
             _kinectDeviceController.Pause();
-            _kinectDeviceController.Close();
+            _kinectDeviceController.StopCamera();
 
             if (GlobalInputHook.IsHookActive)
             {

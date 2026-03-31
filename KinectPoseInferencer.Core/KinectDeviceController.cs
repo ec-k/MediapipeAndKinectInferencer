@@ -33,7 +33,6 @@ public class KinectDeviceController: IDisposable
     readonly int _captureTimeoutMs = 100;
     readonly int _loopStopTimeoutSec = 2;
     Thread? _readingThread = null;
-    volatile bool _stopRequested = false;
     DisposableBag _disposables = new();
     readonly ILogger<KinectDeviceController> _logger;
 
@@ -69,7 +68,6 @@ public class KinectDeviceController: IDisposable
 
     public void Play()  => _commandQueue.Enqueue(Command.Play);
     public void Pause() => _commandQueue.Enqueue(Command.Pause);
-    public void Stop()  => _commandQueue.Enqueue(Command.Stop);
 
     /// <summary>
     /// 
@@ -110,7 +108,6 @@ public class KinectDeviceController: IDisposable
         if (calibration.HasValue)
             _inferencer.SetCalibration(calibration.Value);
 
-        _stopRequested = false;
         _isReading.Value = true;
 
         // Use dedicated thread for CUDA thread affinity
@@ -129,10 +126,9 @@ public class KinectDeviceController: IDisposable
 
         try
         {
-            while (!_stopRequested)
+            while (true)
             {
-                var shouldStop = ProcessCommand();
-                if (shouldStop)
+                if (ProcessCommand())
                     return;
 
                 if (IsReading.CurrentValue)
@@ -197,7 +193,6 @@ public class KinectDeviceController: IDisposable
         if (_readingThread is null) return;
 
         _commandQueue.Enqueue(Command.Stop);
-        _stopRequested = true;
 
         if (_readingThread.IsAlive)
         {
@@ -211,10 +206,10 @@ public class KinectDeviceController: IDisposable
     }
 
     /// <summary>
-    /// Closes the device and stops reading, but keeps the controller reusable.
+    /// Stops the camera and closes the device, but keeps the controller reusable.
     /// Call Open() and StartCamera() to restart.
     /// </summary>
-    public void Close()
+    public void StopCamera()
     {
         StopReadingThread();
 
@@ -225,7 +220,7 @@ public class KinectDeviceController: IDisposable
 
     public void Dispose()
     {
-        Close();
+        StopCamera();
 
         _disposables.Dispose();
         _kinectDevice.Dispose();
