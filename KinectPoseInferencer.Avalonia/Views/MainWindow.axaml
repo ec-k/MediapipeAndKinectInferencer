@@ -3,21 +3,14 @@
         xmlns:vm="using:KinectPoseInferencer.Avalonia.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
-        xmlns:converters="using:KinectPoseInferencer.Avalonia.Converters"
+        xmlns:controls="using:KinectPoseInferencer.Avalonia.Views.Controls"
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="450"
         x:Class="KinectPoseInferencer.Avalonia.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
         Title="KinectPoseInferencer.Avalonia">
 
-    <Window.Resources>
-        <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
-    </Window.Resources>
-
     <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
@@ -25,8 +18,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <Grid.ColumnDefinitions>
@@ -36,60 +27,10 @@
         </Grid.ColumnDefinitions>
 
         <!-- Side Menu: Mode Selection -->
-        <StackPanel Grid.Row="0" Grid.RowSpan="4" Grid.Column="0" Margin="0,0,20,0" Width="120">
-            <TextBlock Text="Mode" FontWeight="Bold" Margin="0,0,0,10"/>
-            <RadioButton Content="Playback"
-                         GroupName="OperationMode"
-                         IsChecked="{Binding SelectedMode, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static vm:OperationMode.Playback}}"
-                         Margin="0,0,0,5"/>
-            <RadioButton Content="Device"
-                         GroupName="OperationMode"
-                         IsChecked="{Binding SelectedMode, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static vm:OperationMode.Device}}"/>
-        </StackPanel>
+        <controls:ModeSelectionPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Margin="0,0,20,0"/>
 
-        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,20,20">
-            <StackPanel.Styles>
-                <Style Selector="TextBox">
-                    <Setter Property="Height" Value="30.0"/>
-                </Style>
-                <Style Selector="Button">
-                    <Setter Property="Height" Value="30.0"/>
-                </Style>
-            </StackPanel.Styles>
-
-            <!-- File input fields (Playback mode only) -->
-            <Grid IsVisible="{Binding IsPlaybackMode}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="video" VerticalAlignment="Center" Margin="0,0,10,5"/>
-                <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding VideoFilePath}" Margin="0,0,0,5"/>
-
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="input log" VerticalAlignment="Center" Margin="0,0,10,5"/>
-                <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding InputLogFilePath}" Margin="0,0,0,5"/>
-
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="meta"  VerticalAlignment="Center" Margin="0,0,10,30"/>
-                <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding MetaFilePath}" Margin="0,0,0,30"/>
-
-                <Button Grid.Row="3" Grid.Column="0" Command="{Binding LoadFilesCommand}" HorizontalAlignment="Left" Width="80">
-                    <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xED25;" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                </Button>
-            </Grid>
-
-            <!-- Kinect inference option -->
-            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                <CheckBox IsChecked="{Binding IsKinectInferenceEnabled}" VerticalAlignment="Center"/>
-                <TextBlock VerticalAlignment="Center" Margin="5,0,0,0">Inference Body by Kinect</TextBlock>
-            </StackPanel>
-        </StackPanel>
+        <!-- File Input Panel -->
+        <controls:FileInputPanel Grid.Row="0" Grid.Column="1" Margin="0,0,20,20"/>
 
         <!-- Input Log Display -->
         <ListBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding InputLogEvents}" Margin="0,0,20,0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
@@ -100,73 +41,8 @@
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <!-- Video View -->
-        <Border x:Name="VideoWindowBorder"
-                Grid.Row="0" Grid.RowSpan="2" Grid.Column="2"
-                Background="Black" CornerRadius="4"
-                VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
-            <Viewbox x:Name="VideoWindowViewBox" Stretch="Uniform">
-                <Grid Width="640" Height="360" ClipToBounds="True">
-                    <Image Source="{Binding ColorBitmap}" Stretch="Fill"
-                           ZIndex="10"/>
-                    <!-- Loading Indicator -->
-                    <TextBlock Text="&#xE72C;"
-                               FontFamily="Segoe Fluent Icons"
-                               FontSize="48"
-                               Foreground="White"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               ZIndex="12"
-                               IsVisible="{Binding IsLoading}"/>
-                </Grid>
-            </Viewbox>
-        </Border>
-
-        <!-- Seek Bar -->
-        <Grid Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,20,0,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- Seek Bar -->
-            <Slider Grid.Column="0"
-                    Minimum="0"
-                    Maximum="{Binding PlaybackLength.TotalSeconds}"
-                    Value="{Binding SeekSliderPosition}"
-                    PointerCaptureLost="Slider_OnPointerCaptureLost"
-                    VerticalAlignment="Center"
-                    />
-
-            <!-- Current Time -->
-            <TextBlock Grid.Column="1"
-                       Margin="10,0,0,0" VerticalAlignment="Center">
-                <TextBlock.Text>
-                    <MultiBinding StringFormat="{}{0:mm\:ss} / {1:mm\:ss}">
-                        <Binding Path="CurrentTime"/>
-                        <Binding Path="PlaybackLength"/>
-                    </MultiBinding>
-                </TextBlock.Text>
-            </TextBlock>
-        </Grid>
-
-
-        <StackPanel Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
-
-            <!-- Rewind (Playback) / Stop (Device) Button -->
-            <Button Command="{Binding SecondaryButtonCommand}" Width="80" Height="60" Margin="0,0,20,0">
-                <Grid>
-                    <TextBlock FontFamily="Segoe Fluent Icons" Text="{Binding SecondaryButtonIconUnicode}"/>
-                </Grid>
-            </Button>
-
-            <!-- Play / Pause Button -->
-            <Button Command="{Binding PlayOrPauseCommand}" Width="80" Height="60">
-                <Grid>
-                    <TextBlock FontFamily="Segoe Fluent Icons" Text="{Binding PlayPauseIconUnicode}"/>
-                </Grid>
-            </Button>
-        </StackPanel>
+        <!-- Video Player Panel -->
+        <controls:VideoPlayerPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="2"/>
     </Grid>
 
 </Window>

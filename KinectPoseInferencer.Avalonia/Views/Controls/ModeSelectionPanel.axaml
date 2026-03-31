@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:KinectPoseInferencer.Avalonia.ViewModels"
+             xmlns:converters="using:KinectPoseInferencer.Avalonia.Converters"
+             mc:Ignorable="d" d:DesignWidth="120" d:DesignHeight="100"
+             x:Class="KinectPoseInferencer.Avalonia.Views.Controls.ModeSelectionPanel"
+             x:DataType="vm:MainWindowViewModel">
+
+    <UserControl.Resources>
+        <converters:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
+    </UserControl.Resources>
+
+    <StackPanel Width="120">
+        <TextBlock Text="Mode" FontWeight="Bold" Margin="0,0,0,10"/>
+        <RadioButton Content="Playback"
+                     GroupName="OperationMode"
+                     IsChecked="{Binding SelectedMode, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static vm:OperationMode.Playback}}"
+                     Margin="0,0,0,5"/>
+        <RadioButton Content="Device"
+                     GroupName="OperationMode"
+                     IsChecked="{Binding SelectedMode, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter={x:Static vm:OperationMode.Device}}"/>
+    </StackPanel>
+</UserControl>

@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:KinectPoseInferencer.Avalonia.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="480"
+             x:Class="KinectPoseInferencer.Avalonia.Views.Controls.VideoPlayerPanel"
+             x:DataType="vm:MainWindowViewModel">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Video View -->
+        <Border x:Name="VideoWindowBorder"
+                Grid.Row="0"
+                Background="Black" CornerRadius="4"
+                VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+            <Viewbox x:Name="VideoWindowViewBox" Stretch="Uniform">
+                <Grid Width="640" Height="360" ClipToBounds="True">
+                    <Image Source="{Binding ColorBitmap}" Stretch="Fill"
+                           ZIndex="10"/>
+                    <!-- Loading Indicator -->
+                    <TextBlock Text="&#xE72C;"
+                               FontFamily="Segoe Fluent Icons"
+                               FontSize="48"
+                               Foreground="White"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               ZIndex="12"
+                               IsVisible="{Binding IsLoading}"/>
+                </Grid>
+            </Viewbox>
+        </Border>
+
+        <!-- Seek Bar -->
+        <Grid Grid.Row="1" Margin="0,20,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Slider Grid.Column="0"
+                    Minimum="0"
+                    Maximum="{Binding PlaybackLength.TotalSeconds}"
+                    Value="{Binding SeekSliderPosition}"
+                    PointerCaptureLost="Slider_OnPointerCaptureLost"
+                    VerticalAlignment="Center"/>
+
+            <!-- Current Time -->
+            <TextBlock Grid.Column="1"
+                       Margin="10,0,0,0" VerticalAlignment="Center">
+                <TextBlock.Text>
+                    <MultiBinding StringFormat="{}{0:mm\:ss} / {1:mm\:ss}">
+                        <Binding Path="CurrentTime"/>
+                        <Binding Path="PlaybackLength"/>
+                    </MultiBinding>
+                </TextBlock.Text>
+            </TextBlock>
+        </Grid>
+
+        <!-- Control Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+            <!-- Rewind (Playback) / Stop (Device) Button -->
+            <Button Command="{Binding SecondaryButtonCommand}" Width="80" Height="60" Margin="0,0,20,0">
+                <Grid>
+                    <TextBlock FontFamily="Segoe Fluent Icons" Text="{Binding SecondaryButtonIconUnicode}"/>
+                </Grid>
+            </Button>
+
+            <!-- Play / Pause Button -->
+            <Button Command="{Binding PlayOrPauseCommand}" Width="80" Height="60">
+                <Grid>
+                    <TextBlock FontFamily="Segoe Fluent Icons" Text="{Binding PlayPauseIconUnicode}"/>
+                </Grid>
+            </Button>
+        </StackPanel>
+    </Grid>
+</UserControl>
