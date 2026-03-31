@@ -4,8 +4,6 @@ using K4AdotNet;
 using K4AdotNet.Record;
 using K4AdotNet.Sensor;
 using KinectPoseInferencer.Core;
-using KinectPoseInferencer.Core.InputHook;
-using KinectPoseInferencer.Renderers;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;

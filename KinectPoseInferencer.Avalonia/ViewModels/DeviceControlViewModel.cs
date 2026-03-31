@@ -1,5 +1,4 @@
 using KinectPoseInferencer.Core.InputHook;
-using KinectPoseInferencer.Core.PoseInference;
 using KinectPoseInferencer.Renderers;
 
 namespace KinectPoseInferencer.Avalonia.ViewModels;

@@ -1,9 +1,6 @@
 using Avalonia.Media.Imaging;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using K4AdotNet;
-using K4AdotNet.BodyTracking;
 using K4AdotNet.Record;
 using K4AdotNet.Sensor;
 using KinectPoseInferencer.Core;
