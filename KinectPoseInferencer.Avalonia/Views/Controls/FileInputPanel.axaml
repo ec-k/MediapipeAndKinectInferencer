@@ -31,15 +31,15 @@
             </Grid.RowDefinitions>
 
             <TextBlock Grid.Row="0" Grid.Column="0" Text="video" VerticalAlignment="Center" Margin="0,0,10,5"/>
-            <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding VideoFilePath}" Margin="0,0,0,5"/>
+            <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding PlaybackControl.VideoFilePath}" Margin="0,0,0,5"/>
 
             <TextBlock Grid.Row="1" Grid.Column="0" Text="input log" VerticalAlignment="Center" Margin="0,0,10,5"/>
-            <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding InputLogFilePath}" Margin="0,0,0,5"/>
+            <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding PlaybackControl.InputLogFilePath}" Margin="0,0,0,5"/>
 
             <TextBlock Grid.Row="2" Grid.Column="0" Text="meta"  VerticalAlignment="Center" Margin="0,0,10,30"/>
-            <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding MetaFilePath}" Margin="0,0,0,30"/>
+            <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding PlaybackControl.MetaFilePath}" Margin="0,0,0,30"/>
 
-            <Button Grid.Row="3" Grid.Column="0" Command="{Binding LoadFilesCommand}" HorizontalAlignment="Left" Width="80">
+            <Button Grid.Row="3" Grid.Column="0" Command="{Binding PlaybackControl.LoadFilesCommand}" HorizontalAlignment="Left" Width="80">
                 <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xED25;" VerticalAlignment="Center" HorizontalAlignment="Center"/>
             </Button>
         </Grid>

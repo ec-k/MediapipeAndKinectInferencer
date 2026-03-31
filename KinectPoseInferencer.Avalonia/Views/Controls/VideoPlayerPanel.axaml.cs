@@ -19,7 +19,7 @@ public partial class VideoPlayerPanel : UserControl
     {
         if (DataContext is ViewModels.MainWindowViewModel vm)
         {
-            vm.ConfirmSeek();
+            vm.PlaybackControl.ConfirmSeek();
         }
     }
 
