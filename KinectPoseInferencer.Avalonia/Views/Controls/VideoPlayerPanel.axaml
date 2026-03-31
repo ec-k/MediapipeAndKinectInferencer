@@ -36,8 +36,8 @@
             </Viewbox>
         </Border>
 
-        <!-- Seek Bar -->
-        <Grid Grid.Row="1" Margin="0,20,0,10">
+        <!-- Seek Bar (Playback mode only) -->
+        <Grid Grid.Row="1" Margin="0,20,0,10" IsVisible="{Binding IsPlaybackMode}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>

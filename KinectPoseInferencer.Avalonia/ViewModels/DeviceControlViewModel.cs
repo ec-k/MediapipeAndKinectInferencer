@@ -70,6 +70,8 @@ public class DeviceControlViewModel : ViewModelBase,
                 GlobalInputHook.StopProcessingEvents();
                 GlobalInputHook.StopHooks();
             }
+
+            _messenger.Send(new MediaSourceClearedMessage());
         }
     }
 

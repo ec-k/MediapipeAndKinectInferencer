@@ -1,7 +1,9 @@
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
 using K4AdotNet.Sensor;
+using KinectPoseInferencer.Avalonia.Messages;
 using KinectPoseInferencer.Core;
 using R3;
 using System;
@@ -9,16 +11,20 @@ using System.Collections.ObjectModel;
 
 namespace KinectPoseInferencer.Avalonia.ViewModels;
 
-public partial class DisplayViewModel : ViewModelBase, IDisposable
+public partial class DisplayViewModel : ViewModelBase, IRecipient<MediaSourceClearedMessage>, IDisposable
 {
     [ObservableProperty] WriteableBitmap? _colorBitmap;
 
     public ObservableCollection<string> InputLogEvents { get; } = new();
 
+    readonly IMessenger _messenger;
     DisposableBag _disposables = new();
 
-    public DisplayViewModel(RecordDataBroker broker)
+    public DisplayViewModel(RecordDataBroker broker, IMessenger messenger)
     {
+        _messenger = messenger;
+        _messenger.RegisterAll(this);
+
         broker.Capture
             .Where(capture => capture is not null)
             .Subscribe(capture => DisplayCapture(capture!))
@@ -74,6 +80,11 @@ public partial class DisplayViewModel : ViewModelBase, IDisposable
     public void SetColorBitmap(WriteableBitmap? bitmap)
     {
         ColorBitmap = bitmap;
+    }
+
+    public void Receive(MediaSourceClearedMessage message)
+    {
+        Dispatcher.UIThread.Post(() => ColorBitmap = null);
     }
 
     public void Dispose()
