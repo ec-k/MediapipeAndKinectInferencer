@@ -1,4 +1,4 @@
-﻿using Avalonia.Media.Imaging;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -79,7 +79,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         _settingsManager = settingManager ?? throw new ArgumentNullException(nameof(settingManager));
         if (landmarkPresenter is null) throw new ArgumentNullException(nameof(landmarkPresenter));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        // _bodyVisualElements = new ObservableCollection<UIElement>(); // No longer needed
 
         var latestSetting = _settingsManager.Load();
         _videoFilePath = latestSetting.VideoFilePath;
@@ -188,186 +187,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             .AddTo(ref _disposables);
     }
 
-    async Task DisplayFirstColorFrame(Playback playback, CancellationToken token)
-    {
-        try
-        {
-            token.ThrowIfCancellationRequested(); // Check for cancellation at the start
-
-            playback.SeekTimestamp(new Microseconds64(0), K4AdotNet.Record.PlaybackSeekOrigin.Begin);
-
-            Capture? captureToDisplay = null;
-            bool foundColorImage = false;
-
-            // When displaying the first frame, we still need to iterate to find a color image.
-            // The broker isn't involved in this initial seeking for the *first* display.
-            for (int i = 0; i < MaxSeekFramesForColorImage; i++)
-            {
-                token.ThrowIfCancellationRequested(); // Check for cancellation within the loop
-
-                if (!playback.TryGetNextCapture(out var currentCapture))
-                {
-                    break;  // Probably at EOF
-                }
-
-                if (currentCapture.ColorImage is not null)
-                {
-                    captureToDisplay = currentCapture.DuplicateReference();
-                    foundColorImage = true;
-                    break;
-                }
-                currentCapture?.Dispose();
-            }
-
-            if (foundColorImage && captureToDisplay is { ColorImage: not null })
-            {
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    ColorBitmap = captureToDisplay.ColorImage.ToWriteableBitmap(ColorBitmap);
-                    captureToDisplay?.Dispose();
-                });
-            }
-            else
-            {
-                // Display gray scale image when no color image is found.
-                playback.SeekTimestamp(new Microseconds64(0), PlaybackSeekOrigin.Begin);
-                if (playback.TryGetNextCapture(out var firstCapture))
-                {
-                    using (firstCapture)
-                    {
-                        if (firstCapture?.DepthImage is not null)
-                        {
-                            await Dispatcher.UIThread.InvokeAsync(() =>
-                            {
-                                ColorBitmap = firstCapture.DepthImage.ToWriteableBitmap(ColorBitmap);
-                            });
-                        }
-                    }
-                }
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Handle cancellation
-            _logger.LogInformation("DisplayFirstColorFrame was cancelled.");
-        }
-    }
-
-    void DisplayCapture(Capture capture)
-    {
-        // DuplicateReference first to avoid race condition with SetCapture disposing the original
-        var captureForUi = capture?.DuplicateReference();
-        if (captureForUi?.ColorImage is not Image colorImage)
-        {
-            captureForUi?.Dispose();
-            return;
-        }
-
-        var width = colorImage.WidthPixels;
-        var height = colorImage.HeightPixels;
-        var stride = colorImage.StrideBytes;
-        var buffer = colorImage.Buffer;
-        var size = colorImage.SizeBytes;
-        Dispatcher.UIThread.Post(() =>
-        {
-            try
-            {
-                ColorBitmap = captureForUi.ColorImage.ToWriteableBitmap(null);
-            }
-            finally
-            {
-                captureForUi?.Dispose();
-                //Interlocked.Exchange(ref _isRendering, 0);
-            }
-        });
-    }
-
-    void OnNewFrame(Capture capture, BodyFrame frame)
-    {
-        if (capture is null || frame is null) return;
-
-        //var visualData = _visualizer.ProcessFrame(frame, capture?.DepthImage);
-        //_visualizer.UpdateVisuals(visualData, 640, 360);
-        //var activeElements = new HashSet<UIElement>(_visualizer.ActiveVisualElements);
-        //var elementsToRemove = BodyVisualElements
-        //                                .Where(element => !activeElements.Contains(element))
-        //                                .ToList();
-
-        WriteableBitmap? colorImage = null;
-        colorImage = capture?.ColorImage?.ToWriteableBitmap(colorImage);
-
-        // Update UI on the main thread
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (colorImage is not null)
-                ColorBitmap = colorImage;
-
-            //foreach (var element in elementsToRemove)
-            //{
-            //    BodyVisualElements.Remove(element);
-            //}
-
-            //foreach (var element in activeElements)
-            //{
-            //    if (!BodyVisualElements.Contains(element))
-            //    {
-            //        BodyVisualElements.Add(element);
-            //    }
-            //}
-        });
-    }
-
-    void OnNewInputLogEvent(DeviceInputData[] inputEvents)
-    {
-        Dispatcher.UIThread.Post(() =>
-        {
-            foreach (var input in inputEvents)
-            {
-                if (input.Data is MouseEventData mouseEventData)
-                    InputLogEvents.Add($"[{input.Timestamp:hh\\:mm\\:ss\\.fff}] Mouse: {mouseEventData.X}, {mouseEventData.Y}");
-                else if (input.Data is KeyboardEventData keyboardEventData && !keyboardEventData.IsKeyDown)
-                    InputLogEvents.Add($"[{input.Timestamp:hh\\:mm\\:ss\\.fff}] Keyboard: {keyboardEventData.KeyCode.ToString()}");
-
-                if (InputLogEvents.Count > 10)
-                    InputLogEvents.RemoveAt(0);
-            }
-        });
-    }
-
-    [RelayCommand(IncludeCancelCommand = true)]
-    async Task LoadFiles(CancellationToken token)
-    {
-        if (string.IsNullOrEmpty(VideoFilePath)) return;
-
-        _settingsManager.Save(new()
-        {
-            VideoFilePath = VideoFilePath,
-            InputLogFilePath = InputLogFilePath,
-            MetaFilePath = MetaFilePath,
-        });
-
-        try
-        {
-            var playbackDesc = new PlaybackDescriptor(VideoFilePath, InputLogFilePath, MetaFilePath);
-            _playbackController.Descriptor = playbackDesc;
-            await _playbackController.Prepare(token);
-
-            // Display the first frame after successful loading
-            if (_playbackController.Reader.Playback.CurrentValue is K4AdotNet.Record.Playback playback)
-            {
-                await Task.Run(() => DisplayFirstColorFrame(playback, token), token);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.LogInformation("File loading was cancelled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Error loading file: {ex.Message}");
-        }
-    }
-
     [RelayCommand(IncludeCancelCommand = true)]
     async Task SecondaryButton(CancellationToken token)
     {
@@ -381,33 +200,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
-    void DeviceStop()
-    {
-        if (_kinectDeviceController.KinectDevice.CurrentValue is not null)
-        {
-            _kinectDeviceController.Pause();
-            _kinectDeviceController.Close();
-
-            if (GlobalInputHook.IsHookActive)
-            {
-                GlobalInputHook.StopProcessingEvents();
-                GlobalInputHook.StopHooks();
-            }
-        }
-    }
-    partial void OnSeekSliderPositionChanged(double value)
-    {
-        if (_isInternalUpdating) return;
-
-        var targetTime = TimeSpan.FromSeconds(value);
-        CurrentTime = targetTime;
-    }
-    public void ConfirmSeek()
-    {
-        _playbackController.SeekAsync(TimeSpan.FromSeconds(SeekSliderPosition));
-    }
-
-
     [RelayCommand]
     public void PlayOrPause()
     {
@@ -418,60 +210,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         else
         {
             DevicePlayOrPause();
-        }
-    }
-
-    void PlaybackPlayOrPause()
-    {
-        var state = _playbackController.State.CurrentValue;
-
-        if (state is PlaybackState.Playing)
-            _playbackController.Pause();
-        if (state is PlaybackState.Pause)
-            _playbackController.Play();
-    }
-
-    void DevicePlayOrPause()
-    {
-        if (_kinectDeviceController.KinectDevice.CurrentValue is null)
-        {
-            _kinectDeviceController.Open();
-
-            // Setup visualization
-            if (_kinectDeviceController?.KinectDevice is null) return;
-
-            var calibration = _kinectDeviceController.GetCalibration();
-            if (calibration.HasValue)
-            {
-                PointCloud.ComputePointCloudCache(calibration.Value);
-            }
-
-            _kinectDeviceController.StartCamera();
-
-            if (!GlobalInputHook.IsHookActive)
-            {
-                GlobalInputHook.StartHooks();
-                GlobalInputHook.StartProcessingEvents();
-            }
-        }
-        else
-        {
-            if (_kinectDeviceController.IsReading.CurrentValue)
-                _kinectDeviceController.Pause();
-            else
-                _kinectDeviceController.Play();
-
-
-            if (!GlobalInputHook.IsHookActive)
-            {
-                GlobalInputHook.StartHooks();
-                GlobalInputHook.StartProcessingEvents();
-            }
-            else
-            {
-                GlobalInputHook.StopProcessingEvents();
-                GlobalInputHook.StopHooks();
-            }
         }
     }
 
