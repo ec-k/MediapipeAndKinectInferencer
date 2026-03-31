@@ -1,85 +1,39 @@
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
-using K4AdotNet;
-using K4AdotNet.Record;
+using CommunityToolkit.Mvvm.ComponentModel;
 using K4AdotNet.Sensor;
 using KinectPoseInferencer.Core;
-using Microsoft.Extensions.Logging;
+using R3;
 using System;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Collections.ObjectModel;
 
 namespace KinectPoseInferencer.Avalonia.ViewModels;
 
-public partial class MainWindowViewModel
+public partial class DisplayViewModel : ViewModelBase, IDisposable
 {
-    async Task DisplayFirstColorFrame(Playback playback, CancellationToken token)
+    [ObservableProperty] WriteableBitmap? _colorBitmap;
+
+    public ObservableCollection<string> InputLogEvents { get; } = new();
+
+    DisposableBag _disposables = new();
+
+    public DisplayViewModel(RecordDataBroker broker)
     {
-        try
-        {
-            token.ThrowIfCancellationRequested();
+        broker.Capture
+            .Where(capture => capture is not null)
+            .Subscribe(capture => DisplayCapture(capture!))
+            .AddTo(ref _disposables);
 
-            playback.SeekTimestamp(new Microseconds64(0), PlaybackSeekOrigin.Begin);
-
-            Capture? captureToDisplay = null;
-            bool foundColorImage = false;
-
-            // When displaying the first frame, we still need to iterate to find a color image.
-            // The broker isn't involved in this initial seeking for the *first* display.
-            for (int i = 0; i < MaxSeekFramesForColorImage; i++)
-            {
-                token.ThrowIfCancellationRequested();
-
-                if (!playback.TryGetNextCapture(out var currentCapture))
-                {
-                    break;
-                }
-
-                if (currentCapture.ColorImage is not null)
-                {
-                    captureToDisplay = currentCapture.DuplicateReference();
-                    foundColorImage = true;
-                    break;
-                }
-                currentCapture?.Dispose();
-            }
-
-            if (foundColorImage && captureToDisplay is { ColorImage: not null })
-            {
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    ColorBitmap = captureToDisplay.ColorImage.ToWriteableBitmap(ColorBitmap);
-                    captureToDisplay?.Dispose();
-                });
-            }
-            else
-            {
-                // Display gray scale image when no color image is found.
-                playback.SeekTimestamp(new Microseconds64(0), PlaybackSeekOrigin.Begin);
-                if (playback.TryGetNextCapture(out var firstCapture))
-                {
-                    using (firstCapture)
-                    {
-                        if (firstCapture?.DepthImage is not null)
-                        {
-                            await Dispatcher.UIThread.InvokeAsync(() =>
-                            {
-                                ColorBitmap = firstCapture.DepthImage.ToWriteableBitmap(ColorBitmap);
-                            });
-                        }
-                    }
-                }
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.LogInformation("DisplayFirstColorFrame was cancelled.");
-        }
+        broker.DeviceInputData
+            .Where(input => input is not null)
+            .Chunk(TimeSpan.FromSeconds(1.0 / 30.0))
+            .Where(inputs => inputs is { Length: > 0 })
+            .Subscribe(inputs => OnNewInputLogEvent(inputs!))
+            .AddTo(ref _disposables);
     }
 
     void DisplayCapture(Capture capture)
     {
-        // DuplicateReference first to avoid race condition with SetCapture disposing the original
         var captureForUi = capture?.DuplicateReference();
         if (captureForUi?.ColorImage is not Image colorImage)
         {
@@ -87,11 +41,6 @@ public partial class MainWindowViewModel
             return;
         }
 
-        var width = colorImage.WidthPixels;
-        var height = colorImage.HeightPixels;
-        var stride = colorImage.StrideBytes;
-        var buffer = colorImage.Buffer;
-        var size = colorImage.SizeBytes;
         Dispatcher.UIThread.Post(() =>
         {
             try
@@ -102,21 +51,6 @@ public partial class MainWindowViewModel
             {
                 captureForUi?.Dispose();
             }
-        });
-    }
-
-    void OnNewFrame(Capture capture, K4AdotNet.BodyTracking.BodyFrame frame)
-    {
-        if (capture is null || frame is null) return;
-
-        WriteableBitmap? colorImage = null;
-        colorImage = capture?.ColorImage?.ToWriteableBitmap(colorImage);
-
-        // Update UI on the main thread
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (colorImage is not null)
-                ColorBitmap = colorImage;
         });
     }
 
@@ -135,5 +69,15 @@ public partial class MainWindowViewModel
                     InputLogEvents.RemoveAt(0);
             }
         });
+    }
+
+    public void SetColorBitmap(WriteableBitmap? bitmap)
+    {
+        ColorBitmap = bitmap;
+    }
+
+    public void Dispose()
+    {
+        _disposables.Dispose();
     }
 }

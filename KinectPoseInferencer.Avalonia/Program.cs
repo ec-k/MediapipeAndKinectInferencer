@@ -1,13 +1,15 @@
-﻿using Avalonia;
-using KinectPoseInferencer.Renderers;
-using KinectPoseInferencer.RemoteControl;
+using Avalonia;
+using CommunityToolkit.Mvvm.Messaging;
+using KinectPoseInferencer.Avalonia.Models;
+using KinectPoseInferencer.Avalonia.ViewModels;
 using KinectPoseInferencer.Core;
 using KinectPoseInferencer.Core.Settings;
+using KinectPoseInferencer.Renderers;
+using KinectPoseInferencer.RemoteControl;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Threading.Tasks;
-using KinectPoseInferencer.Avalonia.Models;
 
 namespace KinectPoseInferencer.Avalonia;
 
@@ -56,8 +58,16 @@ internal sealed class Program
             {
                 services.AddSingleton<App>();
 
+                // Messenger
+                services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
+
+                // ViewModels
                 services.AddSingleton<Views.MainWindow>();
-                services.AddSingleton<ViewModels.MainWindowViewModel>();
+                services.AddSingleton<MainWindowViewModel>();
+                services.AddSingleton<DisplayViewModel>();
+                services.AddSingleton<PlaybackControlViewModel>();
+                services.AddSingleton<DeviceControlViewModel>();
+                services.AddSingleton<MediaControlViewModel>();
                 services.AddSingleton<Renderer>();
 
                 services.Configure<MediaPipeSettings>(context.Configuration.GetSection("MediaPipeSettings"));
