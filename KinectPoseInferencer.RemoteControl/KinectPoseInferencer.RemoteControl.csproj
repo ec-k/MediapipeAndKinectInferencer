@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\KinectPoseInferencer.Core\KinectPoseInferencer.Core.csproj" />
+    <ProjectReference Include="..\KinectPoseInferencer.Core\KinectPoseInferencer.Core.csproj" />
   </ItemGroup>
 
 </Project>
