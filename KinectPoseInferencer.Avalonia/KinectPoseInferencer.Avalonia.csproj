@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <Configurations>Debug;Release;Debug-Femto;Release-Femto</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
