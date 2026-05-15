@@ -32,7 +32,7 @@ public class RemoteControlServer : IDisposable
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         _listener = new();
-        _listener.Prefixes.Add($"http://localhost:{_port}/control/");
+        _listener.Prefixes.Add($"http://+:{_port}/control/");
     }
 
     public async Task StartAsync(CancellationToken ct = default)
@@ -46,7 +46,9 @@ public class RemoteControlServer : IDisposable
             {
                 while (!ct.IsCancellationRequested)
                 {
+                    _logger.LogDebug("Waiting for request...");
                     var context = await _listener.GetContextAsync();
+                    _logger.LogDebug("Request received: {Method} {Url}", context.Request.HttpMethod, context.Request.Url);
 
                     if (context.Request.IsWebSocketRequest)
                     {
